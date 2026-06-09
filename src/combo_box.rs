@@ -217,15 +217,22 @@ impl ComboBox {
         {
             let hwnd = self.inner.borrow().hwnd;
             // SAFETY: FFI call to GetWindowTextLengthW; `hwnd` is a real window handle and the wide buffer is sized appropriately.
+            //
+            // `GetWindowTextLengthW` returns -1 if the window
+            // has no title bar / text (e.g. a disabled combo),
+            // so we guard with `<= 0` to avoid casting a
+            // negative `i32` to `usize` (which would have
+            // produced `usize::MAX` and a multi-GiB alloc).
             let len = unsafe { GetWindowTextLengthW(hwnd) };
-            if len == 0 {
+            if len <= 0 {
                 return String::new();
             }
-            let mut buf = Vec::with_capacity((len + 1) as usize);
+            let buf_len = (len as usize).saturating_add(1);
+            let mut buf = Vec::with_capacity(buf_len);
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
                 GetWindowTextW(hwnd, buf.as_mut_ptr(), len + 1);
-                buf.set_len((len + 1) as usize);
+                buf.set_len(buf_len);
             }
             String::from_utf16_lossy(&buf[..len as usize])
         }
@@ -533,7 +540,7 @@ impl BitmapComboBox {
     pub fn insert_with_image(&self, index: usize, text: &str, image_index: i32) -> i32 {
         #[cfg(target_os = "windows")]
         {
-            let mut inner = self.inner.borrow_mut();
+            let inner = self.inner.borrow_mut();
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
                 let mut wide = to_wide(text);
@@ -690,6 +697,9 @@ impl BitmapComboBox {
         {
             // `CB_GETLBTEXTLEN` returns the length *in characters* not
             // including the null terminator, just like `LB_GETTEXTLEN`.
+            // A negative return value means the index is invalid (e.g.
+            // out of range) — guard with `<= 0` so we never feed a
+            // negative `isize` into the `as usize` cast.
             const CB_GETLBTEXTLEN: u32 = 0x0149;
             const CB_GETLBTEXT: u32 = 0x0148;
             let hwnd = self.inner.borrow().hwnd;
@@ -698,7 +708,8 @@ impl BitmapComboBox {
             if len <= 0 {
                 return String::new();
             }
-            let mut buf = Vec::with_capacity((len + 1) as usize);
+            let buf_len = (len as usize).saturating_add(1);
+            let mut buf = Vec::with_capacity(buf_len);
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             let written = unsafe {
                 SendMessageW(hwnd, CB_GETLBTEXT, index, buf.as_mut_ptr() as isize)
@@ -706,8 +717,9 @@ impl BitmapComboBox {
             if written <= 0 {
                 return String::new();
             }
+            let written = (written as usize).min(buf_len);
             unsafe {
-                buf.set_len(written as usize);
+                buf.set_len(written);
             }
             String::from_utf16_lossy(&buf)
         }
@@ -726,15 +738,20 @@ impl BitmapComboBox {
         {
             let hwnd = self.inner.borrow().hwnd;
             // SAFETY: FFI call to GetWindowTextLengthW; `hwnd` is a real window handle and the wide buffer is sized appropriately.
+            //
+            // `GetWindowTextLengthW` returns -1 for a window
+            // with no title bar / text; guard with `<= 0` so
+            // the cast to `usize` is always non-negative.
             let len = unsafe { GetWindowTextLengthW(hwnd) };
-            if len == 0 {
+            if len <= 0 {
                 return String::new();
             }
-            let mut buf = Vec::with_capacity((len + 1) as usize);
+            let buf_len = (len as usize).saturating_add(1);
+            let mut buf = Vec::with_capacity(buf_len);
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
                 GetWindowTextW(hwnd, buf.as_mut_ptr(), len + 1);
-                buf.set_len((len + 1) as usize);
+                buf.set_len(buf_len);
             }
             String::from_utf16_lossy(&buf[..len as usize])
         }

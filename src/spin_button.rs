@@ -15,8 +15,14 @@
 //!
 //! let frame = Frame::builder().with_title("App").with_size(100, 100).build();
 //! let sb = SpinButton::new(&frame, 0, 100, 0);
-//! sb.on_value_change(&frame, || {
-//!     println!("value = {}", sb.get_value());
+//! // The closure can be `move`-captured; it doesn't need to own
+//! // `sb` because `on_value_change` is a one-shot registration
+//! // (the handler is stored in the frame's notify map).
+//! let cb_value = std::rc::Rc::new(std::cell::RefCell::new(0));
+//! let cb_value_for_closure = cb_value.clone();
+//! sb.on_value_change(&frame, move || {
+//!     *cb_value_for_closure.borrow_mut() += 1;
+//!     println!("value changed");
 //! });
 //! ```
 

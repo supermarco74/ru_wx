@@ -19,12 +19,12 @@
 //! let mut dlg = PropertySheetDialog::new(&parent, "Settings", 500, 400);
 //!
 //! // Page 1: General
-//! let p1 = Panel::new(dlg.frame());
+//! let p1 = Panel::new(&dlg.frame());
 //! StaticText::new(&p1, "General settings go here.");
 //! dlg.add_page("General", p1);
 //!
 //! // Page 2: Advanced
-//! let p2 = Panel::new(dlg.frame());
+//! let p2 = Panel::new(&dlg.frame());
 //! StaticText::new(&p2, "Advanced settings go here.");
 //! dlg.add_page("Advanced", p2);
 //!

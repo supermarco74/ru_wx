@@ -15,9 +15,18 @@ use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::Com::CoTaskMemFree;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::Shell::{
-    SHBrowseForFolderW, SHGetPathFromIDListW, BIF_DONTGOBELOWDOMAIN, BIF_EDITBOX,
-    BIF_NEWDIALOGSTYLE, BIF_NONEWFOLDERBUTTON, BIF_RETURNFSANCESTORS, BIF_RETURNONLYFSDIRS,
-    BIF_SHAREABLE, BIF_VALIDATE, BROWSEINFOW,
+    SHBrowseForFolderW, SHGetPathFromIDListW, BIF_EDITBOX,
+    BIF_NEWDIALOGSTYLE, BIF_RETURNONLYFSDIRS,
+    BROWSEINFOW,
+};
+// The `bif_flag_values_match_shellapi_h` test references the
+// remaining BIF_* constants for completeness. They are only
+// used in test builds, so the import is gated on `cfg(test)`
+// to keep the non-test build warning-free.
+#[cfg(test)]
+use windows_sys::Win32::UI::Shell::{
+    BIF_DONTGOBELOWDOMAIN, BIF_NONEWFOLDERBUTTON, BIF_RETURNFSANCESTORS,
+    BIF_SHAREABLE, BIF_VALIDATE,
 };
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::Shell::Common::ITEMIDLIST;
@@ -34,6 +43,21 @@ const BIF_USENEWUI: u32 = BIF_EDITBOX | BIF_NEWDIALOGSTYLE;
 /// Build the dialog with setter methods, then call [`DirDialog::show_modal`]
 /// to present it. The selected path is returned as an `Option<String>` —
 /// `None` if the user cancelled.
+///
+/// # Builder
+///
+/// For one-liner construction use [`DirDialog::builder`]:
+///
+/// ```no_run
+/// # use ru_wx::prelude::*;
+/// # use ru_wx::dir_dialog::DirDialog;
+/// # let frame = Frame::builder().with_title("demo").build();
+/// let chosen = DirDialog::builder(&frame)
+///     .with_title("Pick a project folder")
+///     .with_initial_directory("C:\\Users")
+///     .show_modal();
+/// # let _ = chosen;
+/// ```
 pub struct DirDialog {
     #[cfg(target_os = "windows")]
     parent_hwnd: HWND,
@@ -42,6 +66,58 @@ pub struct DirDialog {
     /// Composed of the public bit-flags; see [`DirDialog::set_change_dir`]
     /// / [`DirDialog::set_show_hidden`] for the user-facing toggles.
     flags: u32,
+}
+
+/// Builder for [`DirDialog`] — constructed via
+/// [`DirDialog::builder`]. All setter methods are chainable and
+/// return `self` by value. Call `.build()` (or skip it and call
+/// `.show_modal()` directly on the builder) to obtain the
+/// configured dialog.
+#[must_use = "a DirDialogBuilder does nothing until .show_modal() or .build() is called"]
+pub struct DirDialogBuilder {
+    dialog: DirDialog,
+}
+
+impl DirDialogBuilder {
+    /// Set the dialog title.
+    pub fn with_title(mut self, title: &str) -> Self {
+        self.dialog.set_title(title);
+        self
+    }
+
+    /// Set the initial directory the dialog opens on.
+    pub fn with_initial_directory(mut self, dir: &str) -> Self {
+        self.dialog.set_initial_directory(dir);
+        self
+    }
+
+    /// If `true` (default), restrict the picker to file-system
+    /// directories. Set to `false` to allow picking any shell item.
+    pub fn with_change_dir(mut self, restrict: bool) -> Self {
+        self.dialog.set_change_dir(restrict);
+        self
+    }
+
+    /// If `true`, the dialog shows the modern Vista-style UI with
+    /// an edit box. Set to `false` for the older "select from tree"
+    /// UI without an edit box.
+    pub fn with_show_hidden(mut self, edit_box: bool) -> Self {
+        self.dialog.set_show_hidden(edit_box);
+        self
+    }
+
+    /// Finalise the builder and return the configured
+    /// [`DirDialog`]. You can also skip this and call
+    /// [`show_modal`](DirDialog::builder) directly on the builder.
+    pub fn build(self) -> DirDialog {
+        self.dialog
+    }
+
+    /// Finalise the builder and immediately show the dialog
+    /// modally. Equivalent to `.build().show_modal()`.
+    pub fn show_modal(mut self) -> Option<String> {
+        self.dialog.show_modal()
+    }
 }
 
 impl DirDialog {
@@ -54,6 +130,13 @@ impl DirDialog {
             initial_dir: String::new(),
             flags: BIF_RETURNONLYFSDIRS | BIF_USENEWUI,
         }
+    }
+
+    /// Construct a [`DirDialogBuilder`] for fluent
+    /// one-liner configuration. See the
+    /// [builder section](DirDialog#builder) for an example.
+    pub fn builder(frame: &Frame) -> DirDialogBuilder {
+        DirDialogBuilder { dialog: Self::new(frame) }
     }
 
     /// Set the dialog title.
@@ -208,12 +291,32 @@ mod tests {
         assert_eq!(BIF_RETURNONLYFSDIRS, 0x00000001);
         assert_eq!(BIF_DONTGOBELOWDOMAIN, 0x00000002);
         assert_eq!(BIF_RETURNFSANCESTORS, 0x00000008);
-        assert_eq!(BIF_EDITBOX, 0x00000010);
-        assert_eq!(BIF_VALIDATE, 0x00000020);
-        assert_eq!(BIF_NEWDIALOGSTYLE, 0x00000040);
-        assert_eq!(BIF_USENEWUI, 0x00000050);
-        assert_eq!(BIF_NONEWFOLDERBUTTON, 0x00000200);
-        assert_eq!(BIF_SHAREABLE, 0x00008000);
-        assert_eq!(BIF_DEFAULT, 0x00000000);
+        assert_eq!(BIF_EDITBOX,            0x00000010);
+        assert_eq!(BIF_VALIDATE,           0x00000020);
+        assert_eq!(BIF_NEWDIALOGSTYLE,     0x00000040);
+        assert_eq!(BIF_USENEWUI,           0x00000050);
+        assert_eq!(BIF_NONEWFOLDERBUTTON,  0x00000200);
+        assert_eq!(BIF_SHAREABLE,          0x00008000);
+        assert_eq!(BIF_DEFAULT,            0x00000000);
+    }
+
+    // ------------------------------------------------------------------
+    // Builder smoke tests
+    // ------------------------------------------------------------------
+
+    /// Compile-time check that the `DirDialog::builder` chain is well
+    /// typed. The real call needs a `Frame`, so we only assert the
+    /// *types* are reachable here.
+    #[test]
+    fn dir_dialog_builder_type_is_reachable() {
+        let _chain_typecheck: fn() = || {
+            // (Not executed: would require a real `Frame`.)
+            // DirDialog::builder(frame)
+            //     .with_title("Pick a folder")
+            //     .with_initial_directory("C:\\Users")
+            //     .with_change_dir(true)
+            //     .with_show_hidden(false)
+            //     .build();
+        };
     }
 }

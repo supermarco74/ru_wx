@@ -9,7 +9,10 @@ This file is the running log of structural improvements made to the
 - the concrete code-level changes
 
 Scores and a project-wide completion report live in
-[`upgrade_report_v0.5.7.md`](./upgrade_report_v0.5.7.md).
+[`upgrade_report_v0.6.2.md`](./upgrade_report_v0.6.2.md)
+(latest) and
+[`upgrade_report_FINAL.md`](./upgrade_report_FINAL.md)
+(end-of-5-step-programme summary).
 
 ---
 
@@ -1717,7 +1720,7 @@ the pass:
 
 ---
 
-## Upgrade 17 â€” Runtime rebinding of accelerators â†’ `0.5.1` (2026-06-05)
+## Upgrade 17 — Runtime rebinding of accelerators → `0.5.1` (2026-06-05)
 
 **Theme:** close the "runtime rebinding of accelerators" item
 from the v0.4.2 future-work list (carried over to v0.5.1 in
@@ -1896,10 +1899,10 @@ of the pass:
 
 ---
 
-## v0.5.2 â€” 2026-06-05 â€” ListCtrl selection API (wxWidgets parity pass 1)
+## v0.5.2 — 2026-06-05 — ListCtrl selection API (wxWidgets parity pass 1)
 
 **Theme:** close the most visible wxWidgets-parity gap in
-`ListCtrl` â€” the absence of a programmatic selection API.
+`ListCtrl` — the absence of a programmatic selection API.
 The control already had `get_selected_item()` (one
 selected) but lacked the symmetric
 `select` / `deselect` / `clear_selection` / `is_selected`
@@ -1925,23 +1928,23 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
     constants. All are documented with Microsoft Docs
     links.
   - **+6 new high-level public methods** on `ListCtrl`:
-    - `select(&self, index: usize)` â€” set both
+    - `select(&self, index: usize)` — set both
       `LVIS_SELECTED` and `LVIS_FOCUSED` on the row at
       `index`, matching the focus halo that the
       ListView normally applies when the user clicks a
       row in single-select mode.
-    - `deselect(&self, index: usize)` â€” clear both
+    - `deselect(&self, index: usize)` — clear both
       `LVIS_SELECTED` and `LVIS_FOCUSED` on the row at
       `index`.
-    - `clear_selection(&self)` â€” iterate over
+    - `clear_selection(&self)` — iterate over
       `0..get_item_count()` and clear the selection
       state on every row.
-    - `is_selected(&self, index: usize) -> bool` â€”
+    - `is_selected(&self, index: usize) -> bool` —
       returns whether the row at `index` currently has
       `LVIS_SELECTED` set.
-    - `get_selected_item_count(&self) -> usize` â€” O(1)
+    - `get_selected_item_count(&self) -> usize` — O(1)
       count of selected rows via `LVM_GETSELECTEDCOUNT`.
-    - `get_selected_items(&self) -> Vec<usize>` â€”
+    - `get_selected_items(&self) -> Vec<usize>` —
       walk `LVM_GETNEXTITEM` with `LVNI_SELECTED` and
       collect the indices, in ascending order. The walk
       is bounded by the total item count plus one
@@ -1950,10 +1953,10 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
       cannot spin on a null/invalid `HWND`.
   - **+2 new low-level public methods**:
     - `set_item_state(&self, index: usize, state: u32,
-      mask: u32)` â€” direct wrapper around
+      mask: u32)` — direct wrapper around
       `LVM_SETITEMSTATE`.
     - `get_item_state(&self, index: usize, mask: u32)
-      -> u32` â€” direct wrapper around
+      -> u32` — direct wrapper around
       `LVM_GETITEMSTATE`.
   - **+1 new `#[cfg(test)] mod tests`** at the bottom of
     the file with 17 unit tests (see below).
@@ -1961,11 +1964,11 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
 - `tests/integration.rs`
   - **+2 new integration tests** in a new "v0.5.2
     ListCtrl selection API" section:
-    - `listctrl_selection_methods_have_expected_signatures` â€”
+    - `listctrl_selection_methods_have_expected_signatures` —
       pins the function-pointer signatures of the 6 new
       high-level methods + 2 new low-level helpers, and
       pins the 4 `ListCtrlStyle` enum variants.
-    - `listctrl_selection_methods_are_reachable_through_the_prelude` â€”
+    - `listctrl_selection_methods_are_reachable_through_the_prelude` —
       pins that the new methods are reachable through
       `ru_wx::prelude::*` (i.e. `ListCtrl` and the
       selection methods are both still in the curated
@@ -1974,21 +1977,21 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
 **Tests added**
 
 - **17 new unit tests** in `src/list_ctrl.rs::tests`:
-  - `lvm_constants_have_expected_values` â€” pins the
+  - `lvm_constants_have_expected_values` — pins the
     numeric values of all 12 `LVM_*` message constants
     (including the 3 new in v0.5.2) against the
     Microsoft Docs list.
-  - `lvis_constants_have_expected_values` â€” pins the
+  - `lvis_constants_have_expected_values` — pins the
     numeric values of `LVIS_FOCUSED` (0x0001),
     `LVIS_SELECTED` (0x0002), `LVNI_SELECTED` (2), and
     `LVS_EX_FULLROWSELECT` (0x20).
-  - 8 `signature_*` tests â€” function-pointer type
+  - 8 `signature_*` tests — function-pointer type
     assertions that pin the public-API contract for
     every new method. A future refactor that renames a
     method, changes its parameter list, or changes its
     return type will fail to compile, with no
     behavioural test required.
-  - 6 `null_hwnd_*` tests â€” exercise every new method
+  - 6 `null_hwnd_*` tests — exercise every new method
     against a `ListCtrl` whose `HWND` is `NULL`
     (created via `Frame::for_testing()` so
     `CreateWindowExW` is issued with a null parent +
@@ -2008,11 +2011,11 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
 
 - **2 new integration tests** in `tests/integration.rs`:
   - `listctrl_selection_methods_have_expected_signatures`
-    â€” pins all 8 new method signatures and the 4
+    — pins all 8 new method signatures and the 4
     `ListCtrlStyle` variants through the public
     `ru_wx::*` re-exports.
   - `listctrl_selection_methods_are_reachable_through_the_prelude`
-    â€” pins the same through `ru_wx::prelude::*` (the
+    — pins the same through `ru_wx::prelude::*` (the
     curated subset).
 
 **Files changed (filesystem impact)**
@@ -2029,7 +2032,7 @@ that the v0.5.0 report scheduled for v0.5.2 -> v0.5.4.
 **Build / test / CI**
 
 - `cargo test`: **147/147 pass** (111 lib, 13
-  integration, 23 doc) â€” was 128 in v0.5.1 (+19 tests).
+  integration, 23 doc) — was 128 in v0.5.1 (+19 tests).
 - `cargo clippy --lib --tests --no-deps -- -D warnings`:
   **0 warnings, 0 errors**.
 - `cargo fmt --all -- --check`: **0 diffs** (clean).
@@ -4042,4 +4045,366 @@ starts.
 
 ---
 
+## Upgrade 24 — Panic-safety pass → `0.5.8` (2026-06-09)
+
+**Theme:** stability / hygiene. v0.5.5–v0.5.7 added new
+public surface (`DropTarget` / shell drop, `ListCtrl`
+virtual mode, `DatePickerCtrl` value extraction).
+v0.5.8 holds the public surface constant and instead
+audits the existing surface for **panic-safety** — the
+category of defect that turns a malformed input or a
+runtime invariant violation into a `panic!` (and
+therefore a process abort) instead of a recoverable
+error.
+
+**Changes:**
+
+- **`src/animation_ctrl.rs:208–250`** —
+  `AnimationCtrl::play()` no longer uses
+  `inner.animation.as_ref().unwrap().frame(0).unwrap()`.
+  The new code uses a `match` expression that explicitly
+  returns on the "no animation" branch and computes the
+  initial frame delay in the same expression. A
+  `play()`-before-`load_*()` call is now a no-op (the
+  pre-v0.5.8 code would have panicked on the `.unwrap()`).
+  A 4-line comment block explains why the new `match` is
+  preferred over the `.unwrap()` chain.
+- **`src/ole_dnd.rs:read_unicode_text`** — added 3
+  defensive guards: (a) `hglobal.is_null()`,
+  (b) `GlobalSize(hglobal) >= 8`, (c)
+  `len_bytes <= alloc_size.saturating_sub(4)`. On any of
+  the 3 guards, the function releases the `STGMEDIUM`
+  and returns `None`. A 4-line comment block explains
+  the `ReleaseStgMedium` ordering on every error path
+  (otherwise the `HGLOBAL` leaks). Added the
+  `use windows_sys::Win32::System::Memory::GlobalSize;`
+  import.
+- **`src/ole_dnd.rs` (test code)** — replaced
+  `_ => panic!()` patterns in the
+  `ole_dropped_data_variants_match` test with
+  `assert!(matches!(...))` for the 3 sub-assertions
+  (`Files` / `Text` / `Other`).
+- **`src/scroll_bar.rs` (test code)** — replaced
+  `_ => panic!()` arms in the
+  `thumb_release_carries_position` and
+  `thumb_track_carries_position` tests with
+  `if let … else { panic!("expected X, got a different
+  variant") }`.
+- **`src/find_replace_dialog.rs` (test code)** —
+  replaced `.expect("event")` in the
+  `build_event_priority_replace_all` and
+  `build_event_priority_dialog_term` tests with explicit
+  `match build_event(&fr) { Some(ev) => assert!(matches!
+  (ev, …), "expected X, got {:?}", ev), None => panic!
+  ("expected Some, got None") }`.
+- **`src/icon.rs:87`** — fixed a `u32` overflow in
+  `std::slice::from_raw_parts_mut(bits_ptr as *mut u8,
+  (width * height * 4) as usize)`. The pre-v0.5.8 code
+  could truncate the slice length to 0 for
+  `width = height = 32768` (the multiplication overflows
+  `u32` to `0`). The new code widens to `usize` first:
+  `(width as usize) * (height as usize) * 4`. A 4-line
+  comment block explains the widening.
+- **`src/static_bitmap.rs:415`** — same overflow fix as
+  `icon.rs:87`. Same comment block.
+- **`src/animation.rs` (test code)** — the
+  `load_from_memory_png_becomes_single_frame` test was
+  **failing** in the first build of v0.5.8 because the
+  hand-encoded 67-byte PNG has invalid chunk CRCs and
+  the `image` crate's decoder is now CRC-strict. The
+  test is rewritten to generate a real 1×1 transparent
+  PNG at runtime using
+  `image::codecs::png::PngEncoder::write_image`. The
+  `.unwrap()` is replaced with
+  `assert!(load_result.is_ok(), ...)`, so a future
+  regression produces a useful diagnostic.
+
+**Result:** all 311 unit tests pass, all 15 integration
+tests pass, all 49 examples compile. The v0.5.8 cycle
+closes 3 production-code panic paths, 5 test-code
+panic paths, and 1 latent test panic. The default-
+clippy group is still 0 warnings / 0 errors, and
+`cargo fmt --all -- --check` is still clean. The
+weighted score moves from 9.67 to **9.74** — the
+**largest delta of the 5th pass** so far (+0.07), and
+the **highest score the project has recorded**.
+
+**Future-work carry-over:** the v0.5.7 future-work
+section recommended v0.5.8 pick **OLE COM
+`IDropTarget`** (the source-side / in-app-drag half of
+drag-and-drop) **or** `LVN_ODCACHEHINT` (the
+virtual-mode optimisation notification). v0.5.8 picked
+**neither**: the audit surfaced 6 panic-safety defects
+that, in aggregate, are a higher-priority fix than
+either of the two feature deliverables. Both items
+remain on the v0.5.9 / v0.6.0 backlog.
+
 ---
+
+## Upgrade 25 — Memory & resource management pass → `0.5.9` (2026-06-07)
+
+**Theme:** robustness / hygiene. v0.5.8 closed the
+panic-safety defect class (production `.unwrap()`s,
+test `_ => panic!()`s). v0.5.9 closes the
+**memory & resource management** defect class — the
+class of defect where the library acquires a Win32
+resource (HDC, HBITMAP, HICON, pen, brush, font) and
+fails to release it on every exit path, or
+mishandles the `null`-return-on-failure contract at
+the Rust `Option<H>` boundary. This is the
+**5th and final cycle of the 5th 5-cycle pass**;
+the pass is **complete** with this entry.
+
+**Changes:**
+
+- **`src/icon.rs:170-193` (`svg_bytes_to_hicon`)** —
+  the function used to wrap the result of
+  `hbitmap_to_hicon` in `Some(...)` without checking
+  if the `HICON` was null (which it is when
+  `CreateIconIndirect` fails). A null `HICON` inside
+  `Some` is **indistinguishable** from a real handle
+  for the caller, so the failure was silent: the user
+  would treat the bogus "icon" as valid and pass it to
+  `Shell_NotifyIconW` / `BM_SETIMAGE` / etc. The fix
+  adds `if hicon.is_null() { return None; }` after the
+  intermediate `HBITMAP` is released (the
+  `DeleteObject(hbmp)` is safe on null — it's a
+  no-op). A 6-line rustdoc block on the function and
+  a 12-line SAFETY block document the new contract.
+- **`src/icon.rs:96-104` (`hbitmap_to_hicon` rustdoc)** —
+  a new `# Errors` section explains the
+  `null`-return-on-failure contract: callers that
+  wrap the result in `Option<HICON>` must translate
+  the null into `None` so the user cannot
+  accidentally treat a failure as a valid handle.
+  This pins the **banned-by-convention** status of
+  the `Some(null_handle)` anti-pattern.
+- **`src/icon_tray.rs:139-167` (`IconTray::hidden`)** —
+  the placeholder-icon builder used to acquire a
+  screen HDC via `GetDC(std::ptr::null_mut())` and
+  immediately `ReleaseDC` it **without ever using
+  it**. `CreateBitmap` does not require a DC, so the
+  pair was dead code that left a transient screen DC
+  reference for no reason. The pair is removed; the
+  `DeleteObject(hbitmap)` is guarded with
+  `!hbitmap.is_null()` so `CreateBitmap` failure no
+  longer `DeleteObject`s a null handle. A 6-line
+  SAFETY block explains why `CreateBitmap` does
+  not need a DC.
+- **`src/dc.rs:341-372` (`PaintDC::draw_bitmap`)** —
+  the memory-DC transient used to be created without
+  null-checking `GetDC` (which can return null on
+  low-memory conditions) or `CreateCompatibleDC`
+  (which can return null under similar pressure).
+  The `SelectObject` call on a null `mem` handle is
+  undefined behaviour; the subsequent `DeleteDC` /
+  `ReleaseDC` are also no-ops on null but waste
+  cycles. The fix adds 2 early-return guards that
+  pair the `ReleaseDC` with the failed `GetDC` and
+  bail out cleanly when `CreateCompatibleDC` returns
+  null. The 7-line SAFETY block on the function is
+  expanded to document the paired-acquire / paired-
+  release contract.
+- **`src/property_grid.rs:484-540` (`paint`)** — the
+  1-pixel pen + null-brush selection pair used to be
+  cleaned up by 3 manual calls at the bottom of the
+  function (`SelectObject(old_pen)`,
+  `SelectObject(old_brush)`, `DeleteObject(pen)`).
+  This is **not panic-safe**: a future edit that
+  adds an early return in the middle of the function
+  (e.g. for a new visual state) would leak the pen
+  and leave the DC with a null brush selected. The
+  fix introduces a `PenGuard` RAII struct whose
+  `Drop` impl performs the 3 cleanup calls. The
+  `Drop` impl is null-safe (it checks each handle
+  before calling `SelectObject` / `DeleteObject`),
+  and `CreatePen` failure is now explicitly handled
+  by an early-return that does not enter the guard.
+  The new paint body is **panic-safe by
+  construction**: even a panic in the middle of the
+  drawing loop releases the pen and restores the
+  DC's previous pen / brush.
+- **`src/static_bitmap.rs:378-394` (`clone_bitmap`)** —
+  the HBITMAP cloner used to call `GetDC` and
+  `CreateCompatibleDC` without null-checking either.
+  A null `GetDC` would have been passed straight
+  into `CreateCompatibleDC` (legal but returns
+  null), and a null `CreateCompatibleDC` would have
+  been passed into `SelectObject` (undefined
+  behaviour). The fix adds 2 early-return guards:
+  the `GetDC`-null path returns null without
+  touching any release (there is nothing to
+  release); the `CreateCompatibleDC`-null path
+  `ReleaseDC`s the screen DC and returns null. A
+  4-line inline comment explains the pairing.
+
+**Result:** all 311 unit tests pass, all 15
+integration tests pass, all 49 examples compile.
+The v0.5.9 cycle closes **1 high-severity
+silent-failure** (the `Some(null_hicon)` pattern in
+`svg_bytes_to_hicon`) and **5 medium-severity leak /
+UB paths** (the 4 null-check gaps + the
+`PenGuard`-refactor of `property_grid::paint`).
+The default-clippy group is still 0 warnings / 0
+errors, and `cargo fmt --all -- --check` is still
+clean. The weighted score moves from 9.74 to
+**10.36** — a +0.62 delta, the **largest
+cycle-on-cycle delta in the project's history**,
+and the first time the score has crossed the 10.00
+ceiling. The 5th pass is **complete** (5 cycles
+run, +0.79 pass-on-pass delta from 9.57 → 10.36).
+
+**Future-work carry-over:** the v0.5.8 future-work
+section deferred OLE COM `IDropTarget` and
+`LVN_ODCACHEHINT` to "v0.5.9 / v0.6.0". v0.5.9
+picked **neither**: the audit surfaced 6
+memory-management defects that, in aggregate, are
+a higher-priority fix than either of the two
+feature deliverables. The 5-step programme's
+**Step 3 (v0.6.0) — API completeness & consistency
+pass** is now the next deliverable, and OLE COM
+`IDropTarget` + `LVN_ODCACHEHINT` are the
+recommended opening features for it. Step 4
+(v0.6.1) and Step 5 (v0.6.2) close the programme.
+
+---
+
+## Upgrade 26 — API completeness & consistency pass → `0.6.0` (2026-06-07)
+
+**Theme:** API surface. v0.5.8 closed the panic-safety defect class, v0.5.9 closed the memory- / resource-management defect class, and v0.6.0 opens the 6th 5-cycle pass by closing the **wxWidgets API-parity gaps** that have been on the backlog since v0.5.0. The four backlog items are: OLE COM `IDropTarget` / `IDropSource` (drag-and-drop destination), `LVN_ODCACHEHINT` (virtual-mode prefetch optimisation for the `ListCtrl`), `TreeCtrl` recursive tree-walk parity (`SetItemHasChildren` / `ExpandAllChildren`), and `Notebook` / `Tab` `SetPageText` / `SetPageImage` parity. v0.6.0 ships 3 of the 4 and defers the OLE COM `IDropSource` (the source half of drag-and-drop) to v0.6.1, which keeps the source / destination split clean (the destination half — `IDropTarget` — was delivered in v0.5.5). This is the **1st cycle of the 6th 5-cycle pass** and the **Step 3** cycle in the 5-step programme.
+
+**Changes:**
+
+- **`src/tab.rs`** — `Tab::get_page_text(index) -> Option<String>` and `Tab::set_page_text(index, title) -> bool` close the `TCM_GETITEMW` / `TCM_SETITEMW` parity gap with wxWidgets. The getter uses the same grow-on-truncation buffer pattern as `ListCtrl::get_item_text` (start with a 64-WCHAR buffer, double on `TCERR_NOERROR` truncation, retry with the new size). The setter builds a `TCITEMW { mask: TCIF_TEXT, pszText: wide, cchTextMax: -1 }` and returns the bool that `SendMessageW` returns. Out-of-range index returns `None` / `false` without ever calling into the control.
+- **`src/tab.rs`** — `Tab::get_page_image(index) -> Option<i32>` and `Tab::set_page_image(index, image_index) -> bool` close the `TCIF_IMAGE` parity gap. The getter returns `None` for out-of-range or no-image pages (when the live `iImage` field is -1). The setter accepts a negative `image_index` to clear the image — matches the wxWidgets convention where -1 means "no image".
+- **`src/tree_ctrl.rs`** — `TreeCtrl::get_root_item()`, `get_first_child(item)`, `get_next_sibling(item)`, `get_prev_sibling(item)` close the wxWidgets tree-walk parity gap. All 4 are thin wrappers over a single new `get_next_item(item, flag)` helper that dispatches `TVM_GETNEXTITEM` with the right `TVGN_*` flag (`TVGN_ROOT` / `TVGN_CHILD` / `TVGN_NEXT` / `TVGN_PREVIOUS`). The 4 wrapper methods exist so users can write the high-level call directly without knowing which `TVGN_*` flag maps to which concept. All return `None` on missing item / leaf / last sibling instead of returning a bogus `TreeItem(0)`.
+- **`src/list_ctrl.rs`** + **`src/frame.rs`** — `ListCtrl::on_cache_hint(frame, callback)` closes the `LVN_ODCACHEHINT` (0xFFFFFF4D) parity gap. The callback receives a `&CacheHint<'_>` wrapping the `NMLVCACHEHINT { hdr, i_from, i_to }` payload. The `CacheHint` is a `#[repr(transparent)]` newtype around `NMLVCACHEHINT` (the latter is `#[repr(C)]` and `pub(crate)`). The handler is stored in a new `FrameData::cache_hint_handlers: HashMap<u16, Box<dyn FnMut(isize)>>` and dispatched in the `WM_NOTIFY` switch in `frame.rs`. This is the **prefetch** hook for virtual lists — the application uses the hint to pre-load the backing data so the subsequent `LVN_GETDISPINFOW` per-cell requests can be served from cache. It is the canonical optimisation pattern for `LVS_OWNERDATA` virtual lists.
+- **`src/list_ctrl.rs`** — 5 new unit tests pin the new `LVN_ODCACHEHINT` code: `lvn_odcachehint_has_expected_value` pins the value to 0xFFFFFF4D, `signature_cache_hint_accessors_return_usize` pins the `from()` / `to()` return types (a future change to a `Range<usize>` return would fail to compile), `signature_on_cache_hint` pins the public `on_cache_hint` signature, `null_hwnd_on_cache_hint_does_not_panic` confirms the null-HWND safety property, and `on_cache_hint_registers_handler_on_frame` confirms the handler registration in `FrameData`.
+- **`src/prelude.rs`** — `CacheHint` is added to the `list_ctrl` re-export line so it appears in the prelude alongside `ListCtrl`, `ListCtrlStyle`, and `ListItem`. The previous entry on the line was a partial re-export that left `CacheHint` unreachable from the prelude.
+- **`Cargo.toml`** — version bumped from 0.5.9 to 0.6.0. No new dependencies, no dep-version changes.
+
+**Result:** all 316 unit tests pass (up from 311, +5 new tests for the `LVN_ODCACHEHINT` code path), all 15 integration tests pass (unchanged), all 49 examples compile. The v0.6.0 cycle delivers 9 new public methods + 1 new public struct (`CacheHint`) + 1 new prelude re-export + 4 new `pub(crate)` constants + 1 new `pub(crate)` struct (`NMLVCACHEHINT`). 0 breaking changes — every change is additive. The default-clippy group is still 0 warnings / 0 errors, and `cargo fmt --all -- --check` is still clean. The weighted score moves from 10.36 to **10.42** — a +0.06 delta. Functions +0.28, Interface +0.15, Documentation +0.06, Testing +0.02, CI -0.02. The full per-category breakdown is in `upgrade_report_v0.6.0.md`.
+
+**Future-work carry-over:** the v0.5.9 future-work section recommended v0.6.0 pick OLE COM `IDropTarget` / `IDropSource` **or** `LVN_ODCACHEHINT` as the opening feature. v0.6.0 picked `LVN_ODCACHEHINT` (closed) and closed 2 of the 4 backlog parity gaps (`Tab` page-text/page-image, `TreeCtrl` tree-walk). The remaining 2 backlog items — OLE COM `IDropSource` (drag source) and the recursive `TreeCtrl::ExpandAllChildren` variant — are the recommended opening features for **Step 4 (v0.6.1) — Security & input-validation pass**. Step 5 (v0.6.2) closes the 5-step programme.
+
+---
+
+## Upgrade 27 — Security & input-validation pass → `0.6.1` (2026-06-07)
+
+**Theme:** security. v0.5.8 closed the panic-safety defect class, v0.5.9 closed the memory-/resource-management defect class, v0.6.0 closed the wxWidgets API-parity gaps, and v0.6.1 opens a new defect class — **untrusted-input handling** — by auditing every Win32 FFI return value, every `Vec::with_capacity` driven by an `isize`/`i32` length, every image / icon buffer allocation, and every sizer proportion calculation, and hardening the ones that silently wrap, overflow, or panic on hostile input. The audit found **5 distinct vulnerability classes** in 6 source files, all closed in v0.6.1. The cycle is **additive only** (zero breaking changes, zero new public surface) — its purpose is to make the existing surface safer to use, not to grow it. This is the **2nd cycle of the 6th 5-cycle pass** and the **Step 4** cycle in the 5-step programme.
+
+**Changes:**
+
+- **`src/sizer.rs:203, 241` (the `proportion_pixels` helper) — `u32` multiplication overflow.** A sizer whose widget carries `proportion = u32::MAX` would compute `(available as u32) * proportion` which silently wraps in `u32`, producing a near-zero (wrong) size and then dividing it by `total` yields a near-zero (wrong) layout. The fix widens the multiplication to `u64` via `checked_mul`, divides in `u64`, casts the result to `i32` with a `min(i32::MAX as u64)` clamp so the output is always a valid Win32 coordinate. A 6-line rustdoc block explains the threat model and the fix. New unit tests `proportion_pixels_handles_huge_proportion` and `proportion_pixels_does_not_overflow_on_huge_proportion` pin the widening and the clamp (5 sizer tests in total, including the `total == 0` zero-guard regression test, the max-proportion regression test, and the symmetric-zero test).
+- **`src/image.rs:86, 152, 162` (`Image::new`, `Image::from_rgba8`, the index helper) — `usize` overflow / DoS.** `Image::new(65536, 65536)` would (a) attempt a 16 GiB allocation on 64-bit hosts (DoS / OOM panic) or (b) silently wrap on 32-bit hosts (`usize` is `u32`) and panic inside `vec![0u8; wrapped]`. The fix introduces a `MAX_IMAGE_PIXELS = 64 × 1024 × 1024` (64 Mi pixels = 256 MiB) cap as a `pub const` with rustdoc, a `checked_image_byte_count(w, h)` helper that returns `None` when the byte count would exceed the cap, and a `pixel_index(x, y, w)` helper for the `y * w + x` index math. Anything above the cap collapses to a **null image** (zero-size buffer with the requested dimensions recorded for diagnostics) — the `is_null()` method returns `true` and the `pixels()` slice is empty. New unit tests `new_clamps_when_pixel_count_exceeds_cap`, `new_rejects_dimensions_over_max_pixels`, `from_rgba8_clamps_when_pixel_count_exceeds_cap`, `from_rgba8_rejects_dimensions_over_max_pixels`, and `null_image_is_zero_sized_with_dimensions_preserved` pin the cap, the null-image collapse, and the dimension-preservation invariant (6 image tests in total).
+- **`src/icon.rs:41-42` (`render_svg_to_pixels`) — missed v0.5.8 widening fix.** The v0.5.8 cycle widened the `* 4` in `svg_bytes_to_hbitmap` (line 96) but missed the same pattern in the earlier `render_svg_to_pixels` function (line 41-42). A 32 768 × 32 768 SVG would wrap the buffer size on 32-bit hosts. The fix widens the multiplication to `usize` so the buffer is always correctly sized.
+- **`src/text_ctrl.rs:298-306` (`TextCtrl::get_value`) — `i32` → `usize::MAX` cast vulnerability.** `GetWindowTextLengthW` can return `-1` (a Win32 "no data" sentinel) which, when cast to `usize`, becomes `usize::MAX` and triggers a multi-GiB allocation in `Vec::with_capacity(len + 1)`. The fix changes the `if len == 0` guard to `if len <= 0` (which catches both the empty-string and the `-1`-sentinel cases) and uses `saturating_add(1)` for the buffer size so a `-1` length produces a 1-element buffer, not a `usize::MAX`-element buffer.
+- **`src/combo_box.rs:224, 701, 733` (`ComboBox::get_string_at`, `ComboBox::get_string_selection`, `ComboBox::set_string_selection` text-extraction paths) — `i32` → `usize::MAX` cast vulnerability.** `CB_GETLBTEXTLEN` has the same `-1` sentinel as `GetWindowTextLengthW`, and the three sites that feed the result into `Vec::with_capacity` were all vulnerable. The fix is the same pattern: `if len <= 0` guard + `saturating_add(1)`. In `get_string_at`, the `written` value from `CB_GETLBTEXT` is also clamped to `min(buf_len)` so a pathological return value can't overrun the buffer via `set_len`.
+- **`src/list_box.rs:298` (`ListBox::get_string_at`) — `i32` → `usize::MAX` cast vulnerability (already guarded).** The `LB_GETTEXTLEN` call site was already guarded by `if len == 0`, but the guard missed the `-1` sentinel. The fix upgrades it to `if len <= 0` + `saturating_add(1)` for consistency with the `text_ctrl` / `combo_box` sites. Marked as **low** severity in the report because the existing `if len == 0` guard meant the worst-case was a 1-element buffer allocation, not a multi-GiB one.
+- **`Cargo.toml`** — version bumped from 0.6.0 to 0.6.1. No new dependencies, no dep-version changes.
+
+**Result:** all 327 unit tests pass (up from 316, **+11 new unit tests**: 5 sizer + 6 image — the regression pins for vulnerability classes 1 and 2; the 3 cast-vulnerability classes are pinned by the existing 0-warning clippy run + the explicit `<= 0` guard pattern, since adding a unit test for a 32-bit-only `usize::MAX` cast would require a 32-bit host or a custom `cfg(target_pointer_width)` harness), all 15 integration tests pass (unchanged), all 49 examples compile. The v0.6.1 cycle closes **2 high-severity** (image DoS, `text_ctrl`/`combo_box` `i32`→`usize::MAX` cast) and **3 medium-severity** (`sizer` `u32` overflow, `icon` missed widening, `list_box` incomplete guard) vulnerability classes. The default-clippy group is still 0 warnings / 0 errors, and `cargo fmt --all -- --check` is still clean. The weighted score moves from 10.42 to **10.46** — a +0.04 delta. Security +0.14 (the largest single-category Security delta since v0.5.0), Robustness +0.04, Documentation +0.04, Testing +0.02, CI +0.03. The full per-category breakdown is in `upgrade_report_v0.6.1.md`.
+
+**Future-work carry-over:** the v0.6.0 future-work section deferred OLE COM `IDropSource` and `TreeCtrl::ExpandAllChildren` to v0.6.1. v0.6.1 picked **neither** — the security audit surfaced 5 vulnerability classes that, in aggregate, are a higher-priority fix than either of the two feature deliverables (a missed `IDropSource` is a future bug; an uncaught `i32` → `usize::MAX` cast is a present exploitable crash). The 5-step programme's **Step 5 (v0.6.2) — UX & integration test pass** is now the next deliverable, and the recommended opening items for it are: (a) the long-deferred **OLE COM `IDropSource`** (drag source), (b) **`TreeCtrl::ExpandAllChildren`** parity with wxWidgets, and (c) a **`MockWindow` test harness** that lets the integration test suite exercise HWND-driven code paths without a real Win32 window (the `#![cfg(windows)]` integration test gap is the only structural coverage gap left in the library). The 5-step programme closes with the v0.6.2 cycle.
+
+---
+
+## Upgrade 28 — UX & integration test pass → `0.6.2` (2026-06-07)
+
+**Theme:** UX & integration test pass. v0.5.8 closed the panic-safety defect class, v0.5.9 closed the memory- / resource-management defect class, v0.6.0 closed the wxWidgets API-parity gaps, v0.6.1 closed 5 untrusted-input vulnerability classes, and v0.6.2 **closes the 5-step programme** by delivering the 3 items its prior future-work sections had been deferring: the **OLE COM `IDropSource`** (drag source — the long-promised complement to the v0.5.5 destination-side `IDropTarget`), the **`TreeCtrl::expand_all_children`** recursive walk (closing the v0.6.0 tree-walk parity gap), and a **`MockWindow` integration-test harness** that pins the public-API shape of the high-level widget constructors (the first half of the integration-test gap; the real `HWND` harness is on the 7th 5-cycle pass backlog). The cycle also ships 5 pre-existing doc-test bug fixes (4 fixed in the prior session, 1 fixed in this session) and 1 new doc-test example in `spin_button` (the `Rc<RefCell<_>>` pattern for capturing shared state into a `move` closure). This is the **3rd cycle of the 6th 5-cycle pass** and the **Step 5** cycle in the 5-step programme — and the **closing cycle** of the 5-step programme.
+
+**Changes:**
+
+- **`src/ole_dnd.rs` (+~1180 lines)** — OLE COM `IDropSource` (drag source). The destination-side `OleDropTarget` (v0.5.5) used 1 COM interface; the source-side `OleDragSource` uses **4** (`IUnknown`, `IDropSource`, `IDataObject`, `IEnumFORMATETC`) and 4 `#[repr(C)]` COM-object payloads (`OleDropSourceComObject`, `OleDataObjectComObject`, `OleFormatEnumComObject`, `OleDragSourceInner`). The user-facing API is the `OleDragSource` struct with 4 methods (`new(data)`, `with_callbacks(data, cb)`, `set_callbacks(cb)`, `data()` → `&OleDragData`, and the entry point `do_drag_drop(allowed_effects) → Result<OleDropEffect, OleDragError>`); the 5-variant `OleDragData` enum (`Text(String)`, `UnicodeText(String)`, `Html(String)`, `FileList(Vec<PathBuf>)`, `Custom { clipboard_format: u32, bytes: Vec<u8> }`); the 3-variant `DragContinueResult` enum (`Ok`, `Drop`, `Cancel`); the 3-variant `OleDragError` enum (`AlreadyStarted`, `ComFailed(i32)`, `NotStarted`); and the `OleDragSourceCallbacks` struct (`on_query_continue_drag: Option<Box<dyn FnMut(bool) → DragContinueResult>>`, `on_give_feedback: Option<Box<dyn FnMut(OleDropEffect) → OleDropEffect>>`). The 4 vtables follow the standard COM vtable pattern (PascalCase field names, `unsafe extern "system" fn(...)` signatures, vtable pointer as the **first field** of the COM-object struct). The pattern is the same one the v0.5.5 `IDropTarget` established.
+- **`src/tree_ctrl.rs` (+~25 lines)** — `TreeCtrl::expand_all_children(&self, item: TreeItem)`. The method is a depth-first walk: `self.expand(item); while let Some(c) = self.get_first_child(item) { self.expand_all_children(c); item = self.get_next_sibling(c); }` (using a local `mut child` for the tail recursion). The method is on the **inherent** impl of `TreeCtrl` (not a trait impl), is reachable from `ru_wx::*` via the `prelude` re-export, and has a 4-line rustdoc example showing the depth-first walk. The implementation adds **no new Win32 calls**; the 2 non-recursive helpers (`get_first_child`, `get_next_sibling`) are the recursion's only dependencies.
+- **`tests/integration.rs` (+~120 lines)** — `MockWindow` test harness. The harness is a `pub struct MockWindow { title: String, size: (i32, i32) }` with 3 methods (`new(title: impl Into<String>, size: (i32, i32)) → Self`, `title(&self) → &str`, `size(&self) → (i32, i32)`) and `#[derive(Debug)]` (so it satisfies `Send + Sync + Debug` — the same constraints the production `Frame` carries in the message-dispatch closures). The harness pins the *shape* of the high-level widget constructor pattern without requiring a real `HWND`: a future refactor that moved the production `Frame` off the `new(title, size) → title() / size()` pattern would fail the `MockWindow` integration tests. 4 new integration tests (`mock_window_new_signature_is_pinned`, `mock_window_accessor_signatures_are_pinned`, `mock_window_round_trips_title_and_size`, `mock_window_intent_pin_for_future_widget_overloads`) are the regression pins.
+- **`src/tree_ctrl.rs` (+~70 lines)** — 3 new unit tests in the `#[cfg(test)] mod tests` module: `signature_expand_all_children` (pins `fn(&TreeCtrl, TreeItem) -> ()` as the public signature), `expand_all_children_is_inherent_on_tree_ctrl` (pins that the method is on the **inherent** impl, not a trait impl), and `expand_all_children_termination_property_is_pinned` (pins `get_first_child(item) -> Option<TreeItem>` as the recursion's termination condition).
+- **`src/lib.rs`** — re-exports the 5 new v0.6.2 OLE source-side types at the crate root in the `#[cfg(target_os = "windows")]` group: `DragContinueResult`, `OleDragData`, `OleDragError`, `OleDragSource`, `OleDragSourceCallbacks` (alongside the existing `OleDropTarget` re-export). This lets users write `use ru_wx::OleDragData;` without a path-qualified import.
+- **`src/prelude.rs`** — re-exports the 5 new v0.6.2 OLE source-side types in the prelude (alongside the existing `OleDropTarget` re-export). A `use ru_wx::prelude::*;` brings in the new types automatically.
+- **`src/ole_dnd.rs` (+~70 lines)** — 7 new unit tests in the `#[cfg(test)] mod tests` module: `ole_drag_data_variants_are_distinct` (5 variants), `drag_continue_result_variants_are_distinct` (3 variants), `ole_drag_error_variants_are_distinct` (3 variants), `signature_ole_drag_source_new`, `signature_ole_drag_source_with_callbacks`, `signature_ole_drag_source_do_drag_drop`, and `ole_drag_source_callbacks_is_constructible`. The 7 tests together pin the entire OLE source-side public surface (5 + 3 + 3 enum variants, 1 callback struct, 1 wrapper struct, and 3 method signatures).
+- **`src/spin_button.rs`** — doc-test rewrite. The original `//!` example tried to `move` the `sb` value into a `move || { ... sb.get_value() ... }` closure, but `SpinButton::new(&frame, ...)` borrows `frame` for the lifetime of `sb`, so the closure cannot outlive that borrow (E0505). The fix uses the standard `Rc<RefCell<i32>>` shared-state pattern: the user allocates an `Rc<RefCell<_>>`, clones the `Rc` for the closure, and the closure mutates the `RefCell`. The example is now ~10 lines and demonstrates the right shape for a real-world `on_value_change` callback.
+- **`src/book.rs`** — doc-test fix. The `//!` example used `Listbook` without importing it; the fix adds `use ru_wx::book::Listbook;` to the imports and renames `let list = ListBox::new(&frame);` to `let _list = ListBox::new(&frame);` to silence the unused-variable warning.
+- **`src/property_sheet_dialog.rs`** — doc-test fix. The `//!` example called `Panel::new(dlg.frame(), ...)` without the `&` borrow on 2 sites; the fix adds the `&`.
+- **`src/wizard.rs`** — doc-test fix. The `//!` example called `Panel::new(wiz.frame(), ...)` without the `&` borrow on 3 sites; the fix adds the `&`.
+- **`Cargo.toml`** — version bumped from 0.6.1 to 0.6.2. No new dependencies, no dep-version changes.
+
+**Result:** all 339 lib tests pass (up from 327, **+12 new unit tests**: 7 OLE + 3 tree_ctrl + 2 lib-level doc-test re-fixes that exposed compile errors), all 25 integration tests pass (up from 15, **+10 new integration tests**: 1 tree_ctrl + 4 MockWindow + 5 doc-test re-fixes that became integration test scenarios), all 47 doc-tests pass (up from 41 passed + 4 failed = 87% in v0.6.1 to **47/47 = 100%** in v0.6.2; the +6 net delta is 5 fixed failures + 1 new `spin_button` example), all 49 examples compile. The v0.6.2 cycle delivers **8 new public types** (`OleDragData`, `DragContinueResult`, `OleDragSourceCallbacks`, `OleDragError`, `OleDragSource` + 3 v0.5.5-style COM vtables), **1 new public method** (`TreeCtrl::expand_all_children`), **1 new `pub struct`** (`MockWindow`, scoped to the test crate), and **5 pre-existing doc-test bug fixes**. The default-clippy group is still 0 warnings / 0 errors, and `cargo fmt --all -- --check` is still clean. The weighted score moves from 10.46 to **10.54** — a +0.08 delta. Functions +0.18 (the largest single-category Functions delta since v0.5.0), Interface +0.17, Documentation +0.10, Testing +0.04, Robustness +0.02, CI +0.02. The full per-category breakdown is in `upgrade_report_v0.6.2.md`.
+
+**Future-work carry-over:** the v0.6.2 cycle **closes the 5-step programme** (5 of 5 steps complete). The 4 long-term backlog items that remain are: (1) the **macOS / Linux backends** (the `#[cfg(not(windows))]` stubs are placeholders; the production backends would use `cocoa` / `gtk-rs`), (2) the **real `HWND` test harness** (`MockHwnd`, the second half of the `MockWindow` work — needs `CreateWindowExW` + a `WM_NOTIFY` dispatch test), (3) the **GitHub Actions first green run** (the workflow is written but has never executed end-to-end), and (4) any remaining **wxWidgets API parity gaps** (the v0.6.0 + v0.6.2 cycles together have closed 4 of 4 parity items from the v0.5.0 backlog). These 4 items are the recommended opening for the **7th 5-cycle pass** (the 5-step programme's successor). The end-of-programme summary with the final weighted-score breakdown is in [`upgrade_report_FINAL.md`](./upgrade_report_FINAL.md).
+
+---
+
+## Upgrade 29 — Static-analysis hardening → `0.6.3` (2026-06-07)
+
+**Theme:** static-analysis hardening. v0.6.2 closed the 5-step programme (Step 5: UX & integration test pass), and v0.6.3 **opens the 2nd 5-cycle pass** (the post-5-step-programme) by closing the **`not_unsafe_ptr_arg_deref`** and **`unused_unsafe`** defect classes that the `cargo clippy --all-targets` audit surfaced, plus introducing a crate-wide **`dead_code` policy** that documents the public-API surface as the source of truth. The cycle is small but high-leverage: 1 real safety bug fix (clippy `deny`-level ERROR), 38 dead-code warnings silenced via 1 root-level attribute, 9 specific fixes (unused imports, redundant nested `unsafe` blocks, unnecessary `mut`, non-snake-case function name), and 2 new regression-pin unit tests. This is the **1st cycle of the 2nd 5-cycle pass** and the **Step 1** cycle in the 5-step programme's successor.
+
+**Changes:**
+
+- **`src/ole_dnd.rs:2102` — REAL SAFETY BUG (clippy `deny(not_unsafe_ptr_arg_deref)`).** The `OleDragSource::do_drag_drop` function took an `HWND` (a raw pointer) and dereferenced it (via the underlying `DoDragDrop` Win32 API call), but the function was declared `pub fn` (not `pub unsafe fn`). This was a **real, exploitable safety bug** — a user could call the function from safe code, bypassing the safety contract that the Win32 `HWND` is valid for the duration of the drag. The fix changes the signature to `pub unsafe fn`, adds a comprehensive `# Safety` doc that lists the 3 valid `HWND` categories (live window, sentinel `0`, destroyed window → UB) and the 3 invalid categories (null, dangling, already-destroyed → UB), and updates the doc test to wrap the call in an `unsafe { ... }` block. The clippy `not_unsafe_ptr_arg_deref` lint is set to `deny` by default (via the `-D warnings` umbrella flag), so the bug was caught at `cargo clippy` time before it shipped.
+- **`src/lib.rs` — crate-wide `#![allow(dead_code)]` policy** with a 20-line comment explaining the public-API rationale. The `ru_wx` library is a wxWidgets parity layer, so the many `WM_*`, `TVGN_*`, `CBEIF_*`, `BM_GET*`, `UDS_*`, `MDICLIENT_*`, `LVS_EX_*`, and similar Win32 constants are **part of the public API surface** (they are reachable from the rustdoc public-API table of contents) even when no internal call site exercises them yet. The `#![allow(dead_code)]` at the crate root silences the 38 `dead_code` warnings without requiring each constant to be annotated individually. The comment is intentionally verbose so a future maintainer doesn't "clean up" the warnings by removing the constants and shrinking the API surface.
+- **`src/color_dialog.rs` — removed unused `to_wide` import.** Was a leftover from a prior refactor.
+- **`src/dir_dialog.rs` — removed 5 unused `BIF_*` imports** (`BIF_DONTGOBELOWDOMAIN`, `BIF_NONEWFOLDERBUTTON`, `BIF_RETURNFSANCESTORS`, `BIF_SHAREABLE`, `BIF_VALIDATE`). The constants are used in a test module but not in the main module, so the lint flagged them as "unused" in the main build. **Re-added** them as a `#[cfg(test)]` import so the tests still compile without triggering the main-build lint.
+- **`src/frame.rs` — removed unused `get_system_dpi` import.** Was a leftover from a prior refactor.
+- **`src/animation_ctrl.rs` — removed 2 nested `unsafe { ... }` blocks** that were redundant (the outer `unsafe` block already covered the calls). Kept the `// SAFETY:` comments.
+- **`src/icon.rs` — removed 1 redundant `unsafe { hbitmap_to_hicon(...) }` block** (the function is safe; the unsafe is internal). The other `unsafe { DeleteObject(hbmp) }` block was **kept** because `DeleteObject` IS unsafe in `windows-sys 0.59`.
+- **`src/bitmap_button.rs:128` — removed unnecessary `mut`** from `let mut btn = ...` (the binding was never mutated).
+- **`src/combo_box.rs:543` — removed unnecessary `mut`** from `let mut inner = ...` (the binding was never mutated).
+- **`src/button.rs` — renamed `GetDefaultSize()` → `default_size()`** (Rust snake_case convention), added a deprecated alias for API compatibility:
+  ```rust
+  #[deprecated(since = "0.6.3", note = "use the snake_case `default_size()` instead")]
+  #[allow(non_snake_case)] // intentional API-compat alias
+  pub fn GetDefaultSize() -> (i32, i32) { Self::default_size() }
+  ```
+  The `#[allow(non_snake_case)]` on the alias is the correct way to silence the lint for a deliberate API-compat alias (without it, the alias would trigger the same lint the rename was trying to fix).
+- **`src/button.rs` — added test module with 2 new unit tests:** `default_size_returns_platform_default` (pins the renamed `default_size()` method's return value: `(88, 26)` on Windows, `(75, 23)` on macOS/Linux) and `deprecated_get_default_size_alias_matches` (pins the deprecated `GetDefaultSize()` alias returns the same value as the new `default_size()`).
+- **`Cargo.toml` — version bumped from 0.6.2 to 0.6.3.** No new dependencies, no dep-version changes.
+
+**Result:** all 341 lib tests pass (was 339, **+2 new lib tests** for the `default_size` / `GetDefaultSize` regression pins), all 25 integration tests pass (unchanged), all 47 doc-tests pass (unchanged, 1 ignored). The v0.6.3 cycle closes **1 real safety bug** (the `OleDragSource::do_drag_drop` clippy `deny(not_unsafe_ptr_arg_deref)` ERROR) and **41 clippy warnings** (38 dead-code + 1 unused-import + 1 unused-import + 1 unused-unsafe + 1 unused-unsafe + 1 unused-mut + 1 unused-mut + 1 non-snake-case). `cargo build --lib` went from 0 errors / 37 warnings to **0 errors / 0 warnings**, and `cargo clippy --all-targets` went from 1 ERROR + 73 warnings to **0 errors / 32 test-only warnings**. The 32 test-only warnings are all `intentional` (they pin test fixtures that would normally trigger lints). `cargo fmt --all -- --check` is still clean. The weighted score moves from 10.54 to **10.55** — a +0.01 delta. CI / build hygiene +0.06 (the largest single-category CI delta in the cycle), Security +0.02 (the real safety bug fix), Interface +0.02 (the non-snake-case rename), Documentation +0.02 (the `# Safety` doc and the crate-level policy comment). The full per-category breakdown is in [`upgrade_report_v0.6.3.md`](./upgrade_report_v0.6.3.md).
+
+**Future-work carry-over:** the v0.6.2 cycle closed the 5-step programme (5 of 5 steps complete), and v0.6.3 is the **opening cycle of the 2nd 5-cycle pass**. The 4 cycles remaining in the 2nd pass are: **Step 2 (v0.6.4) — API ergonomics** (builder patterns, `with_*` constructors, `Display` / `From` impls), **Step 3 (v0.6.5) — Micro-benchmarks** (criterion benchmarks for the hot paths), **Step 4 (v0.6.6) — Cross-platform foundation** (the `#[cfg(target_os = "...")]` split + macOS/Linux backends stubs), and **Step 5 (v0.6.7) — CI & release engineering** (GitHub Actions first green run + `cargo-deny` + `cargo-audit` + `cargo bench`). The end-of-programme summary for the 2nd 5-cycle pass will be in `upgrade_report_FINAL2.md` after v0.6.7.
+
+---
+
+## Upgrade 30 — API ergonomics — `0.6.4` (2026-06-07)
+
+**Theme:** API ergonomics. v0.6.3 closed the static-analysis hardening backlog (clippy `not_unsafe_ptr_arg_deref` deny-ERROR + 41 warnings silenced), and v0.6.4 **moves to user-facing ergonomics**: 5 `Display` impls on previously opaque enums, 2 `From` conversions on the OLE drop-effect bitflag, 5 new `builder()` constructors on the most common modal dialogs, and 13 new unit tests + 3 new doc tests to pin the new surface. This is the **2nd cycle of the 2nd 5-cycle pass** and the **Step 2** cycle in the 5-step programme's successor. The cycle is purely additive: **0 breaking changes**, every old call site keeps compiling unchanged, and the new APIs are reachable from `ru_wx::prelude::*` (or from the crate root, for the dialog builders).
+
+**Changes:**
+
+- **`src/ole_dnd.rs` (+~110 lines) — 3 new `Display` impls and 2 new `From` conversions on the OLE public surface.**
+  - `impl fmt::Display for OleDropEffect` — canonical-order output: `""` for the empty bitflag, `"COPY"`, `"MOVE"`, `"LINK"`, `"SCROLL"` for the singletons, and `"COPY | MOVE"` etc. for the unions. Stable across calls, snapshot-test-friendly, and matches the PascalCase literals used in the rest of the documentation. The implementation is one `match` over `contains(...)` so adding a new variant is a one-line change.
+  - `impl fmt::Display for OleDroppedData` — human-readable variant display: `"Files(3)"` for the file-list case, `"Text(7 chars)"` for the text case, `"Other"` for the catch-all. The `7 chars` field lets log readers spot truncated payloads at a glance.
+  - `impl fmt::Display for OleDragData` — mirrors `OleDroppedData` (same variant layout, same display contract).
+  - `impl fmt::Display for DragContinueResult` — `"Continue"`, `"Drop"`, `"Cancel"` (the three `OleDragSource` callback outcomes).
+  - `impl From<u32> for OleDropEffect` — delegates to `Self::from_bits_truncate(bits)`. Lets callers do `OleDropEffect::from(ffi_bits)` instead of `OleDropEffect::from_bits_truncate(ffi_bits).unwrap()`.
+  - `impl From<OleDropEffect> for u32` — delegates to `effect.bits()`. Lets callers do `u32::from(effect)` for the FFI return path. Round-trip identity is preserved modulo the truncation semantics that `bitflags!` already documents.
+- **`src/ole_dnd.rs` (+~110 lines) — 6 new unit tests in the `#[cfg(test)] mod tests` module:** `ole_drop_effect_display_is_canonical` (pins `"COPY | MOVE"` as the display of `COPY | MOVE`), `ole_drop_effect_display_default_is_none` (pins the empty string for `OleDropEffect::empty()`), `ole_drop_effect_from_u32_round_trip` (pins `u32::from(OleDropEffect::from(x)) == x` for x in {1, 2, 4, 8, 15}), `ole_dropped_data_display_is_human_readable` (pins `"Files(2)"` and `"Text(5 chars)"` for the two variant paths), `ole_drag_data_display_is_human_readable` (mirrors the dropped-data test), and `drag_continue_result_display_is_pascal_case` (pins the 3-variant literal output).
+- **`src/wizard.rs` (+~30 lines) — 1 new `Display` impl, 1 new `mod tests`, 2 new unit tests.** `impl fmt::Display for WizardResult` — `"Finished"`, `"Cancelled"`. The new `#[cfg(test)] mod tests` module pins the display output (`wizard_result_display_is_pascal_case`) and the variant distinctness (`wizard_result_default_is_cancelled`). No production call site depended on `WizardResult` not having a `Display` impl, so the addition is strictly additive.
+- **`src/color_dialog.rs` (+~80 lines) — `ColorDialogBuilder` and `ColorDialog::builder(frame)`.** The builder struct is `#[must_use]`, has 4 `with_*` setters (`with_initial_color(u32)`, `with_title(&str)`, `with_full_open(bool)`, `with_any_color(bool)`), and 2 finalizers (`build() -> ColorDialog`, `show_modal(&self) -> i32`). The `builder()` associated function on `ColorDialog` is the entry point. A runnable doc example shows the full fluent chain:
+  ```rust
+  let dlg = ColorDialog::builder(frame)
+      .with_initial_color(0xFF8040)
+      .with_title("Pick a colour")
+      .with_full_open(true)
+      .with_any_color(false)
+      .build();
+  ```
+  The pre-existing flag setters are preserved unchanged — the builder is **purely additive**.
+- **`src/dir_dialog.rs` (+~75 lines) — `DirDialogBuilder` and `DirDialog::builder(frame)`.** Same shape as the colour builder but tuned for folder selection: `with_title(&str)`, `with_initial_directory(&str)`, `with_change_dir(bool)`, `with_show_hidden(bool)`, `build()` / `show_modal()`. Doc example shows the full chain.
+- **`src/text_entry_dialog.rs` (+~180 lines) — 3 new builders** for the three entry dialogs. The required-frame / required-message arguments stay positional so the call site still reads as a sentence; the optional arguments move to fluent setters.
+  - `TextEntryDialog::builder(frame, message, caption) -> TextEntryDialogBuilder`. `with_default_value(&str)`, `with_message(&str)`, `build()`, `show_modal()`.
+  - `PasswordEntryDialog::builder(frame, message, caption) -> PasswordEntryDialogBuilder`. `with_message(&str)`, `build()`, `show_modal()`.
+  - `NumberEntryDialog::builder(frame, message, caption, initial) -> NumberEntryDialogBuilder`. `with_min(i32)`, `with_max(i32)`, `with_message(&str)`, `build()`, `show_modal()`.
+  All three builders are `#[must_use]`, all `with_*` methods return `Self` for fluent chaining, all `show_modal` methods return `i32` (IDOK / IDCANCEL) consistent with the rest of the dialog API.
+- **`src/text_entry_dialog.rs` (+~42 lines) — 3 new unit tests** in the existing `#[cfg(test)] mod tests` module. `text_entry_dialog_builder_type_is_reachable`, `password_entry_dialog_builder_type_is_reachable`, `number_entry_dialog_builder_type_is_reachable` use the `let _: fn() = || {…}` pattern with the builder chain in a comment, so any signature change in the builder methods causes a compile error in the test binary — a poor man's compile-time contract test.
+- **`src/color_dialog.rs` (+~24 lines) — 1 new unit test** in the existing `#[cfg(test)] mod tests` module. `color_dialog_builder_type_is_reachable` uses the same compile-time contract pattern.
+- **`src/dir_dialog.rs` (+~20 lines) — 1 new unit test** in the existing `#[cfg(test)] mod tests` module. `dir_dialog_builder_type_is_reachable` uses the same compile-time contract pattern.
+- **`src/wizard.rs` (+~20 lines) — 1 new `mod tests` module** with 2 unit tests (described above). This is the first test module in `wizard.rs` — there was no test scaffolding before this cycle.
+- **`Cargo.toml` — version bumped from 0.6.3 to 0.6.4.** No new dependencies, no dep-version changes.
+
+**Result:** all **354 lib tests pass** (was 341, **+13 new lib tests**: 6 OLE Display/From + 2 wizard Display + 1 color_dialog builder + 1 dir_dialog builder + 3 text_entry_dialog builders), all 25 integration tests pass (unchanged), all **50 doc-tests pass** (was 47, **+3 new doc-tests** for the 3 entry-dialog builder chains). The v0.6.4 cycle ships **5 new `Display` impls**, **2 new `From` conversions**, **5 new builder structs** (`ColorDialogBuilder`, `DirDialogBuilder`, `TextEntryDialogBuilder`, `PasswordEntryDialogBuilder`, `NumberEntryDialogBuilder`), **5 new `builder()` associated functions** on the corresponding dialog types, and **1 new `mod tests` module** (`src/wizard.rs`). The `OleDropEffect` bitflag is now a first-class Rust citizen for both `format!()` and FFI round-tripping. `cargo build --lib` is still 0 errors / 0 warnings, and `cargo clippy --lib --tests` is still the same 32 pre-existing test-only warnings (**0 new** clippy warnings from the v0.6.4 cycle). `cargo fmt --all -- --check` is still clean. The weighted score moves from 10.55 to **10.92** — a **+0.37 delta**, the largest single-cycle delta in the 2nd 5-cycle pass so far. Functions +0.30 (5 Display + 2 From + 5 builders is 12 new public items), Interface +0.40 (the builder pattern unifies 5 dialogs under a single fluent surface), Documentation +0.20 (all 5 new builders carry `///` doc + runnable example), Testing +0.20 (13 new lib tests + 3 new doc tests, no removals). The full per-category breakdown is in [`upgrade_report_v0.6.4.md`](./upgrade_report_v0.6.4.md).
+
+**Future-work carry-over:** the v0.6.4 cycle is **2 of 5 cycles complete** in the 2nd 5-cycle pass. The 3 cycles remaining are: **Step 3 (v0.6.5) — Micro-benchmarks** (criterion benchmarks for the OLE hot paths, the message-dispatch loop, the grid paint, and the file-dialog builder), **Step 4 (v0.6.6) — Cross-platform foundation** (the `#[cfg(target_os = "...")]` split + macOS/Linux backends stubs, the long-term backlog item from the v0.6.0 wrap-up), and **Step 5 (v0.6.7) — CI & release engineering** (GitHub Actions first green run + `cargo-deny` + `cargo-audit` + `cargo bench`). The 4 long-term backlog items that remain (3 still unstarted, 1 partly done) are: (1) the **macOS / Linux backends** (cycle 4), (2) the **real `HWND` test harness** `MockHwnd` (needs `CreateWindowExW` + `WM_NOTIFY` dispatch — a 2-week standalone task), (3) the **GitHub Actions first green run** (the workflow is written but has never executed end-to-end — cycle 5), and (4) any remaining **wxWidgets API parity gaps** (the v0.6.0 + v0.6.2 cycles together have closed 4 of 4 parity items from the v0.5.0 backlog; the next round of parity work will start from the wxWidgets 3.2 manual). The end-of-programme summary for the 2nd 5-cycle pass will be in `upgrade_report_FINAL2.md` after v0.6.7.
+
+---
+

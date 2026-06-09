@@ -295,15 +295,28 @@ impl TextCtrl {
         {
             let hwnd = self.inner.borrow().hwnd;
             // SAFETY: FFI call to GetWindowTextLengthW; `hwnd` is a real window handle and the wide buffer is sized appropriately.
+            //
+            // `GetWindowTextLengthW` returns -1 if the window
+            // has no title bar / text (e.g. disabled / owner-
+            // drawn), so we guard with `<= 0` rather than `== 0`
+            // — previously an `-1` return would have been cast
+            // to `usize` (producing `usize::MAX`) and triggered
+            // a multi-GiB allocation that aborted the process.
             let len = unsafe { GetWindowTextLengthW(hwnd) };
-            if len == 0 {
+            if len <= 0 {
                 return String::new();
             }
-            let mut buf = Vec::with_capacity((len + 1) as usize);
+            // `len` is i32, so `len as usize` is at most
+            // `i32::MAX as usize` (~2 Gi UTF-16 units) which
+            // fits in `usize` even on 32-bit hosts. We
+            // saturating-add 1 to keep the NUL slot in scope
+            // even for the largest legitimate `len`.
+            let buf_len = (len as usize).saturating_add(1);
+            let mut buf = Vec::with_capacity(buf_len);
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
                 GetWindowTextW(hwnd, buf.as_mut_ptr(), len + 1);
-                buf.set_len((len + 1) as usize);
+                buf.set_len(buf_len);
             }
             // Convert from UTF-16 to String, stripping the trailing null
             let raw = String::from_utf16_lossy(&buf[..len as usize]);

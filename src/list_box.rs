@@ -295,7 +295,14 @@ impl ListBox {
             if len == LB_ERR as isize || len < 0 {
                 return None;
             }
-            let mut buf = vec![0u16; (len as usize) + 1];
+            // `+ 1` is saturating to keep the NUL slot in
+            // scope for the largest legitimate length (a
+            // listing with `isize::MAX` characters would
+            // otherwise wrap when adding the terminator
+            // slot). Real list boxes never approach that
+            // size — this is purely a defence-in-depth
+            // measure against hostile control returns.
+            let mut buf = vec![0u16; (len as usize).saturating_add(1)];
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             let result =
                 unsafe { SendMessageW(hwnd, LB_GETTEXT, index, buf.as_mut_ptr() as isize) };

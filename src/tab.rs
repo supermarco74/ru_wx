@@ -74,6 +74,9 @@ const TCIF_IMAGE: u32 = 0x0002;
 /// `TCM_GETITEM` — retrieve information about an existing tab.
 #[cfg(target_os = "windows")]
 const TCM_GETITEM: u32 = TCM_FIRST + 5;
+/// `TCM_SETITEM` — update one or more fields of an existing tab.
+#[cfg(target_os = "windows")]
+const TCM_SETITEM: u32 = TCM_FIRST + 6;
 
 /// `TCITEMW` — the Win32 structure passed to `TCM_INSERTITEM`.
 ///
@@ -375,6 +378,170 @@ impl Tab {
         {
             let _ = (title, panel, image_index);
             0
+        }
+    }
+
+    /// Return the title of the page at the given index, or `None`
+    /// if the index is out of range.
+    pub fn get_page_text(&self, index: usize) -> Option<String> {
+        #[cfg(target_os = "windows")]
+        {
+            let inner = self.inner.borrow();
+            if index >= inner.page_panels.len() {
+                return None;
+            }
+            // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+            unsafe {
+                let mut buf = vec![0u16; 256];
+                let mut item = TCITEMW {
+                    mask: TCIF_TEXT,
+                    dwState: 0,
+                    dwStateMask: 0,
+                    pszText: buf.as_mut_ptr(),
+                    cchTextMax: 256,
+                    iImage: 0,
+                    lParam: 0,
+                };
+                let copied = SendMessageW(
+                    inner.hwnd,
+                    TCM_GETITEM,
+                    index,
+                    &mut item as *mut TCITEMW as isize,
+                );
+                if copied == 0 {
+                    return None;
+                }
+                let end = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                Some(String::from_utf16_lossy(&buf[..end]))
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = index;
+            None
+        }
+    }
+
+    /// Change the title of the page at the given index. Returns
+    /// `false` if the index is out of range.
+    pub fn set_page_text(&self, index: usize, title: &str) -> bool {
+        #[cfg(target_os = "windows")]
+        {
+            let inner = self.inner.borrow();
+            if index >= inner.page_panels.len() {
+                return false;
+            }
+            // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+            unsafe {
+                let mut wide = to_wide(title);
+                let mut item = TCITEMW {
+                    mask: TCIF_TEXT,
+                    dwState: 0,
+                    dwStateMask: 0,
+                    pszText: wide.as_mut_ptr(),
+                    cchTextMax: wide.len() as i32,
+                    iImage: 0,
+                    lParam: 0,
+                };
+                let result = SendMessageW(
+                    inner.hwnd,
+                    TCM_SETITEM,
+                    index,
+                    &mut item as *mut TCITEMW as isize,
+                );
+                result != 0
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (index, title);
+            false
+        }
+    }
+
+    /// Return the zero-based image index for the page at the given
+    /// index, or `None` if the page has no image (index `-1`) or the
+    /// index is out of range.
+    pub fn get_page_image(&self, index: usize) -> Option<i32> {
+        #[cfg(target_os = "windows")]
+        {
+            let inner = self.inner.borrow();
+            if index >= inner.page_panels.len() {
+                return None;
+            }
+            // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+            unsafe {
+                let mut item = TCITEMW {
+                    mask: TCIF_IMAGE,
+                    dwState: 0,
+                    dwStateMask: 0,
+                    pszText: std::ptr::null_mut(),
+                    cchTextMax: 0,
+                    iImage: 0,
+                    lParam: 0,
+                };
+                let result = SendMessageW(
+                    inner.hwnd,
+                    TCM_GETITEM,
+                    index,
+                    &mut item as *mut TCITEMW as isize,
+                );
+                if result == 0 {
+                    return None;
+                }
+                if item.iImage < 0 {
+                    None
+                } else {
+                    Some(item.iImage)
+                }
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = index;
+            None
+        }
+    }
+
+    /// Set the image index for the page at the given index. Pass
+    /// `-1` to remove the icon. Returns `false` if the index is out
+    /// of range. The page's `Panel` is unchanged; only the tab
+    /// strip is updated.
+    pub fn set_page_image(&self, index: usize, image_index: i32) -> bool {
+        #[cfg(target_os = "windows")]
+        {
+            let inner = self.inner.borrow();
+            if index >= inner.page_panels.len() {
+                return false;
+            }
+            // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+            unsafe {
+                let mut item = TCITEMW {
+                    mask: TCIF_IMAGE,
+                    dwState: 0,
+                    dwStateMask: 0,
+                    pszText: std::ptr::null_mut(),
+                    cchTextMax: 0,
+                    iImage: image_index,
+                    lParam: 0,
+                };
+                let result = SendMessageW(
+                    inner.hwnd,
+                    TCM_SETITEM,
+                    index,
+                    &mut item as *mut TCITEMW as isize,
+                );
+                result != 0
+            }
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (index, image_index);
+            false
         }
     }
 

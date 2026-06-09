@@ -75,7 +75,7 @@ pub use crate::date_picker_dialog::{DateDialogFormat, DatePickerDialog};
 pub use crate::dc::{BackgroundMode, Dc, MemoryDC, PaintDC, WindowDC};
 pub use crate::gauge::Gauge;
 pub use crate::list_box::ListBox;
-pub use crate::list_ctrl::{ListCtrl, ListCtrlStyle, ListItem};
+pub use crate::list_ctrl::{CacheHint, ListCtrl, ListCtrlStyle, ListItem};
 pub use crate::radio_box::RadioBox;
 pub use crate::radio_button::RadioButton;
 pub use crate::slider::Slider;
@@ -116,9 +116,12 @@ pub use crate::dpi::{
     get_dpi_for_point, get_dpi_for_window, get_system_dpi, Dpi, DpiAwareness, SYSTEM_DPI,
 };
 pub use crate::drop_target::DroppedFiles;
-pub use crate::ole_dnd::{OleDropEffect, OleDropError, OleDroppedData, OleDropPosition};
+pub use crate::ole_dnd::{
+    DragContinueResult, OleDragData, OleDragError, OleDragSourceCallbacks,
+    OleDropEffect, OleDropError, OleDroppedData, OleDropPosition,
+};
 #[cfg(target_os = "windows")]
-pub use crate::ole_dnd::OleDropTarget;
+pub use crate::ole_dnd::{OleDragSource, OleDropTarget};
 pub use crate::font::{Font, FontDesc};
 pub use crate::timer::Timer;
 pub use crate::tooltip::ToolTip;

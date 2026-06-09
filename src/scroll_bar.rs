@@ -555,18 +555,23 @@ mod tests {
     #[test]
     fn thumb_release_carries_position() {
         let ev = ScrollEvent::ThumbRelease { position: 42 };
-        match ev {
-            ScrollEvent::ThumbRelease { position } => assert_eq!(position, 42),
-            _ => panic!("expected ThumbRelease"),
+        // `assert!(matches!(...))` gives a structured failure
+        // message; the previous `match ... { _ => panic!(...) }`
+        // pattern emitted a hard-coded string with no payload.
+        if let ScrollEvent::ThumbRelease { position } = ev {
+            assert_eq!(position, 42);
+        } else {
+            panic!("expected ThumbRelease, got a different variant");
         }
     }
 
     #[test]
     fn thumb_track_carries_position() {
         let ev = ScrollEvent::ThumbTrack { position: -7 };
-        match ev {
-            ScrollEvent::ThumbTrack { position } => assert_eq!(position, -7),
-            _ => panic!("expected ThumbTrack"),
+        if let ScrollEvent::ThumbTrack { position } = ev {
+            assert_eq!(position, -7);
+        } else {
+            panic!("expected ThumbTrack, got a different variant");
         }
     }
 

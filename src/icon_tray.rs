@@ -137,12 +137,19 @@ impl IconTray {
     /// configured via `set_icon_from_svg_bytes`, `set_tooltip`, and
     /// `set_menu` before being shown with [`IconTray::show`].
     pub fn hidden(frame: &Frame) -> Self {
-        // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+        // SAFETY: We build a 1x1, 32-bpp DIB-section-free placeholder
+        // icon. `CreateBitmap` does **not** require a DC, so we don't
+        // pair it with `GetDC`/`ReleaseDC` (the previous implementation
+        // did, which was dead code that left a transient screen DC
+        // referenced for no reason).
         let hicon = unsafe {
-            let hdc = windows_sys::Win32::Graphics::Gdi::GetDC(std::ptr::null_mut());
-            let hbitmap =
-                windows_sys::Win32::Graphics::Gdi::CreateBitmap(1, 1, 1, 32, std::ptr::null());
-            windows_sys::Win32::Graphics::Gdi::ReleaseDC(std::ptr::null_mut(), hdc);
+            let hbitmap = windows_sys::Win32::Graphics::Gdi::CreateBitmap(
+                1,
+                1,
+                1,
+                32,
+                std::ptr::null(),
+            );
             let ii = windows_sys::Win32::UI::WindowsAndMessaging::ICONINFO {
                 fIcon: 1,
                 xHotspot: 0,
@@ -151,7 +158,9 @@ impl IconTray {
                 hbmColor: hbitmap,
             };
             let hicon = windows_sys::Win32::UI::WindowsAndMessaging::CreateIconIndirect(&ii);
-            windows_sys::Win32::Graphics::Gdi::DeleteObject(hbitmap);
+            if !hbitmap.is_null() {
+                windows_sys::Win32::Graphics::Gdi::DeleteObject(hbitmap);
+            }
             hicon
         };
         Self::hidden_with_hicon(frame, hicon, String::new())

@@ -125,7 +125,7 @@ impl BitmapButton {
         #[cfg(not(target_os = "windows"))]
         let _ = (parent_in, bitmap, width, height);
 
-        let mut btn = BitmapButton {
+        let btn = BitmapButton {
             inner: Rc::new(RefCell::new(BitmapButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,

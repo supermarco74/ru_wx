@@ -205,6 +205,47 @@ struct NMLVDISPINFOW {
     item: LVITEMW,
 }
 
+/// `NMLVCACHEHINT` — payload of the `LVN_ODCACHEHINT` notification
+/// sent by an `LVS_OWNERDATA` (virtual) ListView when it is about
+/// to ask for a contiguous range of items. The application uses
+/// the hint to pre-fetch the data (open a file, query a database,
+/// etc.) so the subsequent `LVN_GETDISPINFOW` requests for items
+/// in the range `[iFrom, iTo]` can be served from the cache
+/// instead of doing the work on the callback path.
+///
+/// Layout is fixed by Microsoft (it must match
+/// `tagNMLVCACHEHINT` from `<commctrl.h>`), so we match the
+/// field order, types, and `#[repr(C)]` of the upstream
+/// definition.
+#[cfg(target_os = "windows")]
+#[repr(C)]
+#[allow(clippy::upper_case_acronyms)]
+#[allow(non_snake_case)]
+struct NMLVCACHEHINT {
+    hdr: NMHDR,
+    i_from: i32,
+    i_to: i32,
+}
+
+/// `LVN_ODCACHEHINT` — owner-data virtual-list "I'm about to ask
+/// for a range of items" notification. Sent before the control
+/// issues a flurry of `LVN_GETDISPINFOW` requests for a
+/// contiguous range; the application is expected to pre-load
+/// the backing data for the range and stash it in a cache.
+///
+/// Computed as `LVN_FIRST - 79` = `(0U - 100U) - 79` = 0xFFFFFF4D.
+/// This is the **W (Unicode) variant**; the A variant has a
+/// different code (0xFFFFFF68). The W variant is the one we
+/// use because every `ListCtrl` API in this crate goes through
+/// the wide Win32 entry points.
+///
+/// `pub(crate)` so the frame's `WM_NOTIFY` arm can dispatch
+/// the notification to the per-control `on_cache_hint` handler
+/// without re-typing the magic number.
+#[cfg(target_os = "windows")]
+#[allow(dead_code)]
+pub(crate) const LVN_ODCACHEHINT: u32 = 0xFFFFFF4D;
+
 // ── ListItem (public wrapper) ────────────────────────────────────────
 
 /// Per-cell request handed to an [`ListCtrl::on_get_disp_info`]
@@ -297,6 +338,45 @@ impl<'a> ListItem<'a> {
     }
 }
 
+// ── CacheHint (public wrapper) ──────────────────────────────────────
+
+/// Per-range "prefetch this chunk" hint handed to a
+/// [`ListCtrl::on_cache_hint`] callback when the underlying Win32
+/// ListView is in
+/// [`LVS_OWNERDATA`](https://learn.microsoft.com/en-us/windows/win32/controls/list-view-controls-overview)
+/// (virtual) mode.
+///
+/// The ListView sends `LVN_ODCACHEHINT` *before* it issues a
+/// burst of `LVN_GETDISPINFOW` requests for a contiguous range
+/// of rows. The application can use the hint to pre-load the
+/// backing data (open a file, query a database, decompress a
+/// chunk, etc.) so the subsequent per-cell requests are served
+/// from a cache instead of doing the work on the callback
+/// hot path.
+///
+/// The wrapper exposes a read-only view of the range: callers
+/// can read the inclusive lower bound (`from()`) and upper
+/// bound (`to()`) of the row range the control is about to
+/// ask for. The notification carries no write-back data
+/// (unlike [`ListItem`]) so there is no `set_*` method.
+pub struct CacheHint<'a> {
+    hint: &'a NMLVCACHEHINT,
+}
+
+impl<'a> CacheHint<'a> {
+    /// Zero-based inclusive lower bound of the row range the
+    /// ListView is about to request via `LVN_GETDISPINFOW`.
+    pub fn from(&self) -> usize {
+        self.hint.i_from.max(0) as usize
+    }
+
+    /// Zero-based inclusive upper bound of the row range the
+    /// ListView is about to request via `LVN_GETDISPINFOW`.
+    pub fn to(&self) -> usize {
+        self.hint.i_to.max(0) as usize
+    }
+}
+
 // ── View style enum ──────────────────────────────────────────────────
 
 /// Determines the visual style of the ListView control.
@@ -329,6 +409,12 @@ fn list_ctrl_style_value(style: &ListCtrlStyle) -> u32 {
 /// the `Option<...>` field type in [`ListCtrlInner`] stays short
 /// enough to silence `clippy::type_complexity`.
 type DispInfoCallback = Box<dyn FnMut(&mut ListItem)>;
+
+/// Type alias for the user-supplied `on_cache_hint` callback
+/// closure. Mirrors [`DispInfoCallback`] so a future signature
+/// change (e.g. adding a `kind: u32` parameter for the
+/// `LVN_ODCACHEHINT` flags) only has to update one site.
+type CacheHintCallback = Box<dyn FnMut(&CacheHint)>;
 
 struct ListCtrlInner {
     #[cfg(target_os = "windows")]
@@ -363,6 +449,14 @@ struct ListCtrlInner {
     /// [`set_drop_files_callback`](crate::frame::Frame::set_drop_files_callback)
     /// "one owner" model on the frame.
     on_get_disp_info: Option<DispInfoCallback>,
+    /// User-supplied virtual-mode cache-hint callback, if any.
+    /// Receives a `&CacheHint` describing the inclusive row range
+    /// the control is about to ask for via a burst of
+    /// `LVN_GETDISPINFOW` requests. Stored in the inner state so
+    /// the `LVN_ODCACHEHINT` handler registered on the parent
+    /// `Frame` can reach it. The closure is replaced on every
+    /// call to [`ListCtrl::on_cache_hint`].
+    on_cache_hint: Option<CacheHintCallback>,
 }
 
 // ── Public type ──────────────────────────────────────────────────────
@@ -415,6 +509,7 @@ impl ListCtrl {
                 on_item_selected: None,
                 last_selection: None,
                 on_get_disp_info: None,
+                on_cache_hint: None,
             })),
         };
 
@@ -1005,6 +1100,113 @@ impl ListCtrl {
         );
     }
 
+    /// Register a callback that fires when an
+    /// `LVS_OWNERDATA` (virtual) ListView is about to ask for a
+    /// contiguous range of items (i.e. right before a burst of
+    /// `LVN_GETDISPINFOW` requests). This is the standard
+    /// optimisation hook for virtual lists: the application uses
+    /// the hint to **prefetch** the backing data (open a file,
+    /// query a database, decompress a chunk) so the subsequent
+    /// per-cell requests can be served from a cache.
+    ///
+    /// This notification is purely advisory — the ListView does
+    /// not require the application to do anything, and the
+    /// [`on_get_disp_info`](Self::on_get_disp_info) callback
+    /// will still be invoked for the items in the range even
+    /// if the application ignores the hint. The two callbacks
+    /// are independent: you can register one, both, or neither.
+    ///
+    /// # Arguments
+    ///
+    /// * `frame` — the parent `Frame` that owns the
+    ///   `ListCtrl`. Required because the dispatch is implemented
+    ///   as a `WM_NOTIFY` handler on the parent (the Win32
+    ///   protocol — the list-view sends the notification to its
+    ///   parent, not to itself).
+    /// * `callback` — a `FnMut(&CacheHint)`. The wrapper
+    ///   exposes the inclusive lower and upper bounds of the
+    ///   row range (`from()` and `to()`). The callback may be
+    ///   invoked many times in quick succession (once per
+    ///   visible-range change / scroll), so it is the right
+    ///   place to push work **off** the per-cell hot path,
+    ///   not to do extra work.
+    ///
+    /// # Replacement semantics
+    ///
+    /// Calling this method again replaces the previous callback
+    /// (the old `Box<dyn FnMut>` is dropped). There is no
+    /// "register multiple" or "chain handlers" support.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use ru_wx::prelude::*;
+    ///
+    /// let frame = Frame::builder().with_title("Big list").build();
+    /// let list = ListCtrl::new(&frame, ListCtrlStyle::Report);
+    /// list.insert_column(0, "Name", 200);
+    /// list.set_item_count(1_000_000);
+    /// list.on_get_disp_info(&frame, |item: &mut ListItem| {
+    ///     if item.is_text_requested() {
+    ///         let _ = item.set_text(&format!("row {}", item.index()));
+    ///     }
+    /// });
+    /// list.on_cache_hint(&frame, |hint: &CacheHint| {
+    ///     // In production code, pre-load `hint.from()..=hint.to()`.
+    /// });
+    /// ```
+    pub fn on_cache_hint<F: FnMut(&CacheHint) + 'static>(
+        &self,
+        frame: &crate::frame::Frame,
+        callback: F,
+    ) {
+        // Store the user's callback inside our inner state.
+        self.inner.borrow_mut().on_cache_hint = Some(Box::new(callback));
+
+        // Register a WM_NOTIFY handler on the frame. The handler is
+        // dispatched with the full `lparam` (a pointer to the
+        // `NMLVCACHEHINT`) so the user-supplied `&CacheHint`
+        // wrapper can read the `i_from` / `i_to` fields.
+        let inner = self.inner.clone();
+        let id = self.inner.borrow().id;
+        frame.register_cache_hint_handler(
+            id,
+            Box::new(move |lparam| {
+                if lparam == 0 {
+                    return;
+                }
+                #[cfg(target_os = "windows")]
+                // SAFETY: `lparam` is a pointer to a `NMLVCACHEHINT`
+                // supplied by the Win32 ListView when it dispatched
+                // LVN_ODCACHEHINT. The control owns the storage and
+                // it is valid for the duration of this call. We
+                // re-interpret the pointer as `&NMLVCACHEHINT`
+                // (we never read past the `i_to` field) and then
+                // narrow the borrow to `&CacheHint` for the
+                // wrapper.
+                unsafe {
+                    let nmch = lparam as *const NMLVCACHEHINT;
+                    if nmch.is_null() {
+                        return;
+                    }
+                    let hint_ref: &NMLVCACHEHINT = &*nmch;
+                    let wrapper = CacheHint { hint: hint_ref };
+                    // Take the callback out, invoke it without
+                    // holding the RefCell borrow, then put it back.
+                    let cb = inner.borrow_mut().on_cache_hint.take();
+                    if let Some(mut c) = cb {
+                        c(&wrapper);
+                        inner.borrow_mut().on_cache_hint = Some(c);
+                    }
+                }
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let _ = (inner, lparam);
+                }
+            }),
+        );
+    }
+
     /// Get the control ID
     pub fn id(&self) -> u16 {
         self.inner.borrow().id
@@ -1382,5 +1584,106 @@ mod tests {
         // After registration: the frame's `disp_info_handlers`
         // map contains an entry for the control id.
         assert!(frame.inner.borrow().disp_info_handlers.contains_key(&id));
+    }
+
+    // ---- v0.6.0: LVN_ODCACHEHINT (virtual-mode prefetch hint) ----
+    //
+    // The `on_cache_hint` method, plus the new `CacheHint`
+    // wrapper and the `LVN_ODCACHEHINT` / `NMLVCACHEHINT`
+    // surface area, are the new virtual-mode API in v0.6.0.
+    // The constant-pinning test guards against a future
+    // magic-number drift; the signature-pinning test guards
+    // against a future API rename; the null-hwnd test proves
+    // the registration path does not panic on a
+    // `Frame::for_testing()` parent.
+
+    /// Pin the new v0.6.0 `LVN_ODCACHEHINT` notification code.
+    /// This is the W (Unicode) variant; the A variant has a
+    /// different code (0xFFFFFF68) and we deliberately do not
+    /// support it (the whole crate goes through the wide Win32
+    /// entry points).
+    ///
+    /// The code is `LVN_FIRST - 79` = `(0U - 100U) - 79` =
+    /// 0xFFFFFF4D. We pin it here so a future typo in the
+    /// constant declaration cannot silently break the
+    /// `WM_NOTIFY` dispatch in `frame.rs` (the dispatch arm
+    /// compares the incoming code against this constant; a
+    /// mismatch would mean the callback never fires in
+    /// production but the unit tests would still pass).
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn lvn_odcachehint_has_expected_value() {
+        assert_eq!(LVN_ODCACHEHINT, 0xFFFFFF4D);
+        // The cache-hint code is two below the
+        // get-disp-info code (0xFFFFFF4F), and the
+        // item-changed code (0xFFFFFF63) is above both.
+        assert!(LVN_ODCACHEHINT < LVN_GETDISPINFOW);
+        assert!(LVN_ODCACHEHINT < LVN_ITEMCHANGED);
+    }
+
+    /// Pin the `CacheHint::from` / `CacheHint::to` return
+    /// types. A future change (e.g. switching to a
+    /// `Range<usize>` return) would fail to compile here. We
+    /// don't pin the full `fn`-pointer signature because
+    /// `CacheHint` is parameterised on its own data lifetime
+    /// (the borrowed `NMLVCACHEHINT`) which has a subtle
+    /// relationship to the method's reference lifetime — the
+    /// user-facing `on_cache_hint` signature test below is
+    /// the more durable API pin.
+    #[test]
+    fn signature_cache_hint_accessors_return_usize() {
+        let hint_holder: Option<CacheHint<'_>> = None;
+        if let Some(h) = hint_holder.as_ref() {
+            // The exact values don't matter (None is the
+            // `if-let` path); what matters is that calling
+            // `from()` and `to()` compiles and returns `usize`.
+            let _f: usize = h.from();
+            let _t: usize = h.to();
+        }
+    }
+
+    /// Pin the `on_cache_hint` signature. A future change
+    /// (e.g. changing the callback to `FnOnce`, or adding a
+    /// filter mask parameter) would fail to compile here.
+    #[test]
+    #[allow(clippy::type_complexity)]
+    fn signature_on_cache_hint() {
+        let _: fn(&ListCtrl, &crate::frame::Frame, Box<dyn FnMut(&CacheHint<'_>)>) =
+            ListCtrl::on_cache_hint;
+    }
+
+    /// `on_cache_hint` on a `null`-`HWND` `ListCtrl` (a
+    /// `Frame::for_testing()` parent that has no real
+    /// `HWND` behind it) must not panic. The registration
+    /// path stores the closure in `inner.on_cache_hint` and
+    /// registers a handler in the frame's
+    /// `cache_hint_handlers` map; both are pure data
+    /// operations and have no Win32 dependency.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn null_hwnd_on_cache_hint_does_not_panic() {
+        let lc = make_null_hwnd_listctrl();
+        lc.on_cache_hint(&Frame::for_testing(), |_hint: &CacheHint| {});
+    }
+
+    /// Registering a cache-hint callback must insert a
+    /// handler into the frame's `cache_hint_handlers` map
+    /// keyed by the `ListCtrl`'s id. Mirrors the
+    /// `on_get_disp_info_registers_handler_on_frame` test
+    /// above.
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn on_cache_hint_registers_handler_on_frame() {
+        let frame = Frame::for_testing();
+        let lc = ListCtrl::new(&frame, ListCtrlStyle::List);
+        let id = lc.id();
+        // Before registration: the frame has no cache-hint
+        // handler for this id.
+        assert!(!frame.inner.borrow().cache_hint_handlers.contains_key(&id));
+        lc.on_cache_hint(&frame, |_hint: &CacheHint| {});
+        // After registration: the frame's
+        // `cache_hint_handlers` map contains an entry for
+        // the control id.
+        assert!(frame.inner.borrow().cache_hint_handlers.contains_key(&id));
     }
 }

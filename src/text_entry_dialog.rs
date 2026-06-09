@@ -349,6 +349,15 @@ impl TextEntryDialog {
         }
     }
 
+    /// Construct a [`TextEntryDialogBuilder`] for fluent
+    /// one-liner configuration. Equivalent to
+    /// [`TextEntryDialog::new`] followed by chained `.with_*` calls.
+    pub fn builder(frame: &Frame, message: &str, caption: &str) -> TextEntryDialogBuilder {
+        TextEntryDialogBuilder {
+            dialog: Self::new(frame, message, caption, ""),
+        }
+    }
+
     /// Show the dialog modally. Blocks until the user dismisses it.
     pub fn show_modal(&self) -> Option<String> {
         #[cfg(target_os = "windows")]
@@ -406,6 +415,55 @@ impl TextEntryDialog {
     }
 }
 
+// ── Builders for the three entry-dialog flavours ────────────────────
+
+/// Fluent builder for [`TextEntryDialog`].
+///
+/// Constructed via [`TextEntryDialog::builder`]. The three required
+/// arguments (`frame`, `message`, `caption`) are passed to the
+/// constructor; the optional default value can be set with
+/// [`TextEntryDialogBuilder::with_default_value`].
+///
+/// ```no_run
+/// # use ru_wx::prelude::*;
+/// # use ru_wx::text_entry_dialog::TextEntryDialog;
+/// # let frame = Frame::builder().with_title("App").with_size(100, 100).build();
+/// let dlg = TextEntryDialog::builder(&frame, "Your name:", "Login")
+///     .with_default_value("Anonymous")
+///     .build();
+/// # let _ = dlg;
+/// ```
+#[must_use = "a TextEntryDialogBuilder does nothing until .build() or .show_modal() is called"]
+pub struct TextEntryDialogBuilder {
+    dialog: TextEntryDialog,
+}
+
+impl TextEntryDialogBuilder {
+    /// Set the initial value shown in the edit control.
+    pub fn with_default_value(mut self, value: &str) -> Self {
+        self.dialog.set_value(value);
+        self
+    }
+
+    /// Update the prompt text shown above the edit control.
+    pub fn with_message(mut self, message: &str) -> Self {
+        self.dialog.set_message(message);
+        self
+    }
+
+    /// Finalise the builder and return the configured
+    /// [`TextEntryDialog`].
+    pub fn build(self) -> TextEntryDialog {
+        self.dialog
+    }
+
+    /// Finalise the builder and immediately show the dialog
+    /// modally. Equivalent to `.build().show_modal()`.
+    pub fn show_modal(self) -> Option<String> {
+        self.dialog.show_modal()
+    }
+}
+
 // ── PasswordEntryDialog ─────────────────────────────────────────────
 
 /// A modal single-line password-entry dialog.
@@ -439,6 +497,14 @@ impl PasswordEntryDialog {
                 caption: caption.to_string(),
             }
         }
+    }
+
+    /// Construct a [`PasswordEntryDialogBuilder`] for fluent
+    /// one-liner configuration. Equivalent to
+    /// [`PasswordEntryDialog::new`] followed by chained `.with_*`
+    /// calls.
+    pub fn builder(frame: &Frame, message: &str, caption: &str) -> PasswordEntryDialogBuilder {
+        PasswordEntryDialogBuilder { dialog: Self::new(frame, message, caption) }
     }
 
     /// Show the dialog modally.
@@ -477,6 +543,38 @@ impl PasswordEntryDialog {
     /// Read the dialog caption.
     pub fn caption(&self) -> &str {
         &self.caption
+    }
+}
+
+/// Fluent builder for [`PasswordEntryDialog`].
+///
+/// Constructed via [`PasswordEntryDialog::builder`]. The three
+/// required arguments (`frame`, `message`, `caption`) are passed
+/// to the constructor; the prompt text can be overridden later
+/// with [`PasswordEntryDialogBuilder::with_message`].
+#[must_use = "a PasswordEntryDialogBuilder does nothing until .build() or .show_modal() is called"]
+pub struct PasswordEntryDialogBuilder {
+    dialog: PasswordEntryDialog,
+}
+
+impl PasswordEntryDialogBuilder {
+    /// Override the prompt text shown above the password edit
+    /// control.
+    pub fn with_message(mut self, message: &str) -> Self {
+        self.dialog.set_message(message);
+        self
+    }
+
+    /// Finalise the builder and return the configured
+    /// [`PasswordEntryDialog`].
+    pub fn build(self) -> PasswordEntryDialog {
+        self.dialog
+    }
+
+    /// Finalise the builder and immediately show the dialog
+    /// modally. Equivalent to `.build().show_modal()`.
+    pub fn show_modal(self) -> Option<String> {
+        self.dialog.show_modal()
     }
 }
 
@@ -526,6 +624,19 @@ impl NumberEntryDialog {
                 max_value: None,
             }
         }
+    }
+
+    /// Construct a [`NumberEntryDialogBuilder`] for fluent
+    /// one-liner configuration. Equivalent to
+    /// [`NumberEntryDialog::new`] followed by chained
+    /// `.with_min` / `.with_max` / `.with_message` calls.
+    pub fn builder(
+        frame: &Frame,
+        message: &str,
+        caption: &str,
+        initial: i64,
+    ) -> NumberEntryDialogBuilder {
+        NumberEntryDialogBuilder { dialog: Self::new(frame, message, caption, initial) }
     }
 
     /// Set the minimum allowed value. Inputs below this will return
@@ -595,6 +706,54 @@ impl NumberEntryDialog {
     /// Read the dialog caption.
     pub fn caption(&self) -> &str {
         &self.caption
+    }
+}
+
+/// Fluent builder for [`NumberEntryDialog`].
+///
+/// Constructed via [`NumberEntryDialog::builder`]. The four
+/// required arguments (`frame`, `message`, `caption`, `initial`)
+/// are passed to the constructor; the optional min / max bounds
+/// and prompt text can be set with
+/// [`NumberEntryDialogBuilder::with_min`],
+/// [`NumberEntryDialogBuilder::with_max`] and
+/// [`NumberEntryDialogBuilder::with_message`].
+#[must_use = "a NumberEntryDialogBuilder does nothing until .build() or .show_modal() is called"]
+pub struct NumberEntryDialogBuilder {
+    dialog: NumberEntryDialog,
+}
+
+impl NumberEntryDialogBuilder {
+    /// Set the minimum allowed value. Inputs below this will
+    /// return `None` from `show_modal`.
+    pub fn with_min(mut self, min: i64) -> Self {
+        self.dialog.set_min(min);
+        self
+    }
+
+    /// Set the maximum allowed value. Inputs above this will
+    /// return `None` from `show_modal`.
+    pub fn with_max(mut self, max: i64) -> Self {
+        self.dialog.set_max(max);
+        self
+    }
+
+    /// Override the prompt text shown above the edit control.
+    pub fn with_message(mut self, message: &str) -> Self {
+        self.dialog.set_message(message);
+        self
+    }
+
+    /// Finalise the builder and return the configured
+    /// [`NumberEntryDialog`].
+    pub fn build(self) -> NumberEntryDialog {
+        self.dialog
+    }
+
+    /// Finalise the builder and immediately show the dialog
+    /// modally. Equivalent to `.build().show_modal()`.
+    pub fn show_modal(self) -> Option<i64> {
+        self.dialog.show_modal()
     }
 }
 
@@ -712,5 +871,47 @@ mod tests {
         let _ = std::mem::size_of::<NumberEntryDialog>();
         let _ = IDOK_I;
         let _ = IDCANCEL_I;
+    }
+
+    // ------------------------------------------------------------------
+    // Builder smoke tests
+    // ------------------------------------------------------------------
+
+    /// Compile-time check that the `TextEntryDialog::builder` chain is
+    /// well typed. The real call needs a `Frame`, so we only assert the
+    /// *types* are reachable here.
+    #[test]
+    fn text_entry_dialog_builder_type_is_reachable() {
+        let _chain_typecheck: fn() = || {
+            // (Not executed: would require a real `Frame`.)
+            // TextEntryDialog::builder(frame, "Enter name", "Greeting")
+            //     .with_default_value("world")
+            //     .with_message("Please type your name")
+            //     .build();
+        };
+    }
+
+    /// Compile-time check for the `PasswordEntryDialog::builder` chain.
+    #[test]
+    fn password_entry_dialog_builder_type_is_reachable() {
+        let _chain_typecheck: fn() = || {
+            // (Not executed: would require a real `Frame`.)
+            // PasswordEntryDialog::builder(frame, "Password", "Auth")
+            //     .with_message("Type your password")
+            //     .build();
+        };
+    }
+
+    /// Compile-time check for the `NumberEntryDialog::builder` chain.
+    #[test]
+    fn number_entry_dialog_builder_type_is_reachable() {
+        let _chain_typecheck: fn() = || {
+            // (Not executed: would require a real `Frame`.)
+            // NumberEntryDialog::builder(frame, "Age", "Profile", 18)
+            //     .with_min(0)
+            //     .with_max(120)
+            //     .with_message("Enter your age")
+            //     .build();
+        };
     }
 }

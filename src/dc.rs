@@ -346,10 +346,21 @@ impl Dc for PaintDC {
         // SAFETY: standard BitBlt with SRCCOPY. We create a
         // transient memory DC, select the source bitmap into
         // it, copy it to the destination DC, and tear the
-        // memory DC down.
+        // memory DC down. Each `GetDC` is paired with a
+        // `ReleaseDC`, and each `CreateCompatibleDC` is paired
+        // with a `DeleteDC`; the early-return guards below
+        // make sure we don't operate on null handles or leak
+        // resources when creation fails.
         unsafe {
             let screen = GetDC(std::ptr::null_mut());
+            if screen.is_null() {
+                return;
+            }
             let mem = CreateCompatibleDC(screen);
+            if mem.is_null() {
+                ReleaseDC(std::ptr::null_mut(), screen);
+                return;
+            }
             let prev = SelectObject(mem, bmp.handle() as windows_sys::Win32::Graphics::Gdi::HGDIOBJ);
             let _ = BitBlt(self.hdc, x, y, bmp.width as i32, bmp.height as i32, mem, 0, 0, SRCCOPY);
             let _ = SelectObject(mem, prev);

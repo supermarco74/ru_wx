@@ -28,7 +28,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::accelerator::Accelerator;
-use crate::dpi::{get_dpi_for_point, get_dpi_for_window, get_system_dpi, Dpi};
+use crate::dpi::{get_dpi_for_point, get_dpi_for_window, Dpi};
 use crate::drop_target::{self, DroppedFiles};
 use crate::ole_dnd::{self, OleDropError, OleDropTarget, OleDroppedData, OleDropPosition};
 use crate::geometry::Colour;
@@ -101,6 +101,32 @@ pub(crate) struct FrameData {
     /// `idFrom` (e.g. a date picker that also wants
     /// `NM_KILLFOCUS`).
     pub dtn_handlers: HashMap<u16, Box<dyn FnMut(isize)>>,
+    /// Handlers invoked when a child `ListCtrl` in `LVS_OWNERDATA`
+    /// (virtual) ListView mode dispatches a `LVN_ODCACHEHINT`
+    /// notification (i.e. the ListView is about to ask for a
+    /// contiguous range of items via a burst of
+    /// `LVN_GETDISPINFOW` requests). Keyed by the control's
+    /// `idFrom`. The handler receives the full `lparam` (a
+    /// pointer to a `tagNMLVCACHEHINT` from `<commctrl.h>`) cast
+    /// to `isize`, which is what the `LVN_ODCACHEHINT` handler
+    /// re-interprets back to a `*const NMLVCACHEHINT` to read
+    /// the `iFrom` / `iTo` range bounds.
+    ///
+    /// This map is separate from `notify_handlers` because the
+    /// cache-hint callback needs the full `lparam` (the
+    /// notification body is the data the callback reads, not
+    /// just a code to filter on), so the simpler
+    /// `Box<dyn FnMut(u32)>` signature of the regular
+    /// `notify_handlers` is not enough. It is also separate
+    /// from `disp_info_handlers` because the two notifications
+    /// carry different structs (`NMLVCACHEHINT` vs.
+    /// `NMLVDISPINFOW`) and have different semantics (read-only
+    /// hint vs. read/write per-cell request). All three maps
+    /// are independent and can be populated for the same
+    /// `idFrom` (e.g. a virtual list that wants both
+    /// `LVN_GETDISPINFOW` for per-cell data and
+    /// `LVN_ODCACHEHINT` for range prefetching).
+    pub cache_hint_handlers: HashMap<u16, Box<dyn FnMut(isize)>>,
     /// Handlers invoked when the frame receives a user-defined message
     /// in the `WM_APP + n` range (used by the `IconTray` for shell
     /// notification area callback messages). Keyed by the message id.
@@ -319,6 +345,44 @@ impl Frame {
         self.inner.borrow_mut().dtn_handlers.insert(id, handler);
     }
 
+    /// Register a cache-hint handler for a child `ListCtrl` in
+    /// `LVS_OWNERDATA` (virtual) mode. The handler is keyed by
+    /// the control's `idFrom` and is invoked whenever the frame
+    /// receives a `LVN_ODCACHEHINT` notification whose `idFrom`
+    /// matches (i.e. the ListView is about to ask for a
+    /// contiguous range of items via a burst of
+    /// `LVN_GETDISPINFOW` requests).
+    ///
+    /// The handler receives the full `lparam` of the `WM_NOTIFY`
+    /// message — that is, a pointer to a `tagNMLVCACHEHINT` from
+    /// `<commctrl.h>`, cast to `isize`. The list-view uses this
+    /// pointer to read the `iFrom` / `iTo` range bounds so the
+    /// application can pre-load the backing data for that range
+    /// (open a file, query a database, decompress a chunk, etc.)
+    /// and serve the subsequent per-cell requests from a cache.
+    ///
+    /// This is a separate registration path from
+    /// [`Frame::register_notify_handler`] and
+    /// [`Frame::register_disp_info_handler`] because the
+    /// cache-hint callback needs the full `lparam` (the
+    /// notification body is the data the callback reads, not
+    /// just a code to filter on), so the simpler
+    /// `Box<dyn FnMut(u32)>` signature of the regular
+    /// `notify_handlers` is not enough. It is also separate
+    /// from `disp_info_handlers` because the two notifications
+    /// carry different structs (`NMLVCACHEHINT` vs.
+    /// `NMLVDISPINFOW`) and have different semantics (read-only
+    /// range hint vs. read/write per-cell request). All three
+    /// maps can be populated for the same `idFrom`
+    /// independently (a virtual list that wants both per-cell
+    /// data and range prefetching should register both).
+    pub fn register_cache_hint_handler(&self, id: u16, handler: Box<dyn FnMut(isize)>) {
+        self.inner
+            .borrow_mut()
+            .cache_hint_handlers
+            .insert(id, handler);
+    }
+
     /// Register a handler for a user-defined message in the `WM_APP + n`
     /// range. Used by `IconTray` to receive shell notification area
     /// callback messages. The handler is invoked with the message's
@@ -435,6 +499,7 @@ impl Frame {
             notify_handlers: HashMap::new(),
             disp_info_handlers: HashMap::new(),
             dtn_handlers: HashMap::new(),
+            cache_hint_handlers: HashMap::new(),
             tray_message_handlers: HashMap::new(),
             scroll_handlers: HashMap::new(),
             paint_handlers: Vec::new(),
@@ -972,6 +1037,7 @@ impl FrameBuilder {
                 notify_handlers: HashMap::new(),
                 disp_info_handlers: HashMap::new(),
                 dtn_handlers: HashMap::new(),
+                cache_hint_handlers: HashMap::new(),
                 tray_message_handlers: HashMap::new(),
                 scroll_handlers: HashMap::new(),
                 paint_handlers: Vec::new(),
@@ -1141,6 +1207,13 @@ unsafe extern "system" fn frame_wnd_proc(
                     //   so it can read the request fields and write
                     //   the response string. Routed to
                     //   `disp_info_handlers`.
+                    // * `LVN_ODCACHEHINT` (virtual-list range
+                    //   prefetch hint) carries a `NMLVCACHEHINT`
+                    //   in `lparam`; the registered handler reads
+                    //   the `iFrom` / `iTo` range bounds so the
+                    //   application can pre-load the backing
+                    //   data for that range. Routed to
+                    //   `cache_hint_handlers`.
                     // * `DTN_DATETIMECHANGE` (date-picker value
                     //   change) carries a `NMDATETIMECHANGE` in
                     //   `lparam`; the registered handler reads the
@@ -1156,6 +1229,12 @@ unsafe extern "system" fn frame_wnd_proc(
                         if let Some(mut h) = handler {
                             h(lparam);
                             rc.borrow_mut().disp_info_handlers.insert(id, h);
+                        }
+                    } else if code == crate::list_ctrl::LVN_ODCACHEHINT {
+                        let handler = rc.borrow_mut().cache_hint_handlers.remove(&id);
+                        if let Some(mut h) = handler {
+                            h(lparam);
+                            rc.borrow_mut().cache_hint_handlers.insert(id, h);
                         }
                     } else if code == crate::date_picker_ctrl::DTN_DATETIMECHANGE {
                         let handler = rc.borrow_mut().dtn_handlers.remove(&id);

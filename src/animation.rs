@@ -237,24 +237,36 @@ mod tests {
 
     #[test]
     fn load_from_memory_png_becomes_single_frame() {
-        // 1×1 transparent PNG, hand-encoded so we don't depend on
-        // disk I/O.
-        let png = [
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // signature
-            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR length + type
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1×1
-            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, // depth 8 RGBA
-            0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, // IDAT length + type
-            0x54, 0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x00, //
-            0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, //
-            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, // IEND
-            0x42, 0x60, 0x82,
-        ];
+        // Build a real 1×1 transparent PNG at runtime via the
+        // `image` crate. The previous test embedded a hand-encoded
+        // byte array with invalid chunk CRCs; the decoder (now
+        // CRC-strict) rejected it, and `.unwrap()` then panicked.
+        // Generating the bytes here is panic-safe: encoder errors
+        // are propagated via `expect` with a clear message instead
+        // of being treated as test invariants.
+        use image::codecs::png::PngEncoder;
+        use image::ImageEncoder;
+
+        let mut png = Vec::new();
+        PngEncoder::new(&mut png)
+            .write_image(
+                &[0u8; 4], // one transparent RGBA pixel
+                1,
+                1,
+                image::ExtendedColorType::Rgba8,
+            )
+            .expect("PNG encoder should not fail on a 1×1 RGBA buffer");
+
         let mut a = Animation::new();
-        a.load_from_memory(&png).unwrap();
+        let load_result = a.load_from_memory(&png);
+        assert!(
+            load_result.is_ok(),
+            "loading a valid 1×1 PNG should succeed, got: {:?}",
+            load_result.err()
+        );
         assert_eq!(a.frame_count(), 1);
         assert_eq!(a.size(), (1, 1));
-        let f = a.frame(0).unwrap();
+        let f = a.frame(0).expect("animation should expose frame 0");
         // PNG decode may report 0 ms for static frames.
         assert_eq!(f.delay_ms, 0);
     }

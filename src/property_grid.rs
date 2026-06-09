@@ -480,6 +480,49 @@ impl PropertyGridData {
 
 // ─── Internal helpers (Windows-only) ───────────────────────────────────
 
+/// RAII guard for a GDI pen + brush selection pair. On drop, restores the
+/// DC's previous pen and brush (if they were non-null) and deletes the
+/// pen we created. This makes the `paint` function panic-safe: even if a
+/// future edit adds an early return in the middle, the resources are
+/// always released.
+#[cfg(target_os = "windows")]
+struct PenGuard {
+    hdc: HDC,
+    old_pen: windows_sys::Win32::Graphics::Gdi::HGDIOBJ,
+    old_brush: windows_sys::Win32::Graphics::Gdi::HGDIOBJ,
+    pen: windows_sys::Win32::Graphics::Gdi::HGDIOBJ,
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for PenGuard {
+    fn drop(&mut self) {
+        // SAFETY: `old_pen` and `old_brush` are the handles `SelectObject`
+        // returned when we installed our pen / null brush, so they are
+        // valid GDI objects to restore. `pen` is the cosmetic pen we
+        // created with `CreatePen`, so it is valid to `DeleteObject`.
+        // `DeleteObject` is a no-op on null, and `SelectObject` ignores
+        // null (replacing the current object with the default), so this
+        // is safe even if any handle is null.
+        unsafe {
+            if !self.old_pen.is_null() {
+                let _ = windows_sys::Win32::Graphics::Gdi::SelectObject(
+                    self.hdc,
+                    self.old_pen,
+                );
+            }
+            if !self.old_brush.is_null() {
+                let _ = windows_sys::Win32::Graphics::Gdi::SelectObject(
+                    self.hdc,
+                    self.old_brush,
+                );
+            }
+            if !self.pen.is_null() {
+                windows_sys::Win32::Graphics::Gdi::DeleteObject(self.pen);
+            }
+        }
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn paint(data: &PropertyGridData, hdc: HDC, rect: RECT) {
     // SAFETY: Win32 FFI calls in this function are all
@@ -490,10 +533,23 @@ fn paint(data: &PropertyGridData, hdc: HDC, rect: RECT) {
         FillRect(hdc, &rect, bg_brush);
         DeleteObject(bg_brush as _);
 
-        // Header row separator (1px line at top).
+        // Header row separator (1px line at top). We rely on
+        // `PenGuard` below to release the pen and restore the
+        // previous pen / brush on every exit path (including
+        // panics in any future code added inside the loop).
         let pen = CreatePen(PS_SOLID, 1, crate::geometry::Colour::new(180, 180, 180, 0).to_colorref());
+        if pen.is_null() {
+            // Couldn't allocate a pen; bail out cleanly.
+            return;
+        }
         let old_pen = SelectObject(hdc, pen as _);
         let old_brush = SelectObject(hdc, GetStockObject(NULL_BRUSH) as _);
+        let _guard = PenGuard {
+            hdc,
+            old_pen,
+            old_brush,
+            pen: pen as _,
+        };
 
         // Column separator.
         let sep_x = data.rect.x + data.name_col_w + PG_COL_SEP / 2;
@@ -508,9 +564,7 @@ fn paint(data: &PropertyGridData, hdc: HDC, rect: RECT) {
             LineTo(hdc, data.rect.x + data.rect.width as i32, y);
         }
 
-        SelectObject(hdc, old_pen);
-        SelectObject(hdc, old_brush);
-        DeleteObject(pen as _);
+        // PenGuard's `Drop` restores old_pen / old_brush and deletes `pen`.
 
         // Text: name (left) + value (right) for each row.
         // `SetBkMode` mode 1 == TRANSPARENT.

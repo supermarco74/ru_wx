@@ -376,7 +376,19 @@ fn clone_bitmap(src: HBITMAP) -> HBITMAP {
         }
 
         let screen_dc = GetDC(std::ptr::null_mut());
+        if screen_dc.is_null() {
+            return std::ptr::null_mut();
+        }
         let mem_dc = CreateCompatibleDC(screen_dc);
+        if mem_dc.is_null() {
+            // Release the screen DC we acquired; the
+            // compatible DC was never created.
+            windows_sys::Win32::Graphics::Gdi::ReleaseDC(
+                std::ptr::null_mut(),
+                screen_dc,
+            );
+            return std::ptr::null_mut();
+        }
         let old = SelectObject(mem_dc, src as _);
 
         let mut bmi: BITMAPINFO = std::mem::zeroed();
@@ -412,7 +424,11 @@ fn clone_bitmap(src: HBITMAP) -> HBITMAP {
         bmi2.bmiHeader.biPlanes = 1;
         bmi2.bmiHeader.biBitCount = 32;
         bmi2.bmiHeader.biCompression = BI_RGB;
-        let dest = std::slice::from_raw_parts_mut(bits_ptr as *mut u8, (w * h * 4) as usize);
+        // Widening cast to `usize` *first* to avoid `u32`
+        // overflow for large dimensions. See the matching
+        // comment in `src/icon.rs`.
+        let byte_count = (w as usize) * (h as usize) * 4;
+        let dest = std::slice::from_raw_parts_mut(bits_ptr as *mut u8, byte_count);
         let got = GetDIBits(
             mem_dc,
             src,

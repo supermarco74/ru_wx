@@ -11,6 +11,30 @@
 
 use crate::widget::WidgetRef;
 
+/// Compute a proportional item size in pixels without
+/// overflowing on hostile or pathological inputs.
+///
+/// `available` is the post-padding pixel count along the
+/// sizer's main axis (always `>= 0` — the caller clamps it
+/// with `.max(0)` before calling). `proportion` and `total`
+/// are `u32` weights chosen by the user; in principle a
+/// user can pass `proportion = u32::MAX` with a non-zero
+/// `available`, which would overflow a `u32` product. We
+/// widen to `u64` (where any `u32 * u32` always fits), use
+/// `checked_div` to defend against a zero `total` (the
+/// formula degenerates in that case), and clamp the final
+/// pixel count to `i32::MAX` so the value can be safely
+/// passed to `MoveWindow` (which takes `i32`).
+#[inline]
+fn proportion_pixels(available: i32, proportion: u32, total: u32) -> i32 {
+    let prod = (available.max(0) as u64).checked_mul(proportion as u64);
+    match prod.and_then(|p| p.checked_div(total as u64)) {
+        Some(v) if v > i32::MAX as u64 => i32::MAX,
+        Some(v) => v as i32,
+        None => 0,
+    }
+}
+
 /// Orientation for BoxSizer
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Orientation {
@@ -200,9 +224,7 @@ impl BoxSizer {
                             Orientation::Horizontal => w.rect().width as i32,
                         }
                     } else {
-                        (available as u32 * proportion)
-                            .checked_div(total_proportion)
-                            .unwrap_or(0) as i32
+                        proportion_pixels(available, *proportion, total_proportion)
                     };
 
                     match self.orientation {
@@ -238,9 +260,7 @@ impl BoxSizer {
                     pos += item_size + self.padding;
                 }
                 SizerItem::Stretch { proportion } => {
-                    let stretch_size = (available as u32 * proportion)
-                        .checked_div(total_proportion)
-                        .unwrap_or(0) as i32;
+                    let stretch_size = proportion_pixels(available, *proportion, total_proportion);
                     pos += stretch_size + self.padding;
                 }
                 SizerItem::FixedSpace { size } => {
@@ -407,5 +427,61 @@ mod tests {
         assert_eq!(a.borrow().rect().x, 7);
         assert_eq!(b.borrow().rect().x, 7);
         assert_eq!(a.borrow().rect().y, 11);
+    }
+
+    // ── v0.6.1 security tests ───────────────────────────────────────
+    //
+    // These exercise the overflow/hostile-input paths of the
+    // proportional layout helper. We do not need a real
+    // Win32 window for them — `proportion_pixels` is a pure
+    // function on the integer inputs, so the tests sit
+    // alongside the helper at the top of this module.
+
+    #[test]
+    fn proportion_pixels_normal_case() {
+        // 800 px available, 1:1 split ⇒ 400 each.
+        assert_eq!(proportion_pixels(800, 1, 2), 400);
+        // Asymmetric 1:3 ⇒ 200 / 600.
+        assert_eq!(proportion_pixels(800, 1, 4), 200);
+        assert_eq!(proportion_pixels(800, 3, 4), 600);
+    }
+
+    #[test]
+    fn proportion_pixels_zero_total_returns_zero() {
+        // Degenerate but legal: caller passed a sum of zero,
+        // so we have no basis to divide by. The helper
+        // returns 0 instead of panicking.
+        assert_eq!(proportion_pixels(100, 5, 0), 0);
+        assert_eq!(proportion_pixels(0, 0, 0), 0);
+    }
+
+    #[test]
+    fn proportion_pixels_does_not_overflow_on_huge_proportion() {
+        // `available = 2_000_000_000`, `proportion = 3`, `total = 4`.
+        // The intermediate product is 6 000 000 000, which
+        // overflows `u32` (silently wrapping to 1 705 032 704
+        // in the pre-v0.6.1 code path, which then divided by
+        // 4 yielded a wrong 426 258 176). The widened helper
+        // computes the true answer in `u64` and reports the
+        // correct 1 500 000 000 — well under i32::MAX, so the
+        // clamp is not triggered.
+        assert_eq!(proportion_pixels(2_000_000_000, 3, 4), 1_500_000_000);
+    }
+
+    #[test]
+    fn proportion_pixels_clamps_to_i32_max() {
+        // 32 GiB available share (4_294_967_296) is way past
+        // what `MoveWindow` can accept (`i32` coordinates);
+        // we clamp to i32::MAX so the result is always a
+        // valid Win32 coordinate.
+        assert_eq!(proportion_pixels(i32::MAX, 4, 1), i32::MAX);
+    }
+
+    #[test]
+    fn proportion_pixels_negative_available_treated_as_zero() {
+        // The sizer itself clamps `available` to >= 0, but
+        // the helper does the same defensively in case it
+        // is called from somewhere else.
+        assert_eq!(proportion_pixels(-50, 1, 1), 0);
     }
 }

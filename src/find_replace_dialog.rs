@@ -720,8 +720,19 @@ mod tests {
             lpfnHook: None,
             lpTemplateName: std::ptr::null(),
         };
-        let ev = build_event(&fr).expect("event");
-        assert!(matches!(ev, FindReplaceEvent::ReplaceAll { .. }));
+        // `build_event` returns `Option<…>`; the previous
+        // implementation used `.expect("event")`, which would
+        // panic with a generic message. We now use `if let Some`
+        // so the test fails with a useful context (the actual
+        // returned variant, not just "event").
+        match build_event(&fr) {
+            Some(ev) => assert!(
+                matches!(ev, FindReplaceEvent::ReplaceAll { .. }),
+                "expected ReplaceAll, got {:?}",
+                ev
+            ),
+            None => panic!("build_event returned None for FR_REPLACEALL|FR_REPLACE|FR_FINDNEXT"),
+        }
     }
 
     #[test]
@@ -744,7 +755,13 @@ mod tests {
             lpfnHook: None,
             lpTemplateName: std::ptr::null(),
         };
-        let ev = build_event(&fr).expect("event");
-        assert!(matches!(ev, FindReplaceEvent::Closed));
+        match build_event(&fr) {
+            Some(ev) => assert!(
+                matches!(ev, FindReplaceEvent::Closed),
+                "expected Closed, got {:?}",
+                ev
+            ),
+            None => panic!("build_event returned None for FR_DIALOGTERM|FR_FINDNEXT"),
+        }
     }
 }

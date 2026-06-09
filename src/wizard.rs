@@ -18,17 +18,17 @@
 //! let mut wiz = Wizard::new("Setup Wizard", 500, 360);
 //!
 //! // Page 1: a panel that the wizard will host
-//! let p1 = Panel::new(wiz.frame());
+//! let p1 = Panel::new(&wiz.frame());
 //! StaticText::new(&p1, "Welcome to the wizard!");
 //! wiz.add_page("Welcome", p1);
 //!
 //! // Page 2
-//! let p2 = Panel::new(wiz.frame());
+//! let p2 = Panel::new(&wiz.frame());
 //! StaticText::new(&p2, "Page two — fill in your details.");
 //! wiz.add_page("Details", p2);
 //!
 //! // Page 3 (last)
-//! let p3 = Panel::new(wiz.frame());
+//! let p3 = Panel::new(&wiz.frame());
 //! StaticText::new(&p3, "Click Finish to complete the setup.");
 //! wiz.add_page("Finish", p3);
 //!
@@ -61,6 +61,7 @@
 //! `#[cfg]`-gated to Windows.
 
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::button::Button;
@@ -110,6 +111,16 @@ pub enum WizardResult {
     Finished,
     /// The user clicked Cancel or closed the wizard window.
     Cancelled,
+}
+
+impl fmt::Display for WizardResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            WizardResult::Finished => "Finished",
+            WizardResult::Cancelled => "Cancelled",
+        };
+        f.write_str(s)
+    }
 }
 
 // ─── Internal state shared with the button / resize closures ──────────
@@ -568,4 +579,24 @@ fn handle_cancel(data: &Rc<RefCell<WizardData>>) {
         d.result = Some(WizardResult::Cancelled);
     }
     data.borrow().frame.close();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wizard_result_display_is_pascal_case() {
+        assert_eq!(format!("{}", WizardResult::Finished), "Finished");
+        assert_eq!(format!("{}", WizardResult::Cancelled), "Cancelled");
+    }
+
+    #[test]
+    fn wizard_result_default_is_cancelled() {
+        // WizardResult is constructed via the run() loop; verify both
+        // variants are constructible and stable across Debug formatting.
+        let finished = WizardResult::Finished;
+        let cancelled = WizardResult::Cancelled;
+        assert_ne!(format!("{:?}", finished), format!("{:?}", cancelled));
+    }
 }

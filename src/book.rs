@@ -24,12 +24,13 @@
 //!
 //! ```no_run
 //! use ru_wx::prelude::*;
+//! use ru_wx::book::Listbook;
 //! let frame = Frame::builder().with_title("book").build();
-//! let list = ListBox::new(&frame);
+//! let _list = ListBox::new(&frame);
 //! let book = Listbook::new();
 //! book.add_page("Page 1", Panel::new(&frame));
 //! book.add_page("Page 2", Panel::new(&frame));
-//! // Caller wires `list`'s selection change to `book.select(idx)`.
+//! // Caller wires the control-strip's selection change to `book.select(idx)`.
 //! ```
 //!
 //! The reason for this is that the various `ru_wx` controls

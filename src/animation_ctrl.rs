@@ -212,24 +212,30 @@ impl AnimationCtrl {
             let initial_delay;
             {
                 let mut inner = self.inner.borrow_mut();
-                if inner.animation.is_none()
-                    || !inner.animation.as_ref().unwrap().is_loaded()
-                {
-                    return;
-                }
+                // Compute the initial delay *before* any mutable
+                // borrow of `inner` is in scope. The previous
+                // implementation used the equivalent of
+                // `inner.animation.as_ref().unwrap().frame(0)`,
+                // which the compiler accepted only because the
+                // temporary `&inner.animation` died at the end
+                // of the statement. The pre-v0.5.8 code is
+                // correct but the `unwrap()` reads as if it
+                // could panic; we replace it with a `match` so
+                // the no-animation branch is explicit at the
+                // source level.
+                initial_delay = match inner.animation.as_ref() {
+                    Some(anim) if anim.is_loaded() => anim
+                        .frame(0)
+                        .map(|f| f.delay_ms)
+                        .unwrap_or(DEFAULT_FRAME_DELAY_MS),
+                    _ => return,
+                };
                 if inner.playing {
                     return;
                 }
                 inner.playing = true;
                 inner.current_frame = 0;
                 hwnd = inner.hwnd;
-                initial_delay = inner
-                    .animation
-                    .as_ref()
-                    .unwrap()
-                    .frame(0)
-                    .map(|f| f.delay_ms)
-                    .unwrap_or(DEFAULT_FRAME_DELAY_MS);
             }
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
@@ -423,10 +429,15 @@ fn draw_current_frame(hwnd: HWND, hdc: HDC) {
             // at 2, so without this bump the second dispatch
             // would drop the count to 0 and free the backing
             // storage).
-            unsafe {
-                Rc::increment_strong_count(ptr as *const RefCell<AnimationCtrlInner>);
-            }
-            let rc = unsafe { Rc::from_raw(ptr as *const RefCell<AnimationCtrlInner>) };
+            // SAFETY: `ptr` was stored via `Rc::into_raw` and the
+            // outer dispatch path bumped the refcount by one before
+            // this drop (see the long comment in `frame.rs`
+            // WM_NOTIFY for the full rationale). The outer `unsafe`
+            // block above covers this call.
+            Rc::increment_strong_count(ptr as *const RefCell<AnimationCtrlInner>);
+            // SAFETY: same as above; the outer `unsafe` block covers
+            // this call.
+            let rc = Rc::from_raw(ptr as *const RefCell<AnimationCtrlInner>);
             let out = {
                 let inner = rc.borrow();
                 if let Some(anim) = &inner.animation {

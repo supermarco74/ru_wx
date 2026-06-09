@@ -41,6 +41,36 @@ use windows_sys::Win32::Graphics::Gdi::{
 /// 8-bit RGBA pixel, stored as `(R, G, B, A)` in memory.
 pub type Rgba = (u8, u8, u8, u8);
 
+/// Maximum pixel count we will allocate for an [`Image`].
+///
+/// The byte count is `4 * MAX_IMAGE_PIXELS` (one byte per
+/// RGBA channel), capped at 256 MiB on 64-bit hosts. Anything
+/// larger would either:
+///
+/// * overflow `usize` on 32-bit hosts (`u32 * u32 * 4 > 2^32`), or
+/// * allocate gigabytes of RAM for a single image, which is
+///   almost certainly a misuse (no real GUI needs a 100k×100k
+///   raster).
+///
+/// When `Image::new` is called with dimensions that would
+/// exceed this cap, the constructed image has a zero-size
+/// pixel buffer and `is_null()` returns `true` so callers can
+/// detect the rejection.
+pub const MAX_IMAGE_PIXELS: usize = 64 * 1024 * 1024; // 64 M pixels = 256 MiB
+
+/// Compute the byte count for a given `(width, height)`,
+/// returning `None` on overflow or when the result would
+/// exceed [`MAX_IMAGE_PIXELS`]. Centralises the overflow
+/// logic so every code path uses the same rule.
+#[inline]
+fn checked_image_byte_count(width: u32, height: u32) -> Option<usize> {
+    let pixels = (width as usize).checked_mul(height as usize)?;
+    if pixels > MAX_IMAGE_PIXELS {
+        return None;
+    }
+    pixels.checked_mul(4)
+}
+
 /// Errors that can occur when working with [`Image`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImageError {
@@ -78,12 +108,30 @@ pub struct Image {
     pixels: Vec<u8>,
 }
 
+/// Compute the byte index of pixel `(x, y)` for a
+/// row-major image of `width` pixels, returning `None` on
+/// `usize` overflow. The 4-byte RGBA stride is multiplied
+/// in last so that we fail fast on the smaller operands.
+#[inline]
+fn pixel_index(y: u32, width: u32, x: u32) -> Option<usize> {
+    let row = (y as usize).checked_mul(width as usize)?;
+    let col = row.checked_add(x as usize)?;
+    col.checked_mul(4)
+}
+
 impl Image {
     /// Create an empty image of the given dimensions filled
     /// with opaque black. Mainly useful for tests and for
     /// building images pixel-by-pixel.
+    ///
+    /// Returns a *null* image (zero-size pixel buffer) when
+    /// the requested dimensions would either overflow
+    /// `usize` or exceed [`MAX_IMAGE_PIXELS`]. Callers can
+    /// detect the rejection with [`Image::is_null`].
     pub fn new(width: u32, height: u32) -> Self {
-        let pixels = vec![0u8; (width as usize) * (height as usize) * 4];
+        let pixels = checked_image_byte_count(width, height)
+            .map(|n| vec![0u8; n])
+            .unwrap_or_default();
         Self {
             width,
             height,
@@ -96,7 +144,28 @@ impl Image {
     /// bytes. Used by the GIF/APNG decoder in
     /// [`crate::animation::Animation`] and by anyone who needs
     /// to build an `Image` from existing RGBA data.
-    pub fn from_rgba8(width: u32, height: u32, pixels: Vec<u8>) -> Self {
+    ///
+    /// The buffer is *clamped* (truncated or zero-extended
+    /// as needed) to the size implied by `width * height`.
+    /// The previous implementation stored the buffer as-is,
+    /// so a too-small or too-large input silently desynced
+    /// `pixels().len()` from `width * height * 4` and
+    /// corrupted the bounds check in `get_pixel` / `set_pixel`.
+    pub fn from_rgba8(width: u32, height: u32, mut pixels: Vec<u8>) -> Self {
+        // Reject dimensions that would overflow usize or
+        // exceed MAX_IMAGE_PIXELS by collapsing the buffer
+        // to a zero-size placeholder — `is_null()` will then
+        // report the failure.
+        let Some(expected) = checked_image_byte_count(width, height) else {
+            return Self {
+                width,
+                height,
+                pixels: Vec::new(),
+            };
+        };
+        if pixels.len() != expected {
+            pixels.resize(expected, 0);
+        }
         Self {
             width,
             height,
@@ -144,22 +213,38 @@ impl Image {
     }
 
     /// Returns the RGBA8 pixel at `(x, y)`, or `None` if the
-    /// coordinates are out of range.
+    /// coordinates are out of range or the index would
+    /// overflow `usize` (the latter is unreachable for
+    /// images constructed via [`Image::new`] / [`Image::from_rgba8`]
+    /// but we guard it defensively).
     pub fn get_pixel(&self, x: u32, y: u32) -> Option<Rgba> {
         if x >= self.width || y >= self.height {
             return None;
         }
-        let idx = ((y as usize) * (self.width as usize) + (x as usize)) * 4;
+        let idx = pixel_index(y, self.width, x)?;
+        let end = idx.checked_add(4)?;
+        if end > self.pixels.len() {
+            return None;
+        }
         Some((self.pixels[idx], self.pixels[idx + 1], self.pixels[idx + 2], self.pixels[idx + 3]))
     }
 
     /// Set the RGBA8 pixel at `(x, y)`. Returns `false` if
-    /// the coordinates are out of range.
+    /// the coordinates are out of range or the index would
+    /// overflow `usize`.
     pub fn set_pixel(&mut self, x: u32, y: u32, pixel: Rgba) -> bool {
         if x >= self.width || y >= self.height {
             return false;
         }
-        let idx = ((y as usize) * (self.width as usize) + (x as usize)) * 4;
+        let Some(idx) = pixel_index(y, self.width, x) else {
+            return false;
+        };
+        let Some(end) = idx.checked_add(4) else {
+            return false;
+        };
+        if end > self.pixels.len() {
+            return false;
+        }
         self.pixels[idx] = pixel.0;
         self.pixels[idx + 1] = pixel.1;
         self.pixels[idx + 2] = pixel.2;
@@ -294,5 +379,99 @@ mod tests {
         assert_eq!(bmp.height, 12);
         #[cfg(target_os = "windows")]
         assert!(!bmp.is_null());
+    }
+
+    // ── v0.6.1 security tests ───────────────────────────────────────
+    //
+    // These exercise the overflow / DoS paths of the
+    // pixel-buffer construction and indexing logic. The
+    // pre-v0.6.1 code computed `width * height * 4` in
+    // `usize` without any check, so a 65536×65536 request
+    // either allocated gigabytes of zeroed memory (DoS) or
+    // wrapped the length on 32-bit hosts (panic in
+    // `vec![0u8; wrapped]`). We now reject anything above
+    // `MAX_IMAGE_PIXELS`.
+
+    #[test]
+    fn new_rejects_dimensions_over_max_pixels() {
+        // 8000 × 8000 = 64 000 000 pixels, just under the
+        // 64 Mi cap (67 108 864), so this *should* succeed.
+        let ok = Image::new(8000, 8000);
+        assert!(!ok.is_null());
+        assert_eq!(ok.pixels().len(), 8000 * 8000 * 4);
+
+        // 9000 × 9000 = 81 000 000 pixels, above the 64 Mi
+        // cap. Must collapse to a null image instead of
+        // panicking.
+        let too_big = Image::new(9000, 9000);
+        assert!(too_big.is_null());
+        assert_eq!(too_big.pixels().len(), 0);
+        // Width/height are still recorded so the caller can
+        // tell *what* the rejected request was.
+        assert_eq!(too_big.width, 9000);
+        assert_eq!(too_big.height, 9000);
+    }
+
+    #[test]
+    fn new_rejects_32bit_overflow_dimensions() {
+        // 65536 × 65536 × 4 = 2^34, which would overflow
+        // `usize` on 32-bit hosts and silently wrap to
+        // a tiny (wrong) buffer on 64-bit hosts. Either
+        // way, we want a null image rather than a bad
+        // allocation. (On 64-bit `usize` the wrap would
+        // not happen but the byte count (16 GiB) is
+        // still well above the cap, so the cap rejects
+        // it; on 32-bit the `checked_mul` chain rejects
+        // it earlier.)
+        let img = Image::new(65_536, 65_536);
+        assert!(img.is_null());
+        assert_eq!(img.pixels().len(), 0);
+    }
+
+    #[test]
+    fn from_rgba8_clamps_buffer_to_expected_size() {
+        // Buffer too small for the declared dimensions:
+        // we zero-extend it to the expected length so the
+        // invariant `pixels.len() == width * height * 4`
+        // is preserved.
+        let tiny = vec![0xAAu8; 4];
+        let img = Image::from_rgba8(2, 2, tiny);
+        assert_eq!(img.pixels().len(), 2 * 2 * 4);
+        assert!(!img.is_null());
+
+        // Buffer too large for the declared dimensions:
+        // we truncate it.
+        let big = vec![0xBBu8; 2 * 2 * 4 + 16];
+        let img2 = Image::from_rgba8(2, 2, big);
+        assert_eq!(img2.pixels().len(), 2 * 2 * 4);
+    }
+
+    #[test]
+    fn from_rgba8_rejects_oversize_dimensions() {
+        // Same overflow case as `new_rejects_32bit_overflow_dimensions`,
+        // but going through the `from_rgba8` entry point.
+        let big_buf = vec![0u8; 1024];
+        let img = Image::from_rgba8(65_536, 65_536, big_buf);
+        assert!(img.is_null());
+    }
+
+    #[test]
+    fn set_pixel_does_not_panic_on_oversize_dimensions() {
+        // A pathological image must still be safe to call
+        // `get_pixel` / `set_pixel` on — the method should
+        // return None / false rather than panic on an
+        // out-of-bounds access.
+        let mut img = Image::new(65_536, 65_536);
+        assert!(img.is_null());
+        assert_eq!(img.get_pixel(0, 0), None);
+        assert!(!img.set_pixel(0, 0, (0, 0, 0, 0)));
+    }
+
+    #[test]
+    fn max_image_pixels_matches_documented_cap() {
+        // The constant is part of the public API. A test
+        // guards against an accidental change to its
+        // value.
+        assert_eq!(MAX_IMAGE_PIXELS, 64 * 1024 * 1024);
     }
 }

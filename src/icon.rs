@@ -36,10 +36,19 @@ fn render_svg_to_pixels(svg_bytes: &[u8], width: u32, height: u32) -> Option<Vec
 
     resvg::render(&tree, transform, &mut pixmap.as_mut());
 
-    // Convert RGBA pixels from the pixmap to BGRA (Win32 DIB section format)
+    // Convert RGBA pixels from the pixmap to BGRA (Win32 DIB section format).
+    //
+    // The v0.5.8 widening fix in `svg_bytes_to_hbitmap`
+    // below moved the `* 4` into `usize` to avoid a `u32`
+    // overflow for large dimensions, but this earlier code
+    // path was missed. We now do the same widening here so
+    // the `vec![0u8; ...]` cannot silently wrap on 32-bit
+    // hosts (`u32 * u32 * 4 > 2^32` for a 65536×65536 image)
+    // and so the loop bound matches the buffer size.
     let rgba = pixmap.data();
-    let mut bgra = vec![0u8; (width * height * 4) as usize];
-    for i in 0..(width * height) as usize {
+    let mut bgra = vec![0u8; (width as usize) * (height as usize) * 4];
+    let px_count = (width as usize) * (height as usize);
+    for i in 0..px_count {
         bgra[i * 4] = rgba[i * 4 + 2]; // Blue
         bgra[i * 4 + 1] = rgba[i * 4 + 1]; // Green
         bgra[i * 4 + 2] = rgba[i * 4]; // Red
@@ -82,9 +91,19 @@ pub fn svg_bytes_to_hbitmap(svg_bytes: &[u8], width: u32, height: u32) -> Option
             return None;
         }
 
-        // Copy BGRA pixels into the DIB section
-        let dest =
-            std::slice::from_raw_parts_mut(bits_ptr as *mut u8, (width * height * 4) as usize);
+        // Copy BGRA pixels into the DIB section.
+        //
+        // The byte count is `width * height * 4`. The pre-v0.5.8
+        // code did the multiplication in `u32` and only then
+        // cast to `usize`, which silently wraps for large
+        // dimensions (e.g. 65536×65536 overflows `u32`). On
+        // 64-bit hosts the cast back to `usize` is fine but the
+        // resulting length is wrong, leading to a too-small
+        // slice and a `copy_from_slice` that panics on the
+        // length mismatch. Widening to `usize` *first* removes
+        // the overflow window entirely.
+        let byte_count = (width as usize) * (height as usize) * 4;
+        let dest = std::slice::from_raw_parts_mut(bits_ptr as *mut u8, byte_count);
         dest.copy_from_slice(&bgra);
 
         Some(hbitmap)
@@ -104,6 +123,14 @@ pub fn load_svg_bytes_as_hbitmap(svg_bytes: &[u8], width: u32, height: u32) -> O
 ///
 /// A monochrome mask is generated (all zeros = fully opaque); the alpha
 /// channel of the colour bitmap is preserved.
+///
+/// # Errors
+///
+/// Returns a **null `HICON`** when `CreateIconIndirect` fails (out of
+/// memory, malformed `BITMAP` from `GetObjectW`, etc.). Callers must
+/// check for null; wrappers in this module that return `Option<HICON>`
+/// translate the null into `None` so the user cannot accidentally
+/// treat a failure as a valid handle.
 #[cfg(target_os = "windows")]
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // thin FFI wrapper around CreateIconIndirect
 pub fn hbitmap_to_hicon(hbitmap: HBITMAP) -> HICON {
@@ -151,12 +178,27 @@ pub fn hbitmap_to_hicon(hbitmap: HBITMAP) -> HICON {
 #[cfg(target_os = "windows")]
 pub fn svg_bytes_to_hicon(svg_bytes: &[u8], size: u32) -> Option<HICON> {
     let hbmp = svg_bytes_to_hbitmap(svg_bytes, size, size)?;
+    // `hbitmap_to_hicon` is a safe thin FFI wrapper (it has no
+    // soundness preconditions beyond those enforced by
+    // `windows-sys`); the call site is plain Rust.
     let hicon = hbitmap_to_hicon(hbmp);
     // The HICON keeps its own reference to the colour bitmap data, so we
-    // can delete the intermediate HBITMAP.
-    // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+    // can delete the intermediate HBITMAP. `DeleteObject` is a no-op
+    // when called with a null handle, so this is safe even if the
+    // bitmap is somehow null.
+    // SAFETY: `hbmp` was just produced by `svg_bytes_to_hbitmap` (a
+    // DIB section we own); `DeleteObject` is the correct destructor.
     unsafe {
         DeleteObject(hbmp);
+    }
+    // `hbitmap_to_hicon` returns a null `HICON` when
+    // `CreateIconIndirect` fails. A null handle inside a `Some` is
+    // indistinguishable from a real handle for the caller, which is a
+    // silent failure: the user would treat the bogus "icon" as
+    // valid and pass it to `Shell_NotifyIconW` / `BM_SETIMAGE` / etc.
+    // Map the null to `None` so the caller can fall back.
+    if hicon.is_null() {
+        return None;
     }
     Some(hicon)
 }

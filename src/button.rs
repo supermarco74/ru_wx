@@ -355,7 +355,7 @@ impl Button {
     /// `BUTTON` control with `BS_PUSHBUTTON` (a "wide" default that
     /// fits an OK / Cancel label plus 2× 6-pixel horizontal margins
     /// and a single line of system font text with vertical padding).
-    pub fn GetDefaultSize() -> (i32, i32) {
+    pub fn default_size() -> (i32, i32) {
         #[cfg(target_os = "windows")]
         {
             // 88×26 is the standard button size reported by the
@@ -368,6 +368,20 @@ impl Button {
         {
             (75, 23)
         }
+    }
+
+    /// Deprecated CamelCase alias for [`Button::default_size`].
+    ///
+    /// Kept for API compatibility with the v0.6.2 release and the
+    /// `wxWidgets` C++ method name. New code should call
+    /// [`Button::default_size`].
+    #[deprecated(
+        since = "0.6.3",
+        note = "use the snake_case `default_size()` instead"
+    )]
+    #[allow(non_snake_case)] // intentional API-compat alias
+    pub fn GetDefaultSize() -> (i32, i32) {
+        Self::default_size()
     }
 }
 
@@ -446,5 +460,33 @@ impl Drop for ButtonInner {
                 DeleteObject(hbmp);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// v0.6.3: the renamed `default_size` returns the
+    /// platform-specific Win32 default (88×26). The deprecated
+    /// `GetDefaultSize` alias must produce the same value.
+    #[test]
+    fn default_size_returns_platform_default() {
+        let (w, h) = Button::default_size();
+        #[cfg(target_os = "windows")]
+        assert_eq!((w, h), (88, 26));
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!((w, h), (75, 23));
+    }
+
+    /// v0.6.3: the deprecated `GetDefaultSize` alias is a
+    /// transparent shim over `default_size`.
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_get_default_size_alias_matches() {
+        let a = Button::default_size();
+        #[allow(deprecated)]
+        let b = Button::GetDefaultSize();
+        assert_eq!(a, b);
     }
 }

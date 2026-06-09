@@ -40,8 +40,24 @@
 //! user-facing surface (the `log` submodules, `tooltip::imp`,
 //! etc.) carry their own `//!` or `///` rustdoc regardless of
 //! the lint suppression.
+//!
+//! The crate also allows `dead_code` at the root: many
+//! public types, fields, and Win32 constants are part of
+//! the *API surface* (they are reachable from the rustdoc
+//! public-API table of contents) even when no internal
+//! call site exercises them yet. This is especially true
+//! for the many `WM_*`, `TVGN_*`, `CBEIF_*`, `BM_GET*`,
+//! `UDS_*`, `MDICLIENT_*`, `LVS_EX_*`, and similar Win32
+//! constants defined for completeness and parity with
+//! wxWidgets. Removing the unused public surface to
+//! silence the lint would shrink the API and require
+//! re-adding items later. The lint is therefore allowed
+//! globally; specific in-function issues (unused
+//! variables, unnecessary `unsafe` blocks, unused
+//! imports) are still fixed per-site.
 
 #![allow(clippy::missing_docs_in_private_items)]
+#![allow(dead_code)]
 
 pub mod accelerator;
 pub mod animation;
@@ -162,7 +178,10 @@ pub use dpi::{
 pub use drop_target::DroppedFiles;
 pub use ole_dnd::{OleDropEffect, OleDropError, OleDroppedData, OleDropPosition};
 #[cfg(target_os = "windows")]
-pub use ole_dnd::OleDropTarget;
+pub use ole_dnd::{
+    DragContinueResult, OleDragData, OleDragError, OleDragSource, OleDragSourceCallbacks,
+    OleDropTarget,
+};
 pub use file_dialog::{FileDialog, FileDialogStyle};
 pub use find_replace_dialog::{FindReplaceDialog, FindReplaceEvent};
 pub use pen::{Pen, PenStyle};
