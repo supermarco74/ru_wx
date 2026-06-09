@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&amp;display=swap');
+      .text-ru {
+        font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 900;
+        font-size: 95px;
+        letter-spacing: -4px;
+      }
+      .text-wx {
+        font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 900;
+        font-size: 125px; 
+        letter-spacing: -6px;
+      }
+    </style>
+
+    <linearGradient id="rustOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B4A" />
+      <stop offset="100%" stop-color="#CD3721" />
+    </linearGradient>
+    
+    <linearGradient id="wxBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00B0FF" />
+      <stop offset="100%" stop-color="#005691" />
+    </linearGradient>
+
+    <filter id="gearShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+
+    <filter id="insetShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  
+  <g fill="url(#rustOrange)" filter="url(#gearShadow)">
+    <circle cx="256" cy="256" r="152" />
+    <polygon points="256,90 235,155 277,155" transform="rotate(0 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(15 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(30 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(45 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(60 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(75 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(90 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(105 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(120 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(135 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(150 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(165 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(180 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(195 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(210 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(225 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(240 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(255 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(270 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(285 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(300 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(315 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(330 256 256)"/>
+    <polygon points="256,90 235,155 277,155" transform="rotate(345 256 256)"/>
+  </g>
+  
+  <circle cx="256" cy="256" r="135" fill="#FFFFFF" />
+  <circle cx="256" cy="256" r="135" fill="none" stroke="#ECEFF1" stroke-width="3" />
+  
+  <g filter="url(#insetShadow)">
+    <circle cx="220" cy="155" r="8" fill="#FF5F56" />
+    <circle cx="256" cy="155" r="8" fill="#FFBD2E" />
+    <circle cx="292" cy="155" r="8" fill="#27C93F" />
+  </g>
+  <line x1="165" y1="177" x2="347" y2="177" stroke="#F0F4F8" stroke-width="4" stroke-linecap="round" />
+  
+  <text x="256" y="250" 
+        class="text-ru"
+        text-anchor="middle" 
+        fill="url(#rustOrange)"
+        filter="url(#insetShadow)">RU</text>
+
+  <text x="246" y="354" 
+        class="text-wx"
+        text-anchor="middle" 
+        fill="url(#wxBlue)"
+        filter="url(#insetShadow)">wx</text>
+</svg>

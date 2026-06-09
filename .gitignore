@@ -1,0 +1,35 @@
+# Rust build artifacts
+/target/
+**/target/
+
+# Pre-built example binaries
+/examples/examples_win32/
+/examples/minitest_win32/
+
+# Build / smoke / test logs and stderr captures
+*.log
+*.txt
+!src/**/*.txt
+!assets/**/*.txt
+!tests/**/*.txt
+
+# Repro / smoke build outputs (the .rs source is committed, not the .exe)
+/repro_*.exe
+/examples/repro_*.exe
+/examples/*/repro_*.exe
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / editor cruft
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cargo / rust-analyzer caches
+.cargo/
+rust-project.json

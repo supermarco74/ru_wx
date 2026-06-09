@@ -1,0 +1,204 @@
+name: CI
+
+# Verifies that the `ru_wx` library compiles and passes its test
+# suite on every platform the crate claims to support.
+#
+# `ru_wx` is a pure-Rust Win32 GUI library. The non-Windows targets
+# compile cross-platform *stubs* (every widget type exists on every
+# OS, but only the `cfg(target_os = "windows")` backend actually
+# creates real widgets), so we still build + test on all three OSes
+# to guarantee that the stubs compile and the headless test
+# layer (`cargo test --lib`) runs to completion.
+#
+# The Windows job additionally embeds the Common Controls v6
+# manifest into the example .exe files via the
+# `build_with_manifest.ps1` wrapper, because the library's
+# `build.rs` emits `cargo:rustc-link-lib` for the static `app.lib`
+# that is NOT forwarded to downstream `[[example]]` targets
+# (see `upgrade.md` Upgrade 6 for the long explanation).
+#
+# This CI runs:
+#   1. `cargo build` and `cargo build --release --examples`;
+#   2. `cargo test --lib` (177 headless unit tests as of v0.5.4);
+#   3. `cargo test --doc` (23 doctests as of v0.5.4);
+#   4. `cargo test --test integration`
+#      (15 cross-module integration tests as of v0.5.4);
+#   5. `cargo doc --no-deps` (must report 0 warnings);
+#   6. `cargo clippy --all-targets -- -D warnings`
+#      (default clippy group; pedantic is tracked separately
+#      in `clippy_text.txt` and not enforced in CI);
+#   7. `cargo fmt --all -- --check`;
+#   8. On Windows: `build_with_manifest.ps1 -p ru_wx --example
+#      input_controls_demo --release` and verifies the .exe
+#      actually launches (no `0xc0000142`).
+#
+# The example .exe is NOT launched on Linux/macOS: the runner is
+# headless and there is no equivalent of the Windows Manifest
+# Tool to verify the demo on those platforms (it would also need
+# a real X server / Aqua session, which neither runner has).
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: build + test on a (os x rust) matrix.
+  # ---------------------------------------------------------------------------
+  test:
+    name: build & test (${{ matrix.os }} / rust ${{ matrix.rust }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (${{ matrix.rust }})
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+
+      - name: Show cargo & rustc versions
+        run: |
+          cargo --version
+          rustc --version
+
+      # Debug build of the library + examples. Must pass on every
+      # platform.
+      - name: cargo build
+        run: cargo build
+
+      # Release build of the examples - the same configuration the
+      # end user would use to ship a binary.
+      - name: cargo build --release --examples
+        run: cargo build --release --examples
+
+      # Headless unit tests. 177 cases as of v0.5.4 (Cycle 20):
+      # geometry, sizer, art provider, log subsystem, accelerator
+      # parser, grid sizer, menu shortcut mutators, and the
+      # frame/menu-bar integration paths. None of them need a
+      # display server.
+      - name: cargo test --lib
+        run: cargo test --lib -- --nocapture
+
+      # Doctests. 23 cases as of v0.5.4 (Cycle 20); they only
+      # `compile` because the user code calls into Win32, but
+      # the compiler still validates every signature.
+      - name: cargo test --doc
+        run: cargo test --doc
+
+      # Cross-module integration tests. 15 cases as of v0.5.4
+      # (Cycle 20); they exercise public-API round-trips
+      # (prelude, accelerator bits, listctrl selection) without
+      # touching a real HWND.
+      - name: cargo test --test integration
+        run: cargo test --test integration
+
+      # `cargo doc` must produce zero warnings. The cycle that
+      # bumped the version to 0.3.6 fixed the last 4 broken
+      # intra-doc links and Cycle 20 (v0.5.4) keeps it at 0.
+      - name: cargo doc --no-deps (must be 0 warnings)
+        run: cargo doc --no-deps
+
+      # Clippy with -D warnings on the default group. Cycle 6
+      # (v0.3.4) drove this to 0 and every cycle since has kept
+      # it at 0; Cycle 20 (v0.5.4) keeps it at 0 after the
+      # menu-shortcut-refresh refactor. The pedantic group is
+      # intentionally NOT enabled here: a pedantic sweep finds
+      # ~973 stylistic lints (mostly cast warnings on Win32 FFI
+      # types, `#[must_use]` on hundreds of accessors, and
+      # `wildcard_import` on the `lib.rs` prelude), and those
+      # are tracked in `clippy_default2.txt` / `clippy_text.txt`
+      # rather than blocking CI.
+      - name: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      # `rustfmt` must not see any deviations.
+      - name: rustfmt --check
+        run: cargo fmt --all -- --check
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Windows-only manifest-embedding smoke test.
+  #
+  # Verifies that the `build_with_manifest.ps1` wrapper actually
+  # embeds the Common Controls v6 manifest into the example .exe
+  # and that the resulting .exe launches without 0xc0000142.
+  # ---------------------------------------------------------------------------
+  smoke_launch_windows:
+    name: smoke launch example (Windows / mt.exe)
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      # The `build_with_manifest.ps1` script locates mt.exe from
+      # the Windows 10/11 SDK that is pre-installed on the
+      # `windows-latest` runner.
+      - name: Build example with manifest embedding
+        shell: pwsh
+        run: |
+          .\build_with_manifest.ps1 -p ru_wx `
+            --example input_controls_demo `
+            --release
+
+      # Verify the .exe actually contains the manifest. This is
+      # the same ASCII-search verification that ships in
+      # `upgrade.md` Upgrade 6.
+      - name: Verify manifest is embedded
+        shell: pwsh
+        run: |
+          $exe = ".\target\release\examples\input_controls_demo.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Expected exe not found: $exe"
+            exit 1
+          }
+          $bytes = [System.IO.File]::ReadAllBytes($exe)
+          $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+          $checks = @(
+            "PerMonitorV2",
+            "Common-Controls",
+            "Microsoft.Windows.Common-Controls"
+          )
+          foreach ($needle in $checks) {
+            if (-not $ascii.Contains($needle)) {
+              Write-Error "Manifest verification failed: '$needle' not found in $exe"
+              exit 1
+            }
+          }
+          Write-Host "Manifest verification OK."
+
+      # Launch the .exe and wait up to 5s for the window to be
+      # idle. If 0xc0000142 fires, the process exits before the
+      # timeout and `HasExited` is true.
+      - name: Launch example (timeout 5s)
+        shell: pwsh
+        run: |
+          $exe = ".\target\release\examples\input_controls_demo.exe"
+          $proc = Start-Process -FilePath $exe -PassThru
+          $null = $proc.WaitForInputIdle(5000)
+          if ($proc.HasExited) {
+            Write-Error "Example exited prematurely (exit code $($proc.ExitCode))."
+            exit 1
+          }
+          Stop-Process -Id $proc.Id -Force
+          Write-Host "Example launched successfully."

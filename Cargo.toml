@@ -1,0 +1,208 @@
+[package]
+name = "ru_wx"
+version = "0.5.7"
+edition = "2021"
+description = "A pure Rust cross-platform GUI library with native widgets"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "gif"] }
+resvg = "0.44"
+
+[build-dependencies]
+embed-resource = "2.4"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_UI_Controls",
+    "Win32_UI_Controls_Dialogs",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_HiDpi",
+    "Win32_System_Com",
+    "Win32_System_Ole",
+    "Win32_System_Memory",
+    "Win32_Media_Multimedia",
+    "Win32_Graphics_OpenGL",
+    "Win32_Graphics_Dwm",
+] }
+
+[[example]]
+name = "window_with_button"
+path = "examples/window_with_button.rs"
+
+[[example]]
+name = "input_controls_demo"
+path = "examples/input_controls_demo.rs"
+
+[[example]]
+name = "icon_tray_demo"
+path = "examples/icon_tray_demo.rs"
+
+[[example]]
+name = "grid_demo"
+path = "examples/grid_demo.rs"
+
+[[example]]
+name = "showcase_all"
+path = "examples/showcase_all.rs"
+
+[[example]]
+name = "aui_toolbar_demo"
+path = "examples/aui_toolbar_demo.rs"
+
+[[example]]
+name = "esempio2"
+path = "examples/esempio2.rs"
+
+# ── Minitests: one focused example per migrated component ──────────────
+[[example]]
+name = "mt_button"
+path = "examples/minitest/mt_button.rs"
+
+[[example]]
+name = "mt_tab"
+path = "examples/minitest/mt_tab.rs"
+
+[[example]]
+name = "mt_menu"
+path = "examples/minitest/mt_menu.rs"
+
+[[example]]
+name = "mt_context_menu"
+path = "examples/minitest/mt_context_menu.rs"
+
+[[example]]
+name = "mt_checkbox_radio"
+path = "examples/minitest/mt_checkbox_radio.rs"
+
+[[example]]
+name = "mt_text_ctrl"
+path = "examples/minitest/mt_text_ctrl.rs"
+
+[[example]]
+name = "mt_choice_combo"
+path = "examples/minitest/mt_choice_combo.rs"
+
+[[example]]
+name = "mt_bitmap_combo"
+path = "examples/minitest/mt_bitmap_combo.rs"
+
+[[example]]
+name = "mt_list_box"
+path = "examples/minitest/mt_list_box.rs"
+
+[[example]]
+name = "mt_slider_gauge"
+path = "examples/minitest/mt_slider_gauge.rs"
+
+[[example]]
+name = "mt_tree_ctrl"
+path = "examples/minitest/mt_tree_ctrl.rs"
+
+[[example]]
+name = "mt_status_bar"
+path = "examples/minitest/mt_status_bar.rs"
+
+[[example]]
+name = "mt_status_bar_input"
+path = "examples/minitest/mt_status_bar_input.rs"
+
+[[example]]
+name = "mt_status_bar_minimal"
+path = "examples/minitest/mt_status_bar_minimal.rs"
+
+[[example]]
+name = "mt_static_line"
+path = "examples/minitest/mt_static_line.rs"
+
+[[example]]
+name = "mt_static_box"
+path = "examples/minitest/mt_static_box.rs"
+
+[[example]]
+name = "mt_static_bitmap"
+path = "examples/minitest/mt_static_bitmap.rs"
+
+[[example]]
+name = "mt_splitter"
+path = "examples/minitest/mt_splitter.rs"
+
+[[example]]
+name = "mt_scrolled"
+path = "examples/minitest/mt_scrolled.rs"
+
+[[example]]
+name = "mt_scroll_bar"
+path = "examples/minitest/mt_scroll_bar.rs"
+
+[[example]]
+name = "mt_dc"
+path = "examples/minitest/mt_dc.rs"
+
+[[example]]
+name = "mt_animation"
+path = "examples/minitest/mt_animation.rs"
+
+[[example]]
+name = "mt_media_ctrl"
+path = "examples/minitest/mt_media_ctrl.rs"
+
+[[example]]
+name = "mt_gl_canvas"
+path = "examples/minitest/mt_gl_canvas.rs"
+
+[[example]]
+name = "mt_listbook"
+path = "examples/minitest/mt_listbook.rs"
+
+[[example]]
+name = "mt_choicebook"
+path = "examples/minitest/mt_choicebook.rs"
+
+[[example]]
+name = "mt_toolbook"
+path = "examples/minitest/mt_toolbook.rs"
+
+[[example]]
+name = "mt_treebook"
+path = "examples/minitest/mt_treebook.rs"
+
+[[example]]
+name = "mt_mini_frame"
+path = "examples/minitest/mt_mini_frame.rs"
+
+[[example]]
+name = "mt_tip_window"
+path = "examples/minitest/mt_tip_window.rs"
+
+[[example]]
+name = "mt_splash_screen"
+path = "examples/minitest/mt_splash_screen.rs"
+
+[[example]]
+name = "mt_mdi"
+path = "examples/minitest/mt_mdi.rs"
+
+[[example]]
+name = "mt_wizard"
+path = "examples/minitest/mt_wizard.rs"
+
+[[example]]
+name = "mt_property_sheet_dialog"
+path = "examples/minitest/mt_property_sheet_dialog.rs"
+
+[[example]]
+name = "mt_property_grid"
+path = "examples/minitest/mt_property_grid.rs"
+
+[[example]]
+name = "mt_window_corners"
+path = "examples/minitest/mt_window_corners.rs"
