@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 fn main() {
     // Build the Windows manifest as a static .lib via embed-resource,
     // then ALSO emit an explicit `cargo:rustc-link-lib` for downstream

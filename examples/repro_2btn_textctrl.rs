@@ -1,25 +1,40 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Test: 2 buttons + TextCtrl + status bar
-//! If this passes, the bug requires the 3rd on_click
 #![windows_subsystem = "windows"]
-use ru_wx::{App, Button, Frame, StatusBar, TextCtrl};
+
+use ru_wx::{App, BoxSizer, Button, Frame, StatusBar, TextCtrl};
+
 fn main() {
-    let _app = App::new();
+    let app = App::new();
     let frame = Frame::builder()
         .with_title("Repro 7 — 2 buttons + TextCtrl")
         .with_size(1000, 600)
-        .build();
+        .with_modern_style().build();
+
     let status = StatusBar::new(&frame, 4);
     status.set_status_text("(empty)", 0);
-    let _input = TextCtrl::new(&frame, "Hello, world!");
-    eprintln!("[T1] TextCtrl created");
+
+    let input = TextCtrl::new(&frame, "Hello, world!");
+
     let s = status.clone();
     let b1 = Button::new(&frame, "Button 1");
-    b1.on_click(&frame, move || { s.set_status_text("1", 0); });
-    eprintln!("[T2] b1.on_click registered");
+    b1.on_click(&frame, move || {
+        s.set_status_text("1", 0);
+    });
+
     let s = status.clone();
-    eprintln!("[T3] About to call b2.on_click");
     let b2 = Button::new(&frame, "Button 2");
-    b2.on_click(&frame, move || { s.set_status_text("2", 0); });
-    eprintln!("[T4] b2.on_click registered - SUCCESS");
-    eprintln!("=== Test passed ===");
+    b2.on_click(&frame, move || {
+        s.set_status_text("2", 0);
+    });
+
+    let mut sizer = BoxSizer::vertical();
+    sizer.add(input.as_widget_ref());
+    sizer.add(b1.as_widget_ref());
+    sizer.add(b2.as_widget_ref());
+    frame.set_sizer(sizer);
+
+    app.run(frame);
 }

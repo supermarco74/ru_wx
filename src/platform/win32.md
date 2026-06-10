@@ -21,5 +21,5 @@ The single source of truth for "Win32-adjacent" helpers that don't belong to a s
 
 ## See also
 
-- [`platform/mod.rs`](./mod.md) — re-exports everything from here.
-- [`dpi.rs`](./dpi.md) — uses the same `GetDpiFor*` / `GetDeviceCaps` family at a higher level.
+- [`platform/mod.rs`](mod.md) — re-exports everything from here.
+- [`dpi.rs`](../core/dpi.md) — uses the same `GetDpiFor*` / `GetDeviceCaps` family at a higher level.

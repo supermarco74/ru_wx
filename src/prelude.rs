@@ -1,9 +1,14 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Convenient re-exports of the most commonly used `ru_wx` items.
 //!
-//! `ru_wx` exposes a large surface (≈ 45 modules); most user code only
-//! needs a handful of types. This module gathers the typical
-//! "import-and-go" set so a single line brings the whole working set
-//! into scope:
+//! `ru_wx` exposes a large surface (≈ 60 modules grouped into ten
+//! domain folders: `core`, `window`, `controls`, `containers`,
+//! `chrome`, `dialogs`, `dc`, `adv`, `dnd`, `platform`); most user
+//! code only needs a handful of types. This module gathers the
+//! typical "import-and-go" set so a single line brings the whole
+//! working set into scope:
 //!
 //! ```no_run
 //! use ru_wx::prelude::*;
@@ -23,105 +28,105 @@
 //! `ru_wx::module_name` for users who need them.
 
 #[cfg(target_os = "windows")]
-pub use crate::widget::Window;
-pub use crate::widget::{Widget, WidgetRef};
+pub use crate::core::widget::Window;
+pub use crate::core::widget::{Widget, WidgetRef};
 
 // --- Application & top-level windows ----------------------------------
-pub use crate::app::App;
-pub use crate::color_dialog::ColorDialog as ColourDialog;
-pub use crate::dialog::Dialog;
-pub use crate::dir_dialog::DirDialog;
-pub use crate::file_dialog::{FileDialog, FileDialogStyle};
-pub use crate::find_replace_dialog::{FindReplaceDialog, FindReplaceEvent};
-pub use crate::font_dialog::FontDialog;
-pub use crate::frame::{Frame, FrameBuilder};
-pub use crate::message_box::{message_box, MessageBoxIcon, MessageBoxResult, MessageBoxStyle};
-pub use crate::message_dialog::{MessageDialog, MessageDialogIcon, MessageDialogStyle};
-pub use crate::panel::Panel;
-pub use crate::progress_dialog::ProgressDialog;
-pub use crate::property_grid::{Property, PropertyGrid, PropertyValue};
-pub use crate::property_sheet_dialog::{PropertySheetDialog, PropertySheetDialogResult};
-pub use crate::single_choice_dialog::{ChoiceResult, MultiChoiceDialog, SingleChoiceDialog};
-pub use crate::symbol_picker_dialog::SymbolPickerDialog;
-pub use crate::text_entry_dialog::{NumberEntryDialog, PasswordEntryDialog, TextEntryDialog};
-pub use crate::top_level_window::{
+pub use crate::core::app::App;
+pub use crate::dialogs::color_dialog::ColorDialog as ColourDialog;
+pub use crate::window::dialog::Dialog;
+pub use crate::dialogs::dir_dialog::DirDialog;
+pub use crate::dialogs::file_dialog::{FileDialog, FileDialogStyle};
+pub use crate::dialogs::find_replace_dialog::{FindReplaceDialog, FindReplaceEvent};
+pub use crate::dialogs::font_dialog::FontDialog;
+pub use crate::window::frame::{Frame, FrameBuilder};
+pub use crate::dialogs::message_box::{message_box, MessageBoxIcon, MessageBoxResult, MessageBoxStyle};
+pub use crate::dialogs::message_dialog::{MessageDialog, MessageDialogIcon, MessageDialogStyle};
+pub use crate::window::panel::Panel;
+pub use crate::dialogs::progress_dialog::ProgressDialog;
+pub use crate::adv::property_grid::{Property, PropertyGrid, PropertyValue};
+pub use crate::dialogs::property_sheet_dialog::{PropertySheetDialog, PropertySheetDialogResult};
+pub use crate::dialogs::single_choice_dialog::{ChoiceResult, MultiChoiceDialog, SingleChoiceDialog};
+pub use crate::dialogs::symbol_picker_dialog::SymbolPickerDialog;
+pub use crate::dialogs::text_entry_dialog::{NumberEntryDialog, PasswordEntryDialog, TextEntryDialog};
+pub use crate::window::top_level_window::{
     CentreDirection, FullScreenStyle, TopLevelWindow, UserAttentionFlags, WindowCornerPreference,
 };
-pub use crate::wizard::{Wizard, WizardPage, WizardResult};
+pub use crate::adv::wizard::{Wizard, WizardPage, WizardResult};
 
 // --- Common containers ------------------------------------------------
-pub use crate::aui_tool_bar::{AuiDockSide, AuiToolBar};
-pub use crate::busy_info::BusyInfo;
-pub use crate::menu::{Menu, MenuBar, MenuItem, MenuItemKind};
-pub use crate::popup_menu::PopupMenu;
-pub use crate::scrolled_window::ScrolledWindow;
-pub use crate::scroll_bar::{ScrollBar, ScrollBarOrientation};
-pub use crate::splitter_window::{SashEvent, SplitterOrientation, SplitterWindow};
-pub use crate::status_bar::StatusBar;
-pub use crate::tab::Tab;
-pub use crate::tool_bar::ToolBar;
+pub use crate::chrome::aui_tool_bar::{AuiDockSide, AuiToolBar};
+pub use crate::core::busy_info::BusyInfo;
+pub use crate::window::menu::{Menu, MenuBar, MenuItem, MenuItemKind};
+pub use crate::window::popup_menu::PopupMenu;
+pub use crate::containers::scrolled_window::ScrolledWindow;
+pub use crate::containers::scroll_bar::{ScrollBar, ScrollBarOrientation};
+pub use crate::containers::splitter_window::{SashEvent, SplitterOrientation, SplitterWindow};
+pub use crate::chrome::status_bar::StatusBar;
+pub use crate::containers::tab::Tab;
+pub use crate::chrome::tool_bar::ToolBar;
 
 // --- Input controls ---------------------------------------------------
-pub use crate::bitmap_button::BitmapButton;
-pub use crate::button::Button;
-pub use crate::check_list_box::CheckListBox;
-pub use crate::checkbox::CheckBox;
-pub use crate::choice::Choice;
-pub use crate::colour_picker_ctrl::ColourPickerCtrl;
-pub use crate::combo_box::BitmapComboBox;
-pub use crate::combo_box::ComboBox;
-pub use crate::date_picker_ctrl::{Date, DateFormat, DatePickerCtrl};
-pub use crate::date_picker_dialog::{DateDialogFormat, DatePickerDialog};
-pub use crate::dc::{BackgroundMode, Dc, MemoryDC, PaintDC, WindowDC};
-pub use crate::gauge::Gauge;
-pub use crate::list_box::ListBox;
-pub use crate::list_ctrl::{CacheHint, ListCtrl, ListCtrlStyle, ListItem};
-pub use crate::radio_box::RadioBox;
-pub use crate::radio_button::RadioButton;
-pub use crate::slider::Slider;
-pub use crate::spin_button::SpinButton;
-pub use crate::spin_ctrl::SpinCtrl;
-pub use crate::spin_ctrl_double::SpinCtrlDouble;
-pub use crate::static_bitmap::StaticBitmap;
-pub use crate::static_box::StaticBox;
-pub use crate::static_line::{StaticLine, StaticLineOrientation};
-pub use crate::static_text::StaticText;
-pub use crate::text_ctrl::TextCtrl;
-pub use crate::toggle_button::ToggleButton;
-pub use crate::tree_ctrl::{TreeCtrl, TreeItem};
+pub use crate::controls::bitmap_button::BitmapButton;
+pub use crate::controls::button::Button;
+pub use crate::controls::check_list_box::CheckListBox;
+pub use crate::controls::checkbox::CheckBox;
+pub use crate::controls::choice::Choice;
+pub use crate::controls::colour_picker_ctrl::ColourPickerCtrl;
+pub use crate::controls::combo_box::BitmapComboBox;
+pub use crate::controls::combo_box::ComboBox;
+pub use crate::controls::date_picker_ctrl::{Date, DateFormat, DatePickerCtrl};
+pub use crate::dialogs::date_picker_dialog::{DateDialogFormat, DatePickerDialog};
+pub use crate::dc::dc::{BackgroundMode, Dc, MemoryDC, PaintDC, WindowDC};
+pub use crate::controls::gauge::Gauge;
+pub use crate::controls::list_box::ListBox;
+pub use crate::controls::list_ctrl::{CacheHint, ListCtrl, ListCtrlStyle, ListItem};
+pub use crate::controls::radio_box::RadioBox;
+pub use crate::controls::radio_button::RadioButton;
+pub use crate::controls::slider::Slider;
+pub use crate::controls::spin_button::SpinButton;
+pub use crate::controls::spin_ctrl::SpinCtrl;
+pub use crate::controls::spin_ctrl_double::SpinCtrlDouble;
+pub use crate::controls::static_bitmap::StaticBitmap;
+pub use crate::controls::static_box::StaticBox;
+pub use crate::controls::static_line::{StaticLine, StaticLineOrientation};
+pub use crate::controls::static_text::StaticText;
+pub use crate::controls::text_ctrl::TextCtrl;
+pub use crate::controls::toggle_button::ToggleButton;
+pub use crate::controls::tree_ctrl::{TreeCtrl, TreeItem};
 
 // --- Geometry & layout ------------------------------------------------
-pub use crate::geometry::{Colour, Rect};
-pub use crate::grid::{Cell, Grid};
-pub use crate::grid_sizer::{FlexGridSizer, GridSizer};
-pub use crate::sizer::{BoxSizer, Orientation};
+pub use crate::core::geometry::{Colour, Rect};
+pub use crate::containers::grid::{Cell, Grid};
+pub use crate::containers::grid_sizer::{FlexGridSizer, GridSizer};
+pub use crate::containers::sizer::{BoxSizer, Orientation};
 
 // --- Image / icon helpers --------------------------------------------
-pub use crate::animation::{Animation, AnimationFrame};
-pub use crate::animation_ctrl::AnimationCtrl;
-pub use crate::bitmap::Bitmap;
-pub use crate::bitmap_bundle::{BitmapBundle, RawBitmap};
-pub use crate::brush::{Brush, BrushStyle};
-pub use crate::gl_canvas::GLCanvas;
-pub use crate::icon_tray::{BalloonIcon, IconTray};
-pub use crate::image::{Image, ImageError, Rgba};
-pub use crate::image_list::ImageList;
-pub use crate::media_ctrl::{MediaCtrl, MediaState};
-pub use crate::pen::{Pen, PenStyle};
+pub use crate::adv::animation::{Animation, AnimationFrame};
+pub use crate::adv::animation_ctrl::AnimationCtrl;
+pub use crate::dc::bitmap::Bitmap;
+pub use crate::dc::bitmap_bundle::{BitmapBundle, RawBitmap};
+pub use crate::dc::brush::{Brush, BrushStyle};
+pub use crate::dc::gl_canvas::GLCanvas;
+pub use crate::chrome::icon_tray::{BalloonIcon, IconTray};
+pub use crate::dc::image::{Image, ImageError, Rgba};
+pub use crate::dc::image_list::ImageList;
+pub use crate::adv::media_ctrl::{MediaCtrl, MediaState};
+pub use crate::dc::pen::{Pen, PenStyle};
 
 // --- Misc helpers -----------------------------------------------------
-pub use crate::accelerator::{Accelerator, Modifiers, VirtualKey};
-pub use crate::art_provider::{ArtClient, ArtId, ArtProvider};
-pub use crate::dpi::{
+pub use crate::core::accelerator::{Accelerator, Modifiers, VirtualKey};
+pub use crate::dc::art_provider::{ArtClient, ArtId, ArtProvider};
+pub use crate::core::dpi::{
     get_dpi_for_point, get_dpi_for_window, get_system_dpi, Dpi, DpiAwareness, SYSTEM_DPI,
 };
-pub use crate::drop_target::DroppedFiles;
-pub use crate::ole_dnd::{
+pub use crate::dnd::drop_target::DroppedFiles;
+pub use crate::dnd::ole_dnd::{
     DragContinueResult, OleDragData, OleDragError, OleDragSourceCallbacks,
     OleDropEffect, OleDropError, OleDroppedData, OleDropPosition,
 };
 #[cfg(target_os = "windows")]
-pub use crate::ole_dnd::{OleDragSource, OleDropTarget};
-pub use crate::font::{Font, FontDesc};
-pub use crate::timer::Timer;
-pub use crate::tooltip::ToolTip;
+pub use crate::dnd::ole_dnd::{OleDragSource, OleDropTarget};
+pub use crate::core::font::{Font, FontDesc};
+pub use crate::core::timer::Timer;
+pub use crate::core::tooltip::ToolTip;

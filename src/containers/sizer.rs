@@ -1,0 +1,658 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
+//! Box-style automatic layout (`wxBoxSizer`).
+//!
+//! [`BoxSizer`] arranges its children along a single axis, either
+//! [`Orientation::Horizontal`] or [`Orientation::Vertical`]. Each
+//! child is added with [`BoxSizer::add`] and an optional proportion /
+//! flags pair.
+//!
+//! Layout is driven from [`crate::window::frame::Frame::set_sizer`]; whenever
+//! the frame receives a `WM_SIZE` it calls `sizer.layout(0, 0, w, h)`
+//! which moves every child with `MoveWindow`.
+
+use crate::containers::sizer_item::SizerItem;
+use crate::core::widget::WidgetRef;
+
+/// Compute a proportional item size in pixels without
+/// overflowing on hostile or pathological inputs.
+///
+/// `available` is the post-padding pixel count along the
+/// sizer's main axis (always `>= 0` — the caller clamps it
+/// with `.max(0)` before calling). `proportion` and `total`
+/// are `u32` weights chosen by the user; in principle a
+/// user can pass `proportion = u32::MAX` with a non-zero
+/// `available`, which would overflow a `u32` product. We
+/// widen to `u64` (where any `u32 * u32` always fits), use
+/// `checked_div` to defend against a zero `total` (the
+/// formula degenerates in that case), and clamp the final
+/// pixel count to `i32::MAX` so the value can be safely
+/// passed to `MoveWindow` (which takes `i32`).
+#[inline]
+fn proportion_pixels(available: i32, proportion: u32, total: u32) -> i32 {
+    let prod = (available.max(0) as u64).checked_mul(proportion as u64);
+    match prod.and_then(|p| p.checked_div(total as u64)) {
+        Some(v) if v > i32::MAX as u64 => i32::MAX,
+        Some(v) => v as i32,
+        None => 0,
+    }
+}
+
+/// Orientation for BoxSizer
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Orientation {
+    Horizontal,
+    Vertical,
+}
+
+/// A box sizer that arranges widgets horizontally or vertically
+#[derive(Clone)]
+pub struct BoxSizer {
+    orientation: Orientation,
+    items: Vec<SizerItem>,
+    padding: i32,
+}
+
+/// `true` when the opt-in sizer diagnostic log is enabled via the
+/// `RU_WX_SIZER_LOG` environment variable (any non-empty value).
+#[cfg(target_os = "windows")]
+fn sizer_log_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("RU_WX_SIZER_LOG").is_some())
+}
+
+impl BoxSizer {
+    pub fn new(orientation: Orientation) -> Self {
+        BoxSizer {
+            orientation,
+            items: Vec::new(),
+            padding: 5,
+        }
+    }
+
+    pub fn vertical() -> Self {
+        Self::new(Orientation::Vertical)
+    }
+
+    pub fn horizontal() -> Self {
+        Self::new(Orientation::Horizontal)
+    }
+
+    /// Set padding between items
+    pub fn set_padding(&mut self, padding: i32) {
+        self.padding = padding;
+    }
+
+    /// The inter-item padding in pixels. Defaults to `5` in
+    /// [`BoxSizer::new`].
+    pub fn padding(&self) -> i32 {
+        self.padding
+    }
+
+    /// The orientation (horizontal or vertical) of the sizer.
+    pub fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+
+    /// Add a widget with proportion 0 (fixed size)
+    pub fn add(&mut self, widget: WidgetRef) {
+        self.items.push(SizerItem::Widget {
+            widget,
+            proportion: 0,
+        });
+    }
+
+    /// Add a widget with a given proportion (for stretching)
+    pub fn add_with_proportion(&mut self, widget: WidgetRef, proportion: u32) {
+        self.items.push(SizerItem::Widget { widget, proportion });
+    }
+
+    /// Add a widget using [`crate::SizerFlags`] (proportion only today).
+    pub fn add_with_flags(&mut self, widget: WidgetRef, flags: crate::containers::sizer_flags::SizerFlags) {
+        self.add_with_proportion(widget, flags.proportion);
+    }
+
+    /// Add a stretch spacer
+    pub fn add_stretch(&mut self, proportion: u32) {
+        self.items.push(SizerItem::Stretch { proportion });
+    }
+
+    /// Add a fixed-size spacer (in pixels along the sizer's main axis).
+    ///
+    /// Useful to reserve room for a sibling control that lives inside
+    /// the parent frame's client area but is *not* part of this sizer —
+    /// the canonical example being a [`crate::StatusBar`] at the bottom
+    /// of a frame, which is positioned at the bottom of the client
+    /// area by its own resize handler and therefore needs the sizer
+    /// to stop a few pixels short of the bottom edge.
+    ///
+    /// The spacer has proportion 0 and does not stretch — it is always
+    /// exactly `size` pixels wide (for a horizontal sizer) or tall
+    /// (for a vertical sizer).
+    pub fn add_spacer(&mut self, size: i32) {
+        self.items.push(SizerItem::FixedSpace { size: size.max(0) });
+    }
+
+    /// Add a fixed spacer described by [`crate::SizerSpacer`].
+    pub fn add_sizer_spacer(&mut self, spacer: crate::containers::sizer_spacer::SizerSpacer) {
+        self.add_spacer(spacer.pixels());
+    }
+
+    /// Add a nested sizer with proportion 0 (it occupies its
+    /// measured minimum size along this sizer's main axis). This is
+    /// the `wxSizer::Add(sizer, …)` nesting feature: e.g. a row of
+    /// buttons (horizontal sizer) inside a vertical column.
+    pub fn add_sizer(&mut self, sizer: BoxSizer) {
+        self.add_sizer_with_proportion(sizer, 0);
+    }
+
+    /// Add a nested sizer with the given proportion (it stretches in
+    /// the leftover space like a widget with the same proportion).
+    pub fn add_sizer_with_proportion(&mut self, sizer: BoxSizer, proportion: u32) {
+        self.items.push(SizerItem::Nested {
+            sizer: Box::new(sizer),
+            proportion,
+        });
+    }
+
+    /// Measured minimum size `(width, height)` of this sizer: the sum
+    /// of child sizes (plus padding) along the main axis, and the
+    /// largest child size across it. Nested sizers are measured
+    /// recursively; stretch spacers count as zero.
+    pub fn min_size(&self) -> (i32, i32) {
+        let mut main: i32 = 0;
+        let mut cross: i32 = 0;
+        let mut counted = 0usize;
+        for item in &self.items {
+            let (w, h) = match item {
+                SizerItem::Widget { widget, .. } => {
+                    let Ok(wid) = widget.try_borrow() else {
+                        continue;
+                    };
+                    let rect = wid.rect();
+                    (rect.width as i32, rect.height as i32)
+                }
+                SizerItem::Nested { sizer, .. } => sizer.min_size(),
+                SizerItem::FixedSpace { size } => match self.orientation {
+                    Orientation::Vertical => (0, *size),
+                    Orientation::Horizontal => (*size, 0),
+                },
+                SizerItem::Stretch { .. } => (0, 0),
+            };
+            match self.orientation {
+                Orientation::Vertical => {
+                    main += h;
+                    cross = cross.max(w);
+                }
+                Orientation::Horizontal => {
+                    main += w;
+                    cross = cross.max(h);
+                }
+            }
+            counted += 1;
+        }
+        if counted > 1 {
+            main += self.padding * (counted as i32 - 1);
+        }
+        match self.orientation {
+            Orientation::Vertical => (cross, main),
+            Orientation::Horizontal => (main, cross),
+        }
+    }
+
+    /// Perform layout within the given bounds.
+    /// Positions and sizes all child widgets using native MoveWindow calls.
+    pub fn layout(&mut self, x: i32, y: i32, width: u32, height: u32) {
+        #[cfg(target_os = "windows")]
+        if sizer_log_enabled() {
+            use std::io::Write;
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("f:\\code\\ru_wx\\logs\\grid_debug.log")
+            {
+                let _ = writeln!(
+                    f,
+                    "[sizer] layout ENTRY x={x} y={y} w={width} h={height} items={}",
+                    self.items.len()
+                );
+            }
+        }
+        if self.items.is_empty() {
+            return;
+        }
+
+        let total_items = self.items.len();
+        let total_padding = self.padding * (total_items as i32 - 1);
+
+        // Calculate total proportion and fixed space
+        let mut total_proportion: u32 = 0;
+        let mut fixed_size: i32 = 0;
+
+        for item in &self.items {
+            match item {
+                SizerItem::Widget { widget, proportion } => {
+                    if *proportion == 0 {
+                        // Use `try_borrow`: a re-entrant call (e.g. a
+                        // WndProc of a sibling / child window) may
+                        // briefly hold the borrow. If the borrow is
+                        // held, treat the widget as having zero
+                        // declared size for this pass — the next
+                        // layout cycle will retry.
+                        if let Ok(w) = widget.try_borrow() {
+                            let rect = w.rect();
+                            match self.orientation {
+                                Orientation::Vertical => fixed_size += rect.height as i32,
+                                Orientation::Horizontal => fixed_size += rect.width as i32,
+                            }
+                        }
+                    } else {
+                        total_proportion += proportion;
+                    }
+                }
+                SizerItem::Stretch { proportion } => {
+                    total_proportion += proportion;
+                }
+                SizerItem::FixedSpace { size } => {
+                    // A fixed-size spacer always reserves its declared
+                    // pixel count, regardless of available space.
+                    fixed_size += *size;
+                }
+                SizerItem::Nested { sizer, proportion } => {
+                    if *proportion == 0 {
+                        let (w, h) = sizer.min_size();
+                        match self.orientation {
+                            Orientation::Vertical => fixed_size += h,
+                            Orientation::Horizontal => fixed_size += w,
+                        }
+                    } else {
+                        total_proportion += proportion;
+                    }
+                }
+            }
+        }
+
+        // Available space for proportional items
+        let available = match self.orientation {
+            Orientation::Vertical => (height as i32) - fixed_size - total_padding,
+            Orientation::Horizontal => (width as i32) - fixed_size - total_padding,
+        };
+        let available = available.max(0);
+
+        // Layout each item
+        let mut pos = match self.orientation {
+            Orientation::Vertical => y,
+            Orientation::Horizontal => x,
+        };
+
+        let orientation = self.orientation;
+        let padding = self.padding;
+        for item in &mut self.items {
+            match item {
+                SizerItem::Widget { widget, proportion } => {
+                    // Use `try_borrow_mut`: a re-entrant call (e.g. a
+                    // child widget's WndProc reacting to a Win32 call
+                    // we make inside `set_size`) may briefly hold the
+                    // borrow. If the borrow is held, skip this widget
+                    // for this pass — the next layout cycle
+                    // (triggered by the next WM_SIZE / paint) will
+                    // retry. This avoids the
+                    // "RefCell already borrowed" panic that would
+                    // otherwise abort the process during initial
+                    // window show, when Windows dispatches a
+                    // synchronous chain of WM_SIZE / WM_PAINT
+                    // messages while the sizer is still iterating.
+                    let Ok(mut w) = widget.try_borrow_mut() else {
+                        continue;
+                    };
+                    let item_size = if *proportion == 0 {
+                        match orientation {
+                            Orientation::Vertical => w.rect().height as i32,
+                            Orientation::Horizontal => w.rect().width as i32,
+                        }
+                    } else {
+                        proportion_pixels(available, *proportion, total_proportion)
+                    };
+
+                    match orientation {
+                        Orientation::Vertical => {
+                            w.set_position(x, pos);
+                            w.set_size(width, item_size as u32);
+                        }
+                        Orientation::Horizontal => {
+                            w.set_position(pos, y);
+                            w.set_size(item_size as u32, height);
+                        }
+                    }
+
+                    #[cfg(target_os = "windows")]
+                    if sizer_log_enabled() {
+                        use std::io::Write;
+                        if let Ok(mut f) = std::fs::OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open("f:\\code\\ru_wx\\logs\\grid_debug.log")
+                        {
+                            let _ = writeln!(
+                                f,
+                                "[sizer]   item size={item_size} pos={pos} w={width} h={height}"
+                            );
+                        }
+                    }
+
+                    pos += item_size + padding;
+                }
+                SizerItem::Stretch { proportion } => {
+                    let stretch_size = proportion_pixels(available, *proportion, total_proportion);
+                    pos += stretch_size + padding;
+                }
+                SizerItem::FixedSpace { size } => {
+                    pos += *size + padding;
+                }
+                SizerItem::Nested { sizer, proportion } => {
+                    let item_size = if *proportion == 0 {
+                        let (w, h) = sizer.min_size();
+                        match orientation {
+                            Orientation::Vertical => h,
+                            Orientation::Horizontal => w,
+                        }
+                    } else {
+                        proportion_pixels(available, *proportion, total_proportion)
+                    };
+
+                    // Recurse: the nested sizer fills the slot the
+                    // parent assigned to it.
+                    match orientation {
+                        Orientation::Vertical => {
+                            sizer.layout(x, pos, width, item_size.max(0) as u32);
+                        }
+                        Orientation::Horizontal => {
+                            sizer.layout(pos, y, item_size.max(0) as u32, height);
+                        }
+                    }
+
+                    pos += item_size + padding;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::geometry::Rect;
+    use crate::core::widget::Widget;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    /// A minimal `Widget` implementation used only by the sizer tests.
+    /// On Windows the real widget would route `set_position` / `set_size`
+    /// to `MoveWindow`; the mock simply records the most recent call.
+    struct MockWidget {
+        rect: Rect,
+        visible: bool,
+        enabled: bool,
+    }
+
+    impl MockWidget {
+        // Returning a trait object from a `new` constructor would
+        // normally trigger `clippy::new_ret_no_self`; silence it
+        // because the alternative (a free function or a different
+        // name) is awkward in test code.
+        #[allow(clippy::new_ret_no_self)]
+        fn new(w: u32, h: u32) -> Rc<RefCell<dyn Widget>> {
+            Rc::new(RefCell::new(MockWidget {
+                rect: Rect::new(0, 0, w, h),
+                visible: true,
+                enabled: true,
+            }))
+        }
+    }
+
+    impl Widget for MockWidget {
+        fn native_handle(&self) -> isize {
+            0
+        }
+        fn set_position(&mut self, x: i32, y: i32) {
+            self.rect.x = x;
+            self.rect.y = y;
+        }
+        fn set_size(&mut self, w: u32, h: u32) {
+            self.rect.width = w;
+            self.rect.height = h;
+        }
+        fn rect(&self) -> Rect {
+            self.rect
+        }
+        fn is_visible(&self) -> bool {
+            self.visible
+        }
+        fn set_visible(&mut self, visible: bool) {
+            self.visible = visible;
+        }
+        fn is_enabled(&self) -> bool {
+            self.enabled
+        }
+        fn set_enabled(&mut self, enabled: bool) {
+            self.enabled = enabled;
+        }
+    }
+
+    #[test]
+    fn empty_sizer_layout_does_not_panic() {
+        let mut sizer = BoxSizer::horizontal();
+        sizer.layout(0, 0, 800, 600);
+    }
+
+    #[test]
+    fn nested_sizer_min_size_sums_main_axis() {
+        // Horizontal row: two 60x24 buttons + 5px padding = 125x24.
+        let a = MockWidget::new(60, 24);
+        let b = MockWidget::new(60, 24);
+        let mut row = BoxSizer::horizontal();
+        row.add(a);
+        row.add(b);
+        assert_eq!(row.min_size(), (125, 24));
+    }
+
+    #[test]
+    fn nested_sizer_children_are_laid_out_inside_parent_slot() {
+        // Vertical column: a stretching body widget + a fixed-height
+        // button row at the bottom (the canonical nesting use case).
+        let body = MockWidget::new(0, 0);
+        let btn1 = MockWidget::new(60, 24);
+        let btn2 = MockWidget::new(60, 24);
+
+        let mut row = BoxSizer::horizontal();
+        row.add(btn1.clone());
+        row.add(btn2.clone());
+
+        let mut column = BoxSizer::vertical();
+        column.add_with_proportion(body.clone(), 1);
+        column.add_sizer(row);
+
+        column.layout(0, 0, 400, 300);
+
+        // The button row keeps its measured 24px height at the bottom;
+        // the body gets the rest (300 - 24 - 5 padding = 271).
+        assert_eq!(body.borrow().rect().height, 271);
+        let b1 = btn1.borrow().rect();
+        let b2 = btn2.borrow().rect();
+        assert_eq!(b1.y, 276, "row starts below the body + padding");
+        assert_eq!(b1.x, 0);
+        assert_eq!(b2.x, 65, "second button sits after the first + padding");
+        assert_eq!(b1.height, 24);
+    }
+
+    #[test]
+    fn nested_sizer_with_proportion_stretches() {
+        // Two nested rows splitting the height 1:1.
+        let a = MockWidget::new(0, 0);
+        let b = MockWidget::new(0, 0);
+
+        let mut row_a = BoxSizer::horizontal();
+        row_a.add_with_proportion(a.clone(), 1);
+        let mut row_b = BoxSizer::horizontal();
+        row_b.add_with_proportion(b.clone(), 1);
+
+        let mut column = BoxSizer::vertical();
+        column.add_sizer_with_proportion(row_a, 1);
+        column.add_sizer_with_proportion(row_b, 1);
+
+        column.layout(0, 0, 200, 405);
+
+        let ha = a.borrow().rect().height;
+        let hb = b.borrow().rect().height;
+        assert_eq!(ha, hb, "1:1 nested rows must split the height equally");
+        assert!(ha > 0);
+    }
+
+    #[test]
+    fn horizontal_sizer_packs_fixed_size_children() {
+        // Two 100x20 children + 5px padding ⇒ total 205 wide.
+        let a = MockWidget::new(100, 20);
+        let b = MockWidget::new(100, 20);
+        let mut sizer = BoxSizer::horizontal();
+        sizer.add(a.clone());
+        sizer.add(b.clone());
+
+        sizer.layout(0, 0, 800, 30);
+
+        // First child at x=0, second at x=100 + padding 5 = 105.
+        assert_eq!(a.borrow().rect().x, 0);
+        assert_eq!(a.borrow().rect().width, 100);
+        assert_eq!(b.borrow().rect().x, 105);
+        assert_eq!(b.borrow().rect().width, 100);
+    }
+
+    #[test]
+    fn vertical_sizer_packs_fixed_size_children() {
+        let a = MockWidget::new(50, 10);
+        let b = MockWidget::new(50, 10);
+        let mut sizer = BoxSizer::vertical();
+        sizer.add(a.clone());
+        sizer.add(b.clone());
+
+        sizer.layout(0, 0, 100, 200);
+
+        assert_eq!(a.borrow().rect().y, 0);
+        assert_eq!(a.borrow().rect().height, 10);
+        assert_eq!(b.borrow().rect().y, 15);
+    }
+
+    #[test]
+    fn horizontal_sizer_distributes_proportional_space() {
+        // Two children with proportion 1:1 in an 800-wide parent. The
+        // sizer subtracts the (n-1) inter-item padding (5) from the
+        // available space, leaving 795 px to split 1:1. Integer division
+        // gives 397 / 397 = 794, plus the 5 px gap = 799 px consumed.
+        let a = MockWidget::new(0, 0);
+        let b = MockWidget::new(0, 0);
+        let mut sizer = BoxSizer::horizontal();
+        sizer.add_with_proportion(a.clone(), 1);
+        sizer.add_with_proportion(b.clone(), 1);
+
+        sizer.layout(0, 0, 800, 30);
+
+        let aw = a.borrow().rect().width;
+        let bw = b.borrow().rect().width;
+        // both should be positive
+        assert!(aw > 0, "first child must get non-zero width");
+        assert!(bw > 0, "second child must get non-zero width");
+        // the two widths must be equal (1:1 proportion)
+        assert_eq!(aw, bw, "1:1 proportion ⇒ equal widths");
+        // width + gap + width must consume (at most) the parent width
+        let consumed = aw + 5 + bw;
+        assert!(consumed <= 800, "must not exceed parent width");
+        assert!(consumed >= 798, "must consume at least 798 px");
+    }
+
+    #[test]
+    fn layout_respects_custom_padding() {
+        let a = MockWidget::new(10, 10);
+        let b = MockWidget::new(10, 10);
+        let mut sizer = BoxSizer::horizontal();
+        sizer.set_padding(20);
+        sizer.add(a.clone());
+        sizer.add(b.clone());
+
+        sizer.layout(0, 0, 800, 30);
+
+        // Second child starts at 10 + 20 padding.
+        assert_eq!(b.borrow().rect().x, 30);
+    }
+
+    #[test]
+    fn vertical_sizer_aligns_children_to_origin_x() {
+        // Vertical sizer aligns each child to the same x (the parent's x).
+        let a = MockWidget::new(50, 10);
+        let b = MockWidget::new(50, 10);
+        let mut sizer = BoxSizer::vertical();
+        sizer.add(a.clone());
+        sizer.add(b.clone());
+
+        sizer.layout(7, 11, 100, 200);
+
+        assert_eq!(a.borrow().rect().x, 7);
+        assert_eq!(b.borrow().rect().x, 7);
+        assert_eq!(a.borrow().rect().y, 11);
+    }
+
+    // ── v0.6.1 security tests ───────────────────────────────────────
+    //
+    // These exercise the overflow/hostile-input paths of the
+    // proportional layout helper. We do not need a real
+    // Win32 window for them — `proportion_pixels` is a pure
+    // function on the integer inputs, so the tests sit
+    // alongside the helper at the top of this module.
+
+    #[test]
+    fn proportion_pixels_normal_case() {
+        // 800 px available, 1:1 split ⇒ 400 each.
+        assert_eq!(proportion_pixels(800, 1, 2), 400);
+        // Asymmetric 1:3 ⇒ 200 / 600.
+        assert_eq!(proportion_pixels(800, 1, 4), 200);
+        assert_eq!(proportion_pixels(800, 3, 4), 600);
+    }
+
+    #[test]
+    fn proportion_pixels_zero_total_returns_zero() {
+        // Degenerate but legal: caller passed a sum of zero,
+        // so we have no basis to divide by. The helper
+        // returns 0 instead of panicking.
+        assert_eq!(proportion_pixels(100, 5, 0), 0);
+        assert_eq!(proportion_pixels(0, 0, 0), 0);
+    }
+
+    #[test]
+    fn proportion_pixels_does_not_overflow_on_huge_proportion() {
+        // `available = 2_000_000_000`, `proportion = 3`, `total = 4`.
+        // The intermediate product is 6 000 000 000, which
+        // overflows `u32` (silently wrapping to 1 705 032 704
+        // in the pre-v0.6.1 code path, which then divided by
+        // 4 yielded a wrong 426 258 176). The widened helper
+        // computes the true answer in `u64` and reports the
+        // correct 1 500 000 000 — well under i32::MAX, so the
+        // clamp is not triggered.
+        assert_eq!(proportion_pixels(2_000_000_000, 3, 4), 1_500_000_000);
+    }
+
+    #[test]
+    fn proportion_pixels_clamps_to_i32_max() {
+        // 32 GiB available share (4_294_967_296) is way past
+        // what `MoveWindow` can accept (`i32` coordinates);
+        // we clamp to i32::MAX so the result is always a
+        // valid Win32 coordinate.
+        assert_eq!(proportion_pixels(i32::MAX, 4, 1), i32::MAX);
+    }
+
+    #[test]
+    fn proportion_pixels_negative_available_treated_as_zero() {
+        // The sizer itself clamps `available` to >= 0, but
+        // the helper does the same defensively in case it
+        // is called from somewhere else.
+        assert_eq!(proportion_pixels(-50, 1, 1), 0);
+    }
+}

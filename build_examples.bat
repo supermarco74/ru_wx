@@ -13,9 +13,15 @@ setlocal EnableDelayedExpansion
 REM Always run from this script's folder (the ru_wx crate root).
 cd /d "%~dp0"
 
+REM Force Cargo output into this crate's local `target\` folder.
+REM Without this, IDE/sandbox sessions may redirect `CARGO_TARGET_DIR`
+REM to a temp cache so `build_examples.bat` copies stale/missing exes.
+set "CARGO_TARGET_DIR=%~dp0target"
+
 echo.
 echo === ru_wx :: build_examples ================================
 echo  Project root : %CD%
+echo  CARGO_TARGET_DIR : %CARGO_TARGET_DIR%
 echo.
 
 REM ---- 1. Build everything in release mode -------------------

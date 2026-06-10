@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: a comprehensive showcase of input controls in `ru_wx`,
 //! organised into a tabbed notebook.
 //!
@@ -22,7 +25,7 @@
 //! cargo run --example input_controls_demo
 //! ```
 
-// #![windows_subsystem = "windows"] // disabled for debugging
+#![windows_subsystem = "windows"]
 
 use std::io::Write;
 
@@ -44,7 +47,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx — Input Controls Demo (Tabbed)")
         .with_size(680, 720)
-        .build();
+        .with_modern_style().build();
     step!("frame created, hwnd={:?}", frame.hwnd());
 
     // ── Build the tab notebook ───────────────────────────────────────────

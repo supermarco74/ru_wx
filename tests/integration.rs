@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Cross-module integration tests.
 //!
 //! These tests live in the top-level `tests/` directory so they

@@ -1,14 +1,18 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `Animation` / `AnimationCtrl` — GIF playback.
 //!
 //! Demonstrates:
-//! 1. A `wxAnimation` data container loaded from an asset file
-//!    (GIF on disk).
-//! 2. An `AnimationCtrl` widget bound to the loaded animation.
-//! 3. Play / Stop / Restart controls driven by ordinary
-//!    `Button`s.
-//! 4. Frame-info readout (current frame index, frame count).
-//! 5. A fallback "static image" animation built from a PNG, so
-//!    the demo works even when no GIF asset is present.
+//! 1. A multi-frame animated GIF **generated at runtime** (an
+//!    orbiting coloured ball, encoded with the `image` crate) and
+//!    loaded via [`Animation::load_from_memory`] — no asset files
+//!    needed.
+//! 2. Two `AnimationCtrl`s bound to the *same* animation data: one
+//!    at the natural size, one stretched (StretchBlt scaling).
+//! 3. Play / Stop / Restart buttons driving both controls.
+//! 4. Live status in a `StatusBar`: playback state in field 0,
+//!    frame index / count in field 1 (refreshed by a [`Timer`]).
 //!
 //! Run with:
 //! ```bash
@@ -17,127 +21,165 @@
 
 #![windows_subsystem = "windows"]
 
-use std::path::PathBuf;
 use std::time::Duration;
 
-use ru_wx::{Animation, AnimationCtrl, App, BoxSizer, Button, Frame, StaticText, Timer};
+use ru_wx::{Animation, AnimationCtrl, App, BoxSizer, Button, Frame, StaticText, StatusBar, Timer};
 
-fn locate_gif() -> Option<PathBuf> {
-    // Look for a GIF first in the assets folder, then next to
-    // the executable. We don't fail hard if it isn't there: the
-    // demo still works using a static PNG fallback below.
-    let candidates = [
-        "assets/icons/anim_sample.gif",
-        "../assets/icons/anim_sample.gif",
-        "anim_sample.gif",
+const SIDE: u32 = 96;
+const FRAMES: u32 = 12;
+
+/// Encode a small animated GIF entirely in memory: a coloured ball
+/// orbiting the centre over a dark vignette background. Each frame
+/// shifts the hue so playback is clearly visible.
+fn build_gif_bytes() -> Vec<u8> {
+    use image::codecs::gif::{GifEncoder, Repeat};
+    use image::{Delay, Frame, Rgba, RgbaImage};
+
+    // Simple colour wheel for the ball: one (r, g, b) per frame.
+    let palette: [(u8, u8, u8); FRAMES as usize] = [
+        (230, 70, 60),
+        (240, 130, 40),
+        (245, 190, 40),
+        (170, 210, 60),
+        (90, 190, 90),
+        (60, 200, 170),
+        (60, 170, 220),
+        (70, 120, 230),
+        (120, 90, 230),
+        (180, 80, 220),
+        (225, 70, 180),
+        (235, 70, 110),
     ];
-    for c in candidates {
-        let p = PathBuf::from(c);
-        if p.exists() {
-            return Some(p);
+
+    let centre = SIDE as f32 / 2.0;
+    let orbit = SIDE as f32 * 0.30;
+    let radius = SIDE as f32 * 0.13;
+
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = GifEncoder::new(&mut bytes);
+        let _ = encoder.set_repeat(Repeat::Infinite);
+        for i in 0..FRAMES {
+            let angle = i as f32 / FRAMES as f32 * std::f32::consts::TAU;
+            let bx = centre + orbit * angle.cos();
+            let by = centre + orbit * angle.sin();
+            let (br, bg, bb) = palette[i as usize];
+            let img = RgbaImage::from_fn(SIDE, SIDE, |x, y| {
+                let dx = x as f32 - bx;
+                let dy = y as f32 - by;
+                if dx * dx + dy * dy <= radius * radius {
+                    Rgba([br, bg, bb, 255])
+                } else {
+                    // Background: radial vignette around the centre.
+                    let cx = x as f32 - centre;
+                    let cy = y as f32 - centre;
+                    let d = (cx * cx + cy * cy).sqrt() / centre;
+                    let shade = (40.0 + 50.0 * (1.0 - d.min(1.0))) as u8;
+                    Rgba([shade / 2, shade / 2, shade, 255])
+                }
+            });
+            let frame = Frame::from_parts(img, 0, 0, Delay::from_numer_denom_ms(80, 1));
+            let _ = encoder.encode_frame(frame);
         }
     }
-    None
+    bytes
 }
 
 fn main() {
     let app = App::new();
     let frame = Frame::builder()
         .with_title("Minitest — Animation / AnimationCtrl")
-        .with_size(420, 320)
-        .build();
+        .with_size(480, 420)
+        .with_modern_style().build();
 
-    // ── Status / info labels ──────────────────────────────────────
-    let info = StaticText::new(&frame, "loading…");
-    let frame_info = StaticText::new(&frame, "frame: 0 / 0");
-    let status = StaticText::new(&frame, "idle");
+    let status = StatusBar::new(&frame, 2);
+    status.set_status_text("idle", 0);
 
-    // ── The animation data ───────────────────────────────────────
+    // ── The animation data: a GIF generated in memory ─────────────
+    let gif = build_gif_bytes();
     let mut anim = Animation::new();
-    if let Some(path) = locate_gif() {
-        if anim.load_file(&path).is_ok() && anim.is_loaded() {
-            let (w, h) = anim.size();
-            info.set_label(&format!(
-                "Loaded GIF: {} ({}×{}, {} frames)",
-                path.display(),
-                w,
-                h,
-                anim.frame_count()
-            ));
-        } else {
-            info.set_label("Failed to decode GIF — using a static fallback");
-        }
+    let info = StaticText::new(&frame, "building…");
+    if anim.load_from_memory(&gif).is_ok() && anim.is_loaded() {
+        let (w, h) = anim.size();
+        info.set_label(&format!(
+            "Runtime GIF: {}×{} px, {} frames, {} bytes encoded",
+            w,
+            h,
+            anim.frame_count(),
+            gif.len()
+        ));
     } else {
-        info.set_label("No GIF found in assets — using a static fallback");
+        info.set_label("GIF encode/decode failed — controls stay empty");
     }
 
-    // Fallback: a 1-frame animation built from inline PNG bytes
-    // so the demo still has *something* to show.
-    if !anim.is_loaded() {
-        let png = [
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-            0x44, 0x52, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x40, 0x08, 0x06, 0x00, 0x00,
-            0x00, 0x4B, 0x6D, 0x29, 0xDC, 0x00, 0x00, 0x00, 0x16, 0x49, 0x44, 0x41, 0x54, 0x78,
-            0x9C, 0xED, 0xC1, 0x01, 0x0D, 0x00, 0x00, 0x00, 0xC2, 0xA0, 0xF7, 0x4F, 0x6D, 0x0E,
-            0x37, 0xA0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xC0, 0xB7, 0x01, 0x4B, 0x6D, 0x0E,
-            0x37, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x1B, 0xC1, 0x66, 0x00, 0x01, 0x6A,
-            0xE0, 0x9C, 0xF1, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60,
-            0x82,
-        ];
-        let _ = anim.load_from_memory(&png);
-    }
+    // ── Two controls sharing the same data ────────────────────────
+    let hint = StaticText::new(&frame, "Natural size (left) vs stretched (right):");
+    let ctrl_native = AnimationCtrl::with_size(&frame, SIDE, SIDE);
+    ctrl_native.set_animation(anim.clone());
+    let ctrl_big = AnimationCtrl::with_size(&frame, SIDE * 2, SIDE * 2);
+    ctrl_big.set_animation(anim.clone());
 
-    // ── The widget ────────────────────────────────────────────────
-    let (anim_w, anim_h) = anim.size();
-    let ctrl = AnimationCtrl::with_size(&frame, anim_w.max(64), anim_h.max(64));
-    ctrl.set_animation(anim.clone());
+    let mut row_anim = BoxSizer::horizontal();
+    row_anim.add(ctrl_native.as_widget_ref());
+    row_anim.add_spacer(16);
+    row_anim.add(ctrl_big.as_widget_ref());
 
-    // ── Buttons ──────────────────────────────────────────────────
+    // ── Buttons drive BOTH controls ───────────────────────────────
     let play_btn = Button::new(&frame, "Play");
     let stop_btn = Button::new(&frame, "Stop");
     let reset_btn = Button::new(&frame, "Restart");
 
-    let ctrl_for_play = ctrl.clone();
+    let (c1, c2, s) = (ctrl_native.clone(), ctrl_big.clone(), status.clone());
     play_btn.on_click(&frame, move || {
-        ctrl_for_play.play();
+        c1.play();
+        c2.play();
+        s.set_status_text("playing", 0);
     });
-    let ctrl_for_stop = ctrl.clone();
-    let status_for_stop = status.clone();
+    let (c1, c2, s) = (ctrl_native.clone(), ctrl_big.clone(), status.clone());
     stop_btn.on_click(&frame, move || {
-        ctrl_for_stop.stop();
-        status_for_stop.set_label("stopped");
+        c1.stop();
+        c2.stop();
+        s.set_status_text("stopped", 0);
     });
-    let ctrl_for_reset = ctrl.clone();
-    let status_for_reset = status.clone();
+    let (c1, c2, s) = (ctrl_native.clone(), ctrl_big.clone(), status.clone());
     reset_btn.on_click(&frame, move || {
-        ctrl_for_reset.stop();
-        ctrl_for_reset.play();
-        status_for_reset.set_label("restarted");
+        c1.stop();
+        c2.stop();
+        c1.play();
+        c2.play();
+        s.set_status_text("restarted", 0);
     });
 
-    // ── A timer to keep the frame-info label in sync ─────────────
+    let mut row_buttons = BoxSizer::horizontal();
+    row_buttons.add(play_btn.as_widget_ref());
+    row_buttons.add(stop_btn.as_widget_ref());
+    row_buttons.add(reset_btn.as_widget_ref());
+
+    // ── Timer keeps the status bar frame counter in sync ──────────
     let refresh = Timer::new(&frame);
-    let ctrl_for_tick = ctrl.clone();
-    let frame_info_for_tick = frame_info.clone();
-    let anim_for_tick = anim.clone();
+    let ctrl_for_tick = ctrl_native.clone();
+    let status_for_tick = status.clone();
+    let total = anim.frame_count();
     refresh.on_tick(move || {
-        frame_info_for_tick.set_label(&format!(
-            "frame: {} / {}",
-            ctrl_for_tick.current_frame(),
-            anim_for_tick.frame_count()
-        ));
+        status_for_tick.set_status_text(
+            &format!(
+                "frame {} / {} — {}",
+                ctrl_for_tick.current_frame() + 1,
+                total,
+                if ctrl_for_tick.is_playing() { "running" } else { "paused" }
+            ),
+            1,
+        );
     });
     refresh.start(Duration::from_millis(100));
-    let _ = status; // silence unused
 
-    // ── Layout ───────────────────────────────────────────────────
+    // ── Layout ────────────────────────────────────────────────────
     let mut sizer = BoxSizer::vertical();
     sizer.add(info.as_widget_ref());
-    sizer.add(ctrl.as_widget_ref());
-    sizer.add(frame_info.as_widget_ref());
-    sizer.add(play_btn.as_widget_ref());
-    sizer.add(stop_btn.as_widget_ref());
-    sizer.add(reset_btn.as_widget_ref());
+    sizer.add(hint.as_widget_ref());
+    sizer.add_sizer(row_anim);
+    sizer.add_spacer(8);
+    sizer.add_sizer(row_buttons);
     frame.set_sizer(sizer);
 
     app.run(frame);

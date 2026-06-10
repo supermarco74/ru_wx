@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `PropertyGrid` — two-column property sheet with
 //! in-place editors (`wxPropertyGrid`).
 //!
@@ -33,7 +36,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — PropertyGrid")
         .with_size(480, 380)
-        .build();
+        .with_modern_style().build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Click on any value cell to edit it.", 0);

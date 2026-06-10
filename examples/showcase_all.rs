@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: showcase all 20 controls ported from `MIGRATION_STATUS.md`,
 //! the per-widget `wxToolTip` port, plus the v0.4.0 HiDPI and
 //! v0.4.1 accelerator APIs.
@@ -36,20 +39,21 @@
 use std::time::Duration;
 
 use ru_wx::{
-    Accelerator, App, ArtClient, ArtId, ArtProvider, BitmapBundle, BoxSizer, Button,
-    CentreDirection, CheckListBox, Choice, Colour, ColourPickerCtrl, DatePickerCtrl, Font,
-    FontDesc, Frame, Gauge, ImageList, MessageBoxIcon, MessageDialog, MessageDialogStyle,
-    Orientation, Panel, PopupMenu, RadioBox, Slider, SpinCtrl, StaticText, StatusBar, Tab, Timer,
-    ToolBar, ToolTip, TopLevelWindow, UserAttentionFlags,
+    Accelerator, AnyButton, App, ArtClient, ArtId, ArtProvider, AuiToolBar, BitmapBundle,
+    BoxSizer, Button, ButtonVariants, CentreDirection, CheckListBox, Choice, Colour,
+    ColourPickerCtrl, DatePickerCtrl, Font, FontDesc, Frame, Gauge, ImageList, ListCtrl,
+    ListCtrlStyle, MessageBoxIcon, MessageDialog, MessageDialogStyle, Orientation, Panel,
+    PopupMenu, RadioBox, ScrollablePanel, Slider, SpinCtrl, StaticText, StatusBar, Tab, Timer,
+    ToolTip, TopLevelWindow, UserAttentionFlags,
 };
 
-// SVG icons for the toolbar. These are tiny inline SVGs that get
-// rasterised by the `image` crate at startup.
-const ICON_NEW: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>"#;
-const ICON_OPEN: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>"#;
-const ICON_SAVE: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 3h11l3 3v15H5z M8 3v6h7V3 M8 14h8v7H8z"/></svg>"#;
-const ICON_CUT: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.12 8.12L20 20 M8.12 15.88L20 4"/></svg>"#;
-const ICON_COPY: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>"#;
+// Colorful inline SVG icons (24×24 viewBox) with filled backgrounds so
+// they stand out on the toolbar surface.
+const ICON_NEW: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#4F46E5"/><path d="M14 6H8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10z" fill="none" stroke="white" stroke-width="1.6"/><path d="M14 6v4h4 M11 16h2 M12 13v5" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>"##;
+const ICON_OPEN: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#10B981"/><path d="M3 10a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_SAVE: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#F59E0B"/><path d="M6 4h10l3 3v13H5z M9 4v5h6V4 M8 13h8v7H8z" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_CUT: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#EF4444"/><circle cx="7" cy="8" r="2.2" fill="white"/><circle cx="7" cy="16" r="2.2" fill="white"/><path d="M9 9.5L20 20 M9 14.5L20 4" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_COPY: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#8B5CF6"/><rect x="9" y="9" width="11" height="11" rx="1.5" fill="none" stroke="white" stroke-width="1.6"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
 
 // Toolbar user-chosen identifiers (we dispatch on these in the click
 // handler below).
@@ -63,7 +67,7 @@ fn main() {
     let app = App::new();
 
     // 19. TopLevelWindow — a richer window base than the bare Frame.
-    let window = TopLevelWindow::new("ru_wx showcase (19 controls)", 820, 620);
+    let window = TopLevelWindow::new("ru_wx showcase — AuiToolBar + Buttons + scroll", 900, 700);
 
     // Centre the window on the screen before showing it.
     window.centre(CentreDirection::Screen);
@@ -74,7 +78,10 @@ fn main() {
     // changes automatically when the window is dragged to a
     // different monitor.
     let status = StatusBar::new(window.frame(), 3);
-    status.set_status_text("Ready", 0);
+    status.set_status_text(
+        "Nuovo: AuiToolBar 40px | tab Buttons | pagine scrollabili — clicca ≡ per staccare la barra",
+        0,
+    );
     {
         let dpi = window.frame().dpi();
         let scale = dpi.scale_factor();
@@ -82,12 +89,10 @@ fn main() {
     }
     status.set_status_text("Field 3", 2);
 
-    // ---- Tool bar (10) with custom SVG icons + separators ----
-    // 15. BitmapBundle: rasterise the SVGs at 16, 20 and 24 px so the
-    // toolbar looks crisp on HiDPI screens. 16. ArtProvider could also
-    // supply these, but BitmapBundle gives us full control over the
-    // asset (and we can register the result back into ArtProvider).
-    let icon_sizes: [(u32, u32); 3] = [(16, 16), (20, 20), (24, 24)];
+    // ---- AuiToolBar (10) — dockable / floating bar with large
+    // colourful icons. 15. BitmapBundle rasterises the SVGs at 32,
+    // 40 and 48 px for HiDPI.
+    let icon_sizes: [(u32, u32); 3] = [(32, 32), (40, 40), (48, 48)];
 
     let bundle_new = BitmapBundle::from_svg_bytes(ICON_NEW, &icon_sizes);
     let bundle_open = BitmapBundle::from_svg_bytes(ICON_OPEN, &icon_sizes);
@@ -95,35 +100,34 @@ fn main() {
     let bundle_cut = BitmapBundle::from_svg_bytes(ICON_CUT, &icon_sizes);
     let bundle_copy = BitmapBundle::from_svg_bytes(ICON_COPY, &icon_sizes);
 
-    // Build an ImageList from the bitmaps inside the bundles. The
-    // image list will be attached to the toolbar and to the notebook
-    // below.
-    let toolbar_images = ImageList::new(24, 24);
-    if let Some(bmp) = bundle_new.best_for_size((24, 24)) {
+    let toolbar_images = ImageList::new(40, 40);
+    if let Some(bmp) = bundle_new.best_for_size((40, 40)) {
         toolbar_images.add_bitmap(bmp.hbitmap);
     }
-    if let Some(bmp) = bundle_open.best_for_size((24, 24)) {
+    if let Some(bmp) = bundle_open.best_for_size((40, 40)) {
         toolbar_images.add_bitmap(bmp.hbitmap);
     }
-    if let Some(bmp) = bundle_save.best_for_size((24, 24)) {
+    if let Some(bmp) = bundle_save.best_for_size((40, 40)) {
         toolbar_images.add_bitmap(bmp.hbitmap);
     }
-    if let Some(bmp) = bundle_cut.best_for_size((24, 24)) {
+    if let Some(bmp) = bundle_cut.best_for_size((40, 40)) {
         toolbar_images.add_bitmap(bmp.hbitmap);
     }
-    if let Some(bmp) = bundle_copy.best_for_size((24, 24)) {
+    if let Some(bmp) = bundle_copy.best_for_size((40, 40)) {
         toolbar_images.add_bitmap(bmp.hbitmap);
     }
 
-    let toolbar = ToolBar::new(window.frame());
-    toolbar.set_image_list(&toolbar_images);
-    toolbar.add_tool(ID_TOOL_NEW, "New", 0);
-    toolbar.add_tool(ID_TOOL_OPEN, "Open", 1);
-    toolbar.add_tool(ID_TOOL_SAVE, "Save", 2);
-    toolbar.add_separator();
-    toolbar.add_tool(ID_TOOL_CUT, "Cut", 3);
-    toolbar.add_tool(ID_TOOL_COPY, "Copy", 4);
-    toolbar.realize();
+    let aui = AuiToolBar::new(window.frame());
+    aui.set_toolbar_height(52);
+    aui.set_image_list(&toolbar_images);
+    aui.add_tool(ID_TOOL_NEW, "New document", 0);
+    aui.add_tool(ID_TOOL_OPEN, "Open file…", 1);
+    aui.add_tool(ID_TOOL_SAVE, "Save document", 2);
+    aui.add_separator();
+    aui.add_tool(ID_TOOL_CUT, "Cut selection", 3);
+    aui.add_tool(ID_TOOL_COPY, "Copy selection", 4);
+    aui.realize();
+    let toolbar_reserved = aui.reserved_height();
 
     // Wire up the toolbar's click events. The single callback fires
     // for every tool with the tool's id. We clone the window so the
@@ -131,7 +135,7 @@ fn main() {
     // `'static`).
     let status_for_tools = status.clone();
     let window_for_tools = window.clone();
-    toolbar.on_tool_clicked(window.frame(), move |id| {
+    aui.on_tool_clicked(window.frame(), move |id| {
         let label = match id {
             ID_TOOL_NEW => "New",
             ID_TOOL_OPEN => "Open",
@@ -161,12 +165,14 @@ fn main() {
     let notebook = Tab::new(window.frame());
     notebook.set_image_list(&toolbar_images);
 
-    // ===== Page 1: lists & selections =====
+    // ===== Page 1: lists & selections (scrollable) =====
     let page1 = Panel::new(window.frame());
-    let lbl1 = StaticText::new(&page1, "Lists and selection controls:");
+    let scroll1 = ScrollablePanel::install(&page1);
+    let content1 = scroll1.content();
+    let lbl1 = StaticText::new(&content1, "Lists and selection controls:");
 
     // 4. Choice — simple drop-down with no edit
-    let choice = Choice::new(&page1);
+    let choice = Choice::new(&content1);
     choice.append("Apples");
     choice.append("Oranges");
     choice.append("Bananas");
@@ -190,7 +196,7 @@ fn main() {
     }
 
     // 5. CheckListBox — list with per-item checkboxes
-    let checklist = CheckListBox::new(&page1);
+    let checklist = CheckListBox::new(&content1);
     checklist.append("Read documentation");
     checklist.append("Write example");
     checklist.append("Run tests");
@@ -210,7 +216,7 @@ fn main() {
     }
 
     // 8. RadioBox — a labelled group of radio buttons
-    let radio = RadioBox::new(&page1, "Priority", &["Low", "Normal", "High", "Urgent"]);
+    let radio = RadioBox::new(&content1, "Priority", &["Low", "Normal", "High", "Urgent"]);
     radio.set_selection(1);
     let status_for_radio = status.clone();
     radio.on_select(window.frame(), move |idx| {
@@ -221,22 +227,34 @@ fn main() {
         status_for_radio.set_status_text(&format!("Priority: {label}"), 0);
     });
 
-    let mut sizer1 = BoxSizer::vertical();
-    sizer1.add(lbl1.as_widget_ref());
-    sizer1.add_stretch(0);
-    sizer1.add(choice.as_widget_ref());
-    sizer1.add_stretch(0);
-    sizer1.add(checklist.as_widget_ref());
-    sizer1.add_stretch(0);
-    sizer1.add(radio.as_widget_ref());
-    page1.set_sizer(sizer1);
+    lbl1.as_widget_ref().borrow_mut().set_size(440, 22);
+    choice.as_widget_ref().borrow_mut().set_size(440, 28);
+    checklist
+        .as_widget_ref()
+        .borrow_mut()
+        .set_size(440, 140);
+    radio.as_widget_ref().borrow_mut().set_size(440, 120);
 
-    // ===== Page 2: numeric inputs + progress =====
+    let mut sizer1 = BoxSizer::vertical();
+    sizer1.set_padding(8);
+    sizer1.add(lbl1.as_widget_ref());
+    sizer1.add_spacer(4);
+    sizer1.add(choice.as_widget_ref());
+    sizer1.add_spacer(8);
+    sizer1.add(checklist.as_widget_ref());
+    sizer1.add_spacer(8);
+    sizer1.add(radio.as_widget_ref());
+    scroll1.set_content_sizer(sizer1);
+    scroll1.set_min_content_height(380);
+
+    // ===== Page 2: numeric inputs + progress (scrollable) =====
     let page2 = Panel::new(window.frame());
-    let lbl2 = StaticText::new(&page2, "Sliders, spinners, gauges:");
+    let scroll2 = ScrollablePanel::install(&page2);
+    let content2 = scroll2.content();
+    let lbl2 = StaticText::new(&content2, "Sliders, spinners, gauges:");
 
     // 1. Slider — continuous value input
-    let slider = Slider::new(&page2, 0, 100, 40);
+    let slider = Slider::new(&content2, 0, 100, 40);
     slider.set_tick_freq(10);
     let slider_for_cb = slider.clone();
     let status_for_slider = status.clone();
@@ -249,7 +267,7 @@ fn main() {
     }
 
     // 3. SpinCtrl — numeric stepper
-    let spin = SpinCtrl::new(&page2, 0, 1000, 250);
+    let spin = SpinCtrl::new(&content2, 0, 1000, 250);
     let spin_for_cb = spin.clone();
     let status_for_spin = status.clone();
     {
@@ -261,7 +279,7 @@ fn main() {
     }
 
     // 2. Gauge — determinate progress
-    let gauge = Gauge::new(&page2, 100);
+    let gauge = Gauge::new(&content2, 100);
     gauge.set_value(40);
 
     // 12. Timer — drives the gauge and a small status update every
@@ -279,21 +297,32 @@ fn main() {
     });
     timer.start(Duration::from_millis(50));
 
-    let mut sizer2 = BoxSizer::vertical();
-    sizer2.add(lbl2.as_widget_ref());
-    sizer2.add_stretch(0);
-    sizer2.add(slider.as_widget_ref());
-    sizer2.add(spin.as_widget_ref());
-    sizer2.add(gauge.as_widget_ref());
-    page2.set_sizer(sizer2);
+    lbl2.as_widget_ref().borrow_mut().set_size(440, 22);
+    slider.as_widget_ref().borrow_mut().set_size(440, 32);
+    spin.as_widget_ref().borrow_mut().set_size(440, 28);
+    gauge.as_widget_ref().borrow_mut().set_size(440, 28);
 
-    // ===== Page 3: pickers & custom font & popup trigger =====
+    let mut sizer2 = BoxSizer::vertical();
+    sizer2.set_padding(8);
+    sizer2.add(lbl2.as_widget_ref());
+    sizer2.add_spacer(6);
+    sizer2.add(slider.as_widget_ref());
+    sizer2.add_spacer(6);
+    sizer2.add(spin.as_widget_ref());
+    sizer2.add_spacer(6);
+    sizer2.add(gauge.as_widget_ref());
+    scroll2.set_content_sizer(sizer2);
+    scroll2.set_min_content_height(420);
+
+    // ===== Page 3: pickers & custom font & popup trigger (scrollable) =====
     let page3 = Panel::new(window.frame());
-    let lbl3 = StaticText::new(&page3, "Pickers and typography:");
+    let scroll3 = ScrollablePanel::install(&page3);
+    let content3 = scroll3.content();
+    let lbl3 = StaticText::new(&content3, "Pickers and typography:");
 
     // 6. DatePickerCtrl — calendar popup
-    let date_label = StaticText::new(&page3, "(no date chosen)");
-    let date = DatePickerCtrl::new(&page3);
+    let date_label = StaticText::new(&content3, "(no date chosen)");
+    let date = DatePickerCtrl::new(&content3);
     let date_label_clone = date_label.clone();
     let status_for_date = status.clone();
     date.on_date_change(window.frame(), move |d| {
@@ -309,8 +338,8 @@ fn main() {
     });
 
     // 7. ColourPickerCtrl — colour chooser
-    let colour_label = StaticText::new(&page3, "Current colour: #000000");
-    let colour = ColourPickerCtrl::new(&page3);
+    let colour_label = StaticText::new(&content3, "Current colour: #000000");
+    let colour = ColourPickerCtrl::new(&content3);
     let colour_label_clone = colour_label.clone();
     let status_for_colour = status.clone();
     colour.on_change(window.frame(), move |c: Colour| {
@@ -324,7 +353,7 @@ fn main() {
     // label then receives the font via `StaticText::set_font` (which
     // under the hood sends `WM_SETFONT` to the control).
     let custom_font = Font::new(FontDesc::new("Segoe UI", 16).bold());
-    let fancy_label = StaticText::new(&page3, "Hello in a custom font!");
+    let fancy_label = StaticText::new(&content3, "Hello in a custom font!");
     fancy_label.set_font(&custom_font);
 
     // 17. PopupMenu — we don't get a right-click hook on the frame,
@@ -341,7 +370,7 @@ fn main() {
     // to borrow from the outer closure body.
     let status_for_popup = status.clone();
     let window_for_popup = window.clone();
-    let popup_button = Button::new(&page3, "Show popup menu");
+    let popup_button = Button::new(&content3, "Show popup menu");
     popup_button.on_click(window.frame(), move || {
         let popup_frame: &Frame = window_for_popup.frame();
         let mut popup = PopupMenu::new();
@@ -387,30 +416,194 @@ fn main() {
         popup.popup(popup_frame);
     });
 
+    lbl3.as_widget_ref().borrow_mut().set_size(440, 22);
+    date.as_widget_ref().borrow_mut().set_size(200, 28);
+    date_label.as_widget_ref().borrow_mut().set_size(440, 20);
+    colour.as_widget_ref().borrow_mut().set_size(200, 32);
+    colour_label.as_widget_ref().borrow_mut().set_size(440, 20);
+    fancy_label.as_widget_ref().borrow_mut().set_size(440, 28);
+    popup_button.as_widget_ref().borrow_mut().set_size(200, 32);
+
     let mut sizer3 = BoxSizer::vertical();
+    sizer3.set_padding(8);
     sizer3.add(lbl3.as_widget_ref());
-    sizer3.add_stretch(0);
+    sizer3.add_spacer(6);
     sizer3.add(date.as_widget_ref());
     sizer3.add(date_label.as_widget_ref());
-    sizer3.add_stretch(0);
+    sizer3.add_spacer(6);
     sizer3.add(colour.as_widget_ref());
     sizer3.add(colour_label.as_widget_ref());
-    sizer3.add_stretch(0);
+    sizer3.add_spacer(6);
     sizer3.add(fancy_label.as_widget_ref());
-    sizer3.add_stretch(0);
+    sizer3.add_spacer(6);
     sizer3.add(popup_button.as_widget_ref());
-    page3.set_sizer(sizer3);
+    scroll3.set_content_sizer(sizer3);
+    scroll3.set_min_content_height(480);
 
-    // Add the three pages to the notebook. The page-with-image
+    // ===== Page 4: ListCtrl report view with per-row icons (scrollable) =====
+    // Shows the `ListCtrl::set_image_list` + `insert_item_with_image`
+    // API: each row carries one of the toolbar SVG glyphs, and the
+    // selection callback drives the status bar.
+    let page4 = Panel::new(window.frame());
+    let scroll4 = ScrollablePanel::install(&page4);
+    let content4 = scroll4.content();
+    let lbl4 = StaticText::new(&content4, "ListCtrl (report) with per-row icons:");
+
+    let report = ListCtrl::new(&content4, ListCtrlStyle::Report);
+    report.insert_column(0, "Document", 200);
+    report.insert_column(1, "Action", 120);
+    report.insert_column(2, "When", 110);
+    report.set_image_list(&toolbar_images);
+
+    let history: [(i32, &str, &str, &str); 5] = [
+        (0, "report_q3.docx", "created", "09:12"),
+        (1, "budget.xlsx", "opened", "09:30"),
+        (2, "notes.md", "saved", "10:02"),
+        (3, "draft_old.txt", "cut", "10:15"),
+        (4, "summary.pdf", "copied", "10:40"),
+    ];
+    for (i, (icon, doc, action, when)) in history.iter().enumerate() {
+        report.insert_item_with_image(i, doc, *icon);
+        report.set_item_text(i, 1, action);
+        report.set_item_text(i, 2, when);
+    }
+
+    let status_for_report = status.clone();
+    let report_for_cb = report.clone();
+    report.on_item_selected(window.frame(), move |sel| {
+        if let Some(idx) = sel {
+            status_for_report.set_status_text(&format!("History row {idx} selected"), 0);
+            let _ = &report_for_cb;
+        }
+    });
+
+    lbl4.as_widget_ref().borrow_mut().set_size(500, 22);
+    report.as_widget_ref().borrow_mut().set_size(500, 220);
+
+    let mut sizer4 = BoxSizer::vertical();
+    sizer4.set_padding(8);
+    sizer4.add(lbl4.as_widget_ref());
+    sizer4.add_spacer(6);
+    sizer4.add(report.as_widget_ref());
+    scroll4.set_content_sizer(sizer4);
+    scroll4.set_min_content_height(400);
+
+    // ===== Page 5: wxWidgets button variants (library factories) =====
+    let page5 = Panel::new(window.frame());
+    let scroll5 = ScrollablePanel::install(&page5);
+    let content5 = scroll5.content();
+    let lbl5 = StaticText::new(&content5, "Button variants (wxButton family):");
+
+    let btn_standard = ButtonVariants::standard(&content5, "Standard");
+    let btn_flat = ButtonVariants::flat(&content5, "Flat / liscio");
+    let btn_bitmap = ButtonVariants::bitmap_only_svg(&content5, ICON_SAVE, 40, 40);
+    let btn_img_left =
+        ButtonVariants::text_with_image_left(&content5, "Save left", ICON_SAVE, 24);
+    let btn_img_right =
+        ButtonVariants::text_with_image_right(&content5, "Open right", ICON_OPEN, 24);
+    let btn_cmd = ButtonVariants::command_link(
+        &content5,
+        "Install feature pack",
+        "Adds optional components to the showcase",
+    );
+    let btn_toggle = ButtonVariants::toggle(&content5, "Pin toolbar");
+    let btn_bmp_toggle = ButtonVariants::bitmap_toggle_svg(&content5, ICON_COPY, 32);
+    let btn_menu = ButtonVariants::menu_drop_down(&content5, "Actions ▾");
+    {
+        let mut menu = btn_menu.menu_mut();
+        let s = status.clone();
+        menu.append("Refresh", window.frame(), move || {
+            s.set_status_text("Menu: Refresh", 0);
+        });
+        let s = status.clone();
+        menu.append("Export…", window.frame(), move || {
+            s.set_status_text("Menu: Export…", 0);
+        });
+    }
+    btn_menu.bind_menu_popup(window.frame());
+    let btn_anim = ButtonVariants::animated_demo(&content5, window.frame());
+
+    let buttons: [(&AnyButton, &str); 10] = [
+        (&btn_standard, "Standard push button"),
+        (&btn_flat, "Flat push button"),
+        (&btn_bitmap, "Bitmap-only button"),
+        (&btn_img_left, "Text + image left"),
+        (&btn_img_right, "Text + image right"),
+        (&btn_cmd, "Command link"),
+        (&btn_toggle, "Toggle button"),
+        (&btn_bmp_toggle, "Bitmap toggle"),
+        (&btn_menu, "Menu drop-down"),
+        (&btn_anim, "Animated button"),
+    ];
+    for (btn, msg) in buttons {
+        btn.on_click_status(window.frame(), &status, msg);
+    }
+
+    lbl5.as_widget_ref().borrow_mut().set_size(520, 22);
+
+    let mut left_col = BoxSizer::vertical();
+    left_col.set_padding(4);
+    let mut right_col = BoxSizer::vertical();
+    right_col.set_padding(4);
+
+    for (i, (btn, _)) in buttons.iter().enumerate() {
+        let col = if i < 5 { &mut left_col } else { &mut right_col };
+        let hint = StaticText::new(&content5, btn.kind_label());
+        hint.as_widget_ref().borrow_mut().set_size(250, 18);
+        let h = if btn.kind() == ru_wx::ButtonKind::CommandLink {
+            52
+        } else if btn.kind() == ru_wx::ButtonKind::Animated || btn.kind() == ru_wx::ButtonKind::BitmapOnly
+        {
+            48
+        } else {
+            40
+        };
+        btn.as_widget_ref().borrow_mut().set_size(250, h);
+        col.add(hint.as_widget_ref());
+        col.add_spacer(2);
+        col.add(btn.as_widget_ref());
+        col.add_spacer(10);
+    }
+
+    let mut cols = BoxSizer::horizontal();
+    cols.set_padding(8);
+    cols.add_sizer_with_proportion(left_col, 1);
+    cols.add_sizer_with_proportion(right_col, 1);
+
+    let mut sizer5 = BoxSizer::vertical();
+    sizer5.set_padding(8);
+    sizer5.add(lbl5.as_widget_ref());
+    sizer5.add_spacer(6);
+    sizer5.add_sizer(cols);
+    scroll5.set_content_sizer(sizer5);
+    scroll5.set_min_content_height(560);
+
+    let scroll_panels = [
+        scroll1.clone(),
+        scroll2.clone(),
+        scroll3.clone(),
+        scroll4.clone(),
+        scroll5.clone(),
+    ];
+
+    // Add the five pages to the notebook. The page-with-image
     // variant picks the tab-strip icon out of the toolbar's image
     // list.
     notebook.add_page_with_image("Lists", &page1, 0);
     notebook.add_page_with_image("Numeric", &page2, 3);
     notebook.add_page_with_image("Pickers", &page3, 4);
+    notebook.add_page_with_image("Data", &page4, 2);
+    notebook.add_page_with_image("Buttons", &page5, 1);
 
     let on_change_status = status.clone();
+    let scrolls_for_tab = scroll_panels.clone();
     notebook.on_selection_change(window.frame(), move |idx| {
-        on_change_status.set_status_text(&format!("Tab page {idx}"), 0);
+        let names = ["Lists", "Numeric", "Pickers", "Data", "Buttons"];
+        let name = names.get(idx).copied().unwrap_or("?");
+        on_change_status.set_status_text(&format!("Tab: {name} ({idx})"), 0);
+        if let Some(scroll) = scrolls_for_tab.get(idx) {
+            scroll.refresh();
+        }
     });
 
     // ---- Menu bar with checkable / radio items (18) + accelerators (22) ----
@@ -482,7 +675,14 @@ fn main() {
 
     let mut view_menu = ru_wx::Menu::new("&View");
     let sb_id = view_menu.append_check_item("Show &status bar", window.frame(), || {});
-    let tb_id = view_menu.append_check_item("Show &tool bar", window.frame(), || {});
+    let aui_for_view = aui.clone();
+    let tb_id = view_menu.append_check_item("Show &tool bar", window.frame(), move || {
+        let visible = aui_for_view.as_widget_ref().borrow().is_visible();
+        aui_for_view
+            .as_widget_ref()
+            .borrow_mut()
+            .set_visible(!visible);
+    });
     let fs_id = view_menu.append_check_item("&Full screen", window.frame(), || {});
 
     // Check the items by default so the user sees the checkmark.
@@ -550,12 +750,37 @@ fn main() {
     // inspection / debug overlay).
     let _ = spin_tip.text();
 
-    // Use the Frame's sizer to lay out the tab across the full
-    // client area. `add_with_proportion(_, 1)` gives the notebook the
-    // entire client rectangle (it absorbs any extra space).
+    // Banner sotto la AuiToolBar — rende evidente che la demo è aggiornata.
+    let banner = StaticText::new(
+        window.frame(),
+        "≡ AuiToolBar colorata 40×40  |  5 tab (apri «Buttons»)  |  scrollbar verticali nelle pagine",
+    );
+
+    // Use the Frame's sizer: spacer per la toolbar, banner, poi notebook.
     let mut main_sizer = BoxSizer::new(Orientation::Vertical);
+    main_sizer.set_padding(4);
+    main_sizer.add_spacer(toolbar_reserved);
+    main_sizer.add(banner.as_widget_ref());
     main_sizer.add_with_proportion(notebook.as_widget_ref(), 1);
     window.frame().set_sizer(main_sizer);
+
+    // Dopo il layout iniziale: toolbar sopra il notebook, scroll aggiornati.
+    aui.bring_to_front();
+    for scroll in &scroll_panels {
+        scroll.refresh();
+    }
+
+    // Apri la pagina Lists (Choice corretto); usa le tab per le altre sezioni.
+    notebook.set_selection(0);
+
+    let scrolls_on_resize = scroll_panels.clone();
+    let aui_on_resize = aui.clone();
+    window.frame().on_resize(move |_w, _h| {
+        aui_on_resize.bring_to_front();
+        for scroll in &scrolls_on_resize {
+            scroll.refresh();
+        }
+    });
 
     // ---- Run the application ----
     app.run(window.into_frame());

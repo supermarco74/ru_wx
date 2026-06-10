@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Platform-specific backends for the UI toolkit.
 //!
 //! Each supported operating system ships its own submodule
@@ -12,10 +15,13 @@
 //! * Functions that return a handle are allowed to return a null
 //!   pointer when the underlying call fails; callers are responsible
 //!   for null-checking. The library also logs the failure through the
-//!   [`crate::log`] system when appropriate.
+//!   [`crate::core::log`] system when appropriate.
 //! * No function in this module panics. `try_into` / lock failures
 //!   fall back to a sensible default (96 DPI, an empty string, etc.)
 //!   rather than aborting the process.
+
+pub mod appkit_stubs;
+pub mod gtk_stubs;
 
 #[cfg(target_os = "windows")]
 pub mod win32;

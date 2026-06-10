@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: minimal status bar visibility check.
 //!
 //! Creates a frame with a single 4-field status bar and a long
@@ -14,7 +17,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StatusBar only")
         .with_size(800, 200)
-        .build();
+        .with_modern_style().build();
 
     let status = StatusBar::new(&frame, 4);
     status.set_status_text(

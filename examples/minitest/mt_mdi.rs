@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `MDIParentFrame` and `MDIChildFrame` — multiple-document
 //! interface (`wxMDIParentFrame` / `wxMDIChildFrame`).
 //!
@@ -45,11 +48,11 @@ fn main() {
     let launcher = Frame::builder()
         .with_title("Minitest — MDI control panel")
         .with_size(420, 360)
-        .build();
+        .with_modern_style().build();
     let status = StatusBar::new(&launcher, 1);
     status.set_status_text("Click 'Open MDI parent' to spawn an MDI window.", 0);
 
-    StaticText::new(
+    let hint = StaticText::new(
         &launcher,
         "Use the buttons below to open the MDI parent and operate\non its children. The control bar is a *separate* frame\nbecause MDI children cannot host child widgets.",
     );
@@ -58,6 +61,13 @@ fn main() {
     let status_for_open = status.clone();
     let btn_open = Button::new(&launcher, "Open MDI parent");
     btn_open.on_click(&launcher, move || {
+        // Replace any previously opened MDI parent so we do not leak HWNDs.
+        MDI.with(|cell| {
+            if let Some((old, _, _)) = cell.borrow_mut().take() {
+                old.destroy();
+            }
+        });
+
         // Build the parent — a self-contained top-level MDI host.
         let mdi = MDIParentFrame::new(None, "Minitest — MDI parent", 720, 480);
 
@@ -170,6 +180,7 @@ fn main() {
 
     // Layout
     let mut sizer = BoxSizer::vertical();
+    sizer.add(hint.as_widget_ref());
     sizer.add(btn_open.as_widget_ref());
     sizer.add(btn_cascade.as_widget_ref());
     sizer.add(btn_tile_v.as_widget_ref());

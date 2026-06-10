@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `StatusBar` — 4 fields, 4 features exercised by buttons.
 //!
 //! Demonstrates the four main things you can do with a `StatusBar`:
@@ -24,7 +27,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StatusBar")
         .with_size(560, 360)
-        .build();
+        .with_modern_style().build();
 
     // 4 fields → "ready/field-name/coords/state" style layout.
     let status = StatusBar::new(&frame, 4);

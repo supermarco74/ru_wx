@@ -3,7 +3,7 @@
 A **cheat sheet of the 12 most common `ru_wx` patterns**, written so an AI can copy a snippet, paste it, and only have to look up the per-module MD when it needs a non-default knob. Every snippet is a complete, minimal, compilable example.
 
 > Conventions used below:
-> - `use ru_wx::prelude::*;` brings in the typical working set (App, Frame, all common controls, sizers, geometry, fonts). See [`prelude.md`](./prelude.md).
+> - `use ru_wx::prelude::*;` brings in the typical working set (App, Frame, all common controls, sizers, geometry, fonts). See [`prelude.md`](prelude.md).
 > - `Window` trait is Windows-only; on non-Windows targets it does not exist (everything below is `#[cfg(target_os = "windows")]`-friendly at the type level).
 > - `Frame` is `Clone` (wraps `Rc<RefCell<…>>`). Clone it to share with a callback.
 
@@ -24,7 +24,7 @@ fn main() {
 }
 ```
 
-That's it: one `App`, one `Frame` built with the builder, `app.run(frame)` enters the message loop and blocks until the user closes the window. See [`app.md`](./app.md), [`frame.md`](./frame.md).
+That's it: one `App`, one `Frame` built with the builder, `app.run(frame)` enters the message loop and blocks until the user closes the window. See [`app.md`](core/app.md), [`frame.md`](window/frame.md).
 
 ---
 
@@ -60,7 +60,7 @@ Key idioms:
 - `button.on_click(&frame, move || { ... })` registers the callback in the frame's command-handler map.
 - `as_widget_ref()` returns a `WidgetRef` suitable for adding to any sizer.
 
-See [`button.md`](./button.md), [`static_text.md`](./static_text.md), [`sizer.md`](./sizer.md).
+See [`button.md`](controls/button.md), [`static_text.md`](controls/static_text.md), [`sizer.md`](containers/sizer.md).
 
 ---
 
@@ -81,7 +81,7 @@ frame.set_sizer(s);
 - `add_spacer(n)` for a fixed-pixel gap.
 - `add_stretchable(proportion)` for an elastic gap (a "spring").
 
-`GridSizer(rows, cols)` / `FlexGridSizer(rows, cols)` exist for tabular layouts — see [`grid_sizer.md`](./grid_sizer.md).
+`GridSizer(rows, cols)` / `FlexGridSizer(rows, cols)` exist for tabular layouts — see [`grid_sizer.md`](containers/grid_sizer.md).
 
 ---
 
@@ -120,7 +120,7 @@ let ans = message_box(&frame.hwnd(), "Are you sure?", "Confirm",
                       MessageBoxStyle::YesNo, MessageBoxIcon::Question);
 ```
 
-Module map: [`file_dialog.md`](./file_dialog.md), [`dir_dialog.md`](./dir_dialog.md), [`color_dialog.md`](./color_dialog.md), [`font_dialog.md`](./font_dialog.md), [`date_picker_dialog.md`](./date_picker_dialog.md), [`text_entry_dialog.md`](./text_entry_dialog.md), [`message_box.md`](./message_box.md), [`message_dialog.md`](./message_dialog.md), [`single_choice_dialog.md`](./single_choice_dialog.md).
+Module map: [`file_dialog.md`](dialogs/file_dialog.md), [`dir_dialog.md`](dialogs/dir_dialog.md), [`color_dialog.md`](dialogs/color_dialog.md), [`font_dialog.md`](dialogs/font_dialog.md), [`date_picker_dialog.md`](dialogs/date_picker_dialog.md), [`text_entry_dialog.md`](dialogs/text_entry_dialog.md), [`message_box.md`](dialogs/message_box.md), [`message_dialog.md`](dialogs/message_dialog.md), [`single_choice_dialog.md`](dialogs/single_choice_dialog.md).
 
 ---
 
@@ -140,7 +140,7 @@ pick.on_selection_change(&frame, || {
 });
 ```
 
-`ComboBox::new(&frame, "default text")` is the **editable** variant — the user can type a value not in the list, and you can read it with `get_value()`. See [`choice.md`](./choice.md), [`combo_box.md`](./combo_box.md).
+`ComboBox::new(&frame, "default text")` is the **editable** variant — the user can type a value not in the list, and you can read it with `get_value()`. See [`choice.md`](controls/choice.md), [`combo_box.md`](controls/combo_box.md).
 
 ---
 
@@ -163,7 +163,7 @@ let r2 = RadioButton::new(&frame, "Option B", false);   // same group as r1
 let r3 = RadioButton::new(&frame, "Option C", false);
 ```
 
-See [`checkbox.md`](./checkbox.md), [`radio_button.md`](./radio_button.md), [`radio_box.md`](./radio_box.md).
+See [`checkbox.md`](controls/checkbox.md), [`radio_button.md`](controls/radio_button.md), [`radio_box.md`](controls/radio_box.md).
 
 ---
 
@@ -184,7 +184,7 @@ frame.register_paint_handler(move |hdc| {
 - `PaintDC` is the only safe DC for `WM_PAINT`; `MemoryDC` for offscreen; `WindowDC` for any time.
 - Always create fresh `Brush` / `Pen` per call (they wrap GDI handles with `Drop`).
 
-See [`dc.md`](./dc.md), [`brush.md`](./brush.md), [`pen.md`](./pen.md), [`geometry.md`](./geometry.md).
+See [`dc.md`](dc/dc.md), [`brush.md`](dc/brush.md), [`pen.md`](dc/pen.md), [`geometry.md`](core/geometry.md).
 
 ---
 
@@ -201,11 +201,11 @@ frame.register_accelerator(
 frame.register_command_handler(save_id, Box::new(|| { println!("Save!"); }));
 ```
 
-- Virtual keys live in [`accelerator.md`](./accelerator.md).
+- Virtual keys live in [`accelerator.md`](core/accelerator.md).
 - Accelerator bindings are **stored on the frame** and take effect when `app.run(frame)` starts.
 - If a menubar is attached, accelerator mutations also refresh the visible menu-item shortcut labels.
 
-See [`accelerator.md`](./accelerator.md), [`menu.md`](./menu.md).
+See [`accelerator.md`](core/accelerator.md), [`menu.md`](window/menu.md).
 
 ---
 
@@ -221,7 +221,7 @@ t.start(move || { println!("tick"); });
 t.stop();
 ```
 
-The closure runs on the Win32 message-loop thread. Capture state by `move` (clone it first if it's `Clone`). See [`timer.md`](./timer.md).
+The closure runs on the Win32 message-loop thread. Capture state by `move` (clone it first if it's `Clone`). See [`timer.md`](core/timer.md).
 
 ---
 
@@ -245,7 +245,7 @@ frame.set_ole_drop_callback(|data: OleDroppedData, _pos: OleDropPosition| {
 })?;
 ```
 
-See [`drop_target.md`](./drop_target.md), [`ole_dnd.md`](./ole_dnd.md).
+See [`drop_target.md`](dnd/drop_target.md), [`ole_dnd.md`](dnd/ole_dnd.md).
 
 ---
 
@@ -260,7 +260,7 @@ sb.push_status_text("Loading…");        // pushes a transient text on top
 sb.pop_status_text();                    // pops back to the previous text
 ```
 
-See [`status_bar.md`](./status_bar.md).
+See [`status_bar.md`](chrome/status_bar.md).
 
 ---
 
@@ -276,7 +276,7 @@ let big_font = Font::new(FontDesc::default()
 label.set_font(&big_font);
 ```
 
-`App::set_process_dpi_awareness(DpiAwareness::PerMonitorV2)` should be called **before** creating the first `Frame` for the best behaviour. See [`dpi.md`](./dpi.md), [`font.md`](./font.md).
+`App::set_process_dpi_awareness(DpiAwareness::PerMonitorV2)` should be called **before** creating the first `Frame` for the best behaviour. See [`dpi.md`](core/dpi.md), [`font.md`](core/font.md).
 
 ---
 
@@ -284,16 +284,16 @@ label.set_font(&big_font);
 
 These follow the same "build a struct, add to frame, optionally set sizer" pattern. Quick pointers:
 
-- **Menu bar**: [`menu.md`](./menu.md) — `MenuBar` → `Menu::new("&File")` → `menubar.append(file_menu)` → `frame.set_menu_bar(menubar)`.
-- **Toolbar**: [`tool_bar.md`](./tool_bar.md) — `ToolBar::new(&frame)`, then `tb.add_tool(...)`, then `frame.set_tool_bar(tb)`.
-- **Tabs**: [`tab.md`](./tab.md) — `let tab = Tab::new(&frame); tab.add_page("Tab 1", panel1); …; frame.set_sizer(sizer_with_tab)`.
-- **List view (multi-column)**: [`list_ctrl.md`](./list_ctrl.md) — `ListCtrl::new(&frame, ListCtrlStyle::report)`, then `lc.insert_column(0, "Name", 200)`, `lc.insert_item(0, "Alice")`.
-- **Grid (editable cells)**: [`grid.md`](./grid.md) — `Grid::new(&frame, rows, cols)`, then `grid.set_cell_value(row, col, "x")`.
-- **Tree**: [`tree_ctrl.md`](./tree_ctrl.md) — `TreeCtrl::new(&frame)`, then `let root = tree.add_root("Root"); tree.append_item(root, "Child")`.
-- **Tray icon**: [`icon_tray.md`](./icon_tray.md) — `IconTray::new(&frame, icon, tooltip)`, then `tray.show()`.
-- **Animation (GIF/APNG)**: [`animation.md`](./animation.md) + [`animation_ctrl.md`](./animation_ctrl.md) — `let a = Animation::load_file("logo.gif")?; let ac = AnimationCtrl::new(&frame); ac.set_animation(&a); ac.play()`.
-- **OpenGL**: [`gl_canvas.md`](./gl_canvas.md) — `let gl = GLCanvas::new(&frame, 400, 300); gl.set_current(); /* draw with gl11::* */`.
-- **Media (audio/video)**: [`media_ctrl.md`](./media_ctrl.md) — `let m = MediaCtrl::new(&frame); m.load("song.mp3")?; m.play()`.
+- **Menu bar**: [`menu.md`](window/menu.md) — `MenuBar` → `Menu::new("&File")` → `menubar.append(file_menu)` → `frame.set_menu_bar(menubar)`.
+- **Toolbar**: [`tool_bar.md`](chrome/tool_bar.md) — `ToolBar::new(&frame)`, then `tb.add_tool(...)`, then `frame.set_tool_bar(tb)`.
+- **Tabs**: [`tab.md`](containers/tab.md) — `let tab = Tab::new(&frame); tab.add_page("Tab 1", panel1); …; frame.set_sizer(sizer_with_tab)`.
+- **List view (multi-column)**: [`list_ctrl.md`](controls/list_ctrl.md) — `ListCtrl::new(&frame, ListCtrlStyle::report)`, then `lc.insert_column(0, "Name", 200)`, `lc.insert_item(0, "Alice")`.
+- **Grid (editable cells)**: [`grid.md`](containers/grid.md) — `Grid::new(&frame, rows, cols)`, then `grid.set_cell_value(row, col, "x")`.
+- **Tree**: [`tree_ctrl.md`](controls/tree_ctrl.md) — `TreeCtrl::new(&frame)`, then `let root = tree.add_root("Root"); tree.append_item(root, "Child")`.
+- **Tray icon**: [`icon_tray.md`](chrome/icon_tray.md) — `IconTray::new(&frame, icon, tooltip)`, then `tray.show()`.
+- **Animation (GIF/APNG)**: [`animation.md`](adv/animation.md) + [`animation_ctrl.md`](adv/animation_ctrl.md) — `let a = Animation::load_file("logo.gif")?; let ac = AnimationCtrl::new(&frame); ac.set_animation(&a); ac.play()`.
+- **OpenGL**: [`gl_canvas.md`](dc/gl_canvas.md) — `let gl = GLCanvas::new(&frame, 400, 300); gl.set_current(); /* draw with gl11::* */`.
+- **Media (audio/video)**: [`media_ctrl.md`](adv/media_ctrl.md) — `let m = MediaCtrl::new(&frame); m.load("song.mp3")?; m.play()`.
 
 ---
 
@@ -322,7 +322,7 @@ This pattern gives you:
 
 If you need the raw `HWND` (rare, only for custom FFI), call `widget.hwnd()` on Windows (`window.hwnd()` through the `Window` trait).
 
-See [`widget.md`](./widget.md) for the full `Widget` / `Window` / `WidgetRef` story.
+See [`widget.md`](core/widget.md) for the full `Widget` / `Window` / `WidgetRef` story.
 
 ---
 

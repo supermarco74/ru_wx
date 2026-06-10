@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `TipWindow` — a transient non-activating popup hint
 //! (`wxTipWindow`).
 //!
@@ -31,7 +34,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TipWindow")
         .with_size(540, 360)
-        .build();
+        .with_modern_style().build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Click a button to show a tip popup.", 0);

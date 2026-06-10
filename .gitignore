@@ -5,6 +5,7 @@
 # Pre-built example binaries
 /examples/examples_win32/
 /examples/minitest_win32/
+/dist/
 
 # Build / smoke / test logs and stderr captures
 *.log
@@ -12,6 +13,9 @@
 !src/**/*.txt
 !assets/**/*.txt
 !tests/**/*.txt
+*.err
+/_ttsize.exe
+/_ttsize.pdb
 
 # Repro / smoke build outputs (the .rs source is committed, not the .exe)
 /repro_*.exe

@@ -1,54 +1,50 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Diagnostic — probe the FrameData RefCell state after TextCtrl::new
 #![windows_subsystem = "windows"]
-use std::cell::RefCell;
-use std::rc::Rc;
-use ru_wx::{App, Button, Frame, StatusBar, TextCtrl};
 
-// We need to access the inner RefCell. Use a minimal test.
+use ru_wx::{App, BoxSizer, Button, Frame, StatusBar, TextCtrl};
+
 fn main() {
-    eprintln!("=== Test: probe RefCell state ===");
-    let _app = App::new();
+    let app = App::new();
     let frame = Frame::builder()
         .with_title("Diagnostic")
         .with_size(1000, 600)
-        .build();
+        .with_modern_style().build();
 
-    eprintln!("[1] Frame built, status bar next");
     let status = StatusBar::new(&frame, 4);
-    eprintln!("[2] StatusBar created");
     status.set_status_text("(empty)", 0);
-    eprintln!("[3] set_status_text(0) done");
     status.set_status_text("Field 1", 1);
     status.set_status_text("Field 2", 2);
     status.set_status_text("Field 3", 3);
-    eprintln!("[4] All set_status_text done");
 
-    eprintln!("[5] About to create TextCtrl");
-    let _input = TextCtrl::new(&frame, "Hello, world!");
-    eprintln!("[6] TextCtrl created");
+    let input = TextCtrl::new(&frame, "Hello, world!");
 
-    // After TextCtrl::new, try a sanity check using known refcount pattern.
-    // We don't have direct access to inner, but we can call on_click and see
-    // if it succeeds. (b1 uses Button::new + on_click)
-    eprintln!("[7] About to create Button b1");
     let s = status.clone();
     let b1 = Button::new(&frame, "Button 1");
-    eprintln!("[8] b1 Button::new done");
-    b1.on_click(&frame, move || { s.set_status_text("1", 0); });
-    eprintln!("[9] b1.on_click registered");
+    b1.on_click(&frame, move || {
+        s.set_status_text("1", 0);
+    });
 
     let s = status.clone();
     let b2 = Button::new(&frame, "Button 2");
-    eprintln!("[10] b2 Button::new done");
-    b2.on_click(&frame, move || { s.set_status_text("2", 0); });
-    eprintln!("[11] b2.on_click registered");
+    b2.on_click(&frame, move || {
+        s.set_status_text("2", 0);
+    });
 
-    eprintln!("[12] About to create Button b3");
     let s = status.clone();
     let b3 = Button::new(&frame, "Button 3");
-    eprintln!("[13] b3 Button::new done");
-    b3.on_click(&frame, move || { s.set_status_text("3", 0); });
-    eprintln!("[14] b3.on_click registered - SUCCESS");
+    b3.on_click(&frame, move || {
+        s.set_status_text("3", 0);
+    });
 
-    eprintln!("=== Test complete ===");
+    let mut sizer = BoxSizer::vertical();
+    sizer.add(input.as_widget_ref());
+    sizer.add(b1.as_widget_ref());
+    sizer.add(b2.as_widget_ref());
+    sizer.add(b3.as_widget_ref());
+    frame.set_sizer(sizer);
+
+    app.run(frame);
 }

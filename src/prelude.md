@@ -74,4 +74,4 @@ use ru_wx::prelude::*;
 
 ## See also
 
-- [`lib.rs`](./lib.md) — full crate-level re-exports.
+- [`lib.rs`](lib.md) — full crate-level re-exports.

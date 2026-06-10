@@ -18,7 +18,7 @@ cargo run --example grid_demo
 - `grid.on_selection_changed(&frame, |sel| ...)` — row-click event
 - `Cell::{Text, ImageOnly, Image, Empty}` — cell content variants
 - `ImageList::new(16, 16)` + `images.add_bitmap(hb)` — 16×16 icon list
-- `ru_wx::icon::load_svg_bytes_as_hbitmap(svg, w, h)` — direct SVG → HBITMAP
+- `ru_wx::dc::icon::load_svg_bytes_as_hbitmap(svg, w, h)` — direct SVG → HBITMAP
 
 ## Embedded assets
 5 SVG icons from `assets/icons/` at compile time (16×16 in this demo):
@@ -76,7 +76,7 @@ Indices:
   actual change.
 - `grid.row_count()` / `grid.col_count()` — getters.
 - `Cell::Text(String)` / `Cell::ImageOnly(i32)` / `Cell::Image { idx, text }` / `Cell::Empty` — content variants.
-- `ru_wx::icon::load_svg_bytes_as_hbitmap(svg, w, h) -> Option<HBITMAP>` — Windows-only; on non-Windows targets this is stubbed to `None`.
+- `ru_wx::dc::icon::load_svg_bytes_as_hbitmap(svg, w, h) -> Option<HBITMAP>` — Windows-only; on non-Windows targets this is stubbed to `None`.
 
 ## Win32 / platform notes
 - The `Grid` is implemented on top of `SysListView32` (LVS_REPORT) with

@@ -2,7 +2,24 @@
 name = "ru_wx"
 version = "0.6.4"
 edition = "2021"
-description = "A pure Rust cross-platform GUI library with native widgets"
+description = "Pure Rust cross-platform GUI library with a wxWidgets-like API and native widgets. No C++ bindings."
+license = "GPL-3.0-or-later"
+repository = "https://github.com/supermarco74/ru_wx"
+homepage = "https://github.com/supermarco74/ru_wx"
+readme = "README.md"
+keywords = ["gui", "win32", "wxwidgets", "windows", "native"]
+categories = ["gui"]
+exclude = [
+    "/dist/",
+    "/examples/examples_win32/",
+    "/examples/minitest_win32/",
+    "**/*.exe",
+    "**/*.pdb",
+    "**/*.err",
+    "/tools/",
+    "/scripts/",
+    "/vecchie_elaborazioni/",
+]
 
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "gif"] }
@@ -26,6 +43,7 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_Shell_Common",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_HiDpi",
+    "Win32_System_DataExchange",
     "Win32_System_Com",
     "Win32_System_Ole",
     "Win32_System_Memory",
@@ -61,6 +79,10 @@ path = "examples/aui_toolbar_demo.rs"
 [[example]]
 name = "esempio2"
 path = "examples/esempio2.rs"
+
+[[example]]
+name = "music_player"
+path = "examples/music_player.rs"
 
 # ── Minitests: one focused example per migrated component ──────────────
 [[example]]
@@ -106,6 +128,14 @@ path = "examples/minitest/mt_slider_gauge.rs"
 [[example]]
 name = "mt_tree_ctrl"
 path = "examples/minitest/mt_tree_ctrl.rs"
+
+[[example]]
+name = "mt_list_ctrl"
+path = "examples/minitest/mt_list_ctrl.rs"
+
+[[example]]
+name = "mt_modern_style"
+path = "examples/minitest/mt_modern_style.rs"
 
 [[example]]
 name = "mt_status_bar"
@@ -206,3 +236,99 @@ path = "examples/minitest/mt_property_grid.rs"
 [[example]]
 name = "mt_window_corners"
 path = "examples/minitest/mt_window_corners.rs"
+
+[[example]]
+name = "mt_hyperlink"
+path = "examples/minitest/mt_hyperlink.rs"
+
+[[example]]
+name = "mt_search"
+path = "examples/minitest/mt_search.rs"
+
+[[example]]
+name = "mt_clipboard"
+path = "examples/minitest/mt_clipboard.rs"
+
+[[example]]
+name = "mt_events"
+path = "examples/minitest/mt_events.rs"
+
+[[example]]
+name = "mt_pickers"
+path = "examples/minitest/mt_pickers.rs"
+
+[[example]]
+name = "mt_about"
+path = "examples/minitest/mt_about.rs"
+
+[[example]]
+name = "mt_activity"
+path = "examples/minitest/mt_activity.rs"
+
+[[example]]
+name = "mt_frame_events"
+path = "examples/minitest/mt_frame_events.rs"
+
+[[example]]
+name = "mt_round20"
+path = "examples/minitest/mt_round20.rs"
+
+[[example]]
+name = "mt_round21"
+path = "examples/minitest/mt_round21.rs"
+
+[[example]]
+name = "mt_round22"
+path = "examples/minitest/mt_round22.rs"
+
+[[example]]
+name = "mt_round23"
+path = "examples/minitest/mt_round23.rs"
+
+[[example]]
+name = "mt_round24"
+path = "examples/minitest/mt_round24.rs"
+
+[[example]]
+name = "mt_round25"
+path = "examples/minitest/mt_round25.rs"
+
+[[example]]
+name = "mt_round26"
+path = "examples/minitest/mt_round26.rs"
+
+[[example]]
+name = "mt_round27"
+path = "examples/minitest/mt_round27.rs"
+
+[[example]]
+name = "mt_round28"
+path = "examples/minitest/mt_round28.rs"
+
+[[example]]
+name = "mt_round29"
+path = "examples/minitest/mt_round29.rs"
+
+[[example]]
+name = "mt_round30"
+path = "examples/minitest/mt_round30.rs"
+
+[[example]]
+name = "mt_round31"
+path = "examples/minitest/mt_round31.rs"
+
+[[example]]
+name = "mt_round32"
+path = "examples/minitest/mt_round32.rs"
+
+[[example]]
+name = "mt_round33"
+path = "examples/minitest/mt_round33.rs"
+
+[[example]]
+name = "mt_round34"
+path = "examples/minitest/mt_round34.rs"
+
+[[example]]
+name = "mt_round35"
+path = "examples/minitest/mt_round35.rs"

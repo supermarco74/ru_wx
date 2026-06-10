@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `BitmapComboBox` — a drop-down where each row carries a small icon.
 //!
 //! Run with:
@@ -13,15 +16,16 @@
 #![windows_subsystem = "windows"]
 
 use ru_wx::{
-    icon, App, BitmapComboBox, BoxSizer, Frame, ImageList, StaticText, StatusBar,
+    App, BitmapComboBox, BoxSizer, Frame, ImageList, StaticText, StatusBar,
 };
+use ru_wx::dc::icon;
 
 fn main() {
     let app = App::new();
     let frame = Frame::builder()
         .with_title("Minitest — BitmapComboBox")
         .with_size(460, 320)
-        .build();
+        .with_modern_style().build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Pick an action.", 0);

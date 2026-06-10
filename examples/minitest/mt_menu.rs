@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `MenuBar` — File / Edit / Help with all common item kinds.
 //!
 //! Demonstrates:
@@ -16,7 +19,7 @@
 
 #![windows_subsystem = "windows"]
 
-use ru_wx::{Accelerator, App, Frame, Menu, MenuBar, StaticText, StatusBar};
+use ru_wx::{Accelerator, App, BoxSizer, Frame, Menu, MenuBar, StaticText, StatusBar};
 
 const FILE_NEW_SVG: &[u8] = include_bytes!("../../assets/icons/file-new.svg");
 const FOLDER_OPEN_SVG: &[u8] = include_bytes!("../../assets/icons/folder-open.svg");
@@ -29,9 +32,9 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — MenuBar")
         .with_size(520, 320)
-        .build();
+        .with_modern_style().build();
 
-    let _label = StaticText::new(
+    let label = StaticText::new(
         &frame,
         "Open the menus and pick items. Status bar reports the action.",
     );
@@ -111,6 +114,10 @@ fn main() {
     menubar.append(edit_menu);
     menubar.append(help_menu);
     frame.set_menu_bar(menubar);
+
+    let mut sizer = BoxSizer::vertical();
+    sizer.add(label.as_widget_ref());
+    frame.set_sizer(sizer);
 
     app.run(frame);
 }

@@ -1,0 +1,151 @@
+name: Release
+
+# Builds Windows example binaries (with embedded Common Controls v6
+# manifest), packages them as .zip archives, and publishes a GitHub
+# Release when a version tag is pushed.
+#
+# Create a release:
+#   1. Bump version in Cargo.toml
+#   2. git commit && git tag v0.6.4 && git push origin main --tags
+#
+# Manual run (draft release from current commit, tag must not exist yet
+# or use a new tag name):
+#   Actions → Release → Run workflow → enter version e.g. 0.6.4
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver without v prefix (e.g. 0.6.4); defaults to Cargo.toml"
+        required: false
+        default: ""
+      draft:
+        description: "Create as draft release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish-crates-io:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Cargo.toml version matches tag
+        shell: bash
+        run: |
+          tag_ver="${GITHUB_REF_NAME#v}"
+          cargo_ver=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$tag_ver" != "$cargo_ver" ]; then
+            echo "Tag v$tag_ver does not match Cargo.toml version $cargo_ver"
+            exit 1
+          fi
+
+      - name: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --token "$CARGO_REGISTRY_TOKEN"
+
+  release-windows:
+    name: build & publish (Windows x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: meta
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $v = "${{ inputs.version }}".Trim()
+            if (-not $v) {
+              $line = Select-String -Path Cargo.toml -Pattern '^version\s*=' | Select-Object -First 1
+              $v = $line.Line -replace '.*"(.+?)".*', '$1'
+            }
+          } else {
+            $v = "${{ github.ref_name }}" -replace '^v', ''
+          }
+          if ($v -notmatch '^\d+\.\d+\.\d+') {
+            Write-Error "Invalid version: '$v'"
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=v$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Release version: v$v"
+
+      - name: Verify Cargo.toml version (tag push)
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $tagVer = "${{ steps.meta.outputs.version }}"
+          $cargoLine = Select-String -Path Cargo.toml -Pattern '^version\s*=' | Select-Object -First 1
+          $cargoVer = $cargoLine.Line -replace '.*"(.+?)".*', '$1'
+          if ($tagVer -ne $cargoVer) {
+            Write-Error "Tag v$tagVer does not match Cargo.toml version $cargoVer"
+          }
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build all examples (release + manifest)
+        shell: pwsh
+        run: .\build_with_manifest.ps1 --release --examples
+
+      - name: Package release archives
+        shell: pwsh
+        run: .\scripts\package_github_release.ps1 -Version "${{ steps.meta.outputs.version }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ru_wx ${{ steps.meta.outputs.version }}
+          draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft }}
+          generate_release_notes: true
+          files: |
+            dist/ru_wx-${{ steps.meta.outputs.version }}-win64.zip
+            dist/ru_wx-${{ steps.meta.outputs.version }}-examples-win64.zip
+            dist/ru_wx-${{ steps.meta.outputs.version }}-minitests-win64.zip
+          body: |
+            ## Windows binaries (x64)
+
+            Pre-built example and minitest executables for **Windows 10/11**.
+            Each `.exe` has the Common Controls v6 manifest embedded (required on modern Windows).
+
+            | Archive | Contents |
+            |---------|----------|
+            | `ru_wx-*-win64.zip` | Full package (`examples_win32/` + `minitest_win32/` + README) |
+            | `ru_wx-*-examples-win64.zip` | Demo applications only |
+            | `ru_wx-*-minitests-win64.zip` | `mt_*` component minitests only |
+
+            ### Quick try
+
+            1. Download and extract `ru_wx-*-win64.zip`
+            2. Run `examples_win32\showcase_all.exe` or `examples_win32\music_player.exe`
+
+            ### Build from source
+
+            ```bash
+            git clone https://github.com/supermarco74/ru_wx.git
+            cd ru_wx
+            cargo run --example window_with_button
+            ```
+
+            On Windows, use `build_with_manifest.ps1 --release --examples` (or `build_examples.bat`) to produce distributable `.exe` files locally.

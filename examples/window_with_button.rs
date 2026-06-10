@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: a window with native Win32 widgets laid out by a BoxSizer.
 //!
 //! Demonstrates:
@@ -29,7 +32,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx Native Demo")
         .with_size(500, 350)
-        .build();
+        .with_modern_style().build();
 
     // --- StaticText ---
     let label = StaticText::new(&frame, "Hello from native Win32 widgets!");

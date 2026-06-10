@@ -15,7 +15,7 @@ name: CI
 # `build_with_manifest.ps1` wrapper, because the library's
 # `build.rs` emits `cargo:rustc-link-lib` for the static `app.lib`
 # that is NOT forwarded to downstream `[[example]]` targets
-# (see `upgrade.md` Upgrade 6 for the long explanation).
+# (see `vecchie_elaborazioni/upgrade.md` Upgrade 6 for the long explanation).
 #
 # This CI runs:
 #   1. `cargo build` and `cargo build --release --examples`;

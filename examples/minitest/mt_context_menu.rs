@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `PopupMenu` — context menu shown by clicking a button.
 //!
 //! Demonstrates:
@@ -19,7 +22,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Context (popup) menu")
         .with_size(460, 280)
-        .build();
+        .with_modern_style().build();
 
     let _hint = StaticText::new(
         &frame,

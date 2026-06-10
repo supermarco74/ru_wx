@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `Wizard` — multi-page navigation dialog (`wxWizard`).
 //!
 //! Demonstrates:
@@ -31,7 +34,7 @@ fn main() {
     let launcher = Frame::builder()
         .with_title("Minitest — Wizard")
         .with_size(440, 220)
-        .build();
+        .with_modern_style().build();
     let status = StatusBar::new(&launcher, 1);
     status.set_status_text("Click 'Open wizard' to start the demo.", 0);
 

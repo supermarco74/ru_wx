@@ -1,40 +1,34 @@
-//! `esempio2` — Mini Editor that combines the **newly created controls**:
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
 //!
-//! - [`AuiToolBar`] — a dockable toolbar that can be detached to a
-//!   floating window by clicking the `≡` gripper. Re-dock by clicking
-//!   the gripper again, double-clicking the floating title bar, or
-//!   closing the floating window.
-//! - [`ToolTip`] — per-widget tooltips attached to every interactive
-//!   control in the window. A `Show tooltips` checkbox toggles the
-//!   global enable flag.
-//! - [`StaticText`] — labels that describe what each region of the
-//!   window does.
-//!
-//! Plus pre-existing controls used for context:
-//! - [`Frame`], [`StatusBar`], [`BoxSizer`], [`TextCtrl`], [`Button`],
-//!   [`CheckBox`], [`ImageList`].
+//! `esempio2` — Mini Editor with a colourful dockable toolbar, native
+//! Win32 tooltips on every tool button, per-widget [`ToolTip`]s on the
+//! rest of the UI, and Windows 11 rounded corners via DWM.
 //!
 //! Run with:
 //! ```bash
 //! cargo run --example esempio2
 //! ```
+//! On Windows 11, build with the Common Controls v6 manifest (see
+//! `build_with_manifest.ps1`) for PerMonitorV2 scaling and modern
+//! control theming.
 
 #![windows_subsystem = "windows"]
 
 use ru_wx::{
-    App, AuiDockSide, AuiToolBar, BitmapBundle, BoxSizer, Button, CheckBox, Frame, ImageList,
-    StaticText, StatusBar, TextCtrl, ToolTip,
+    App, AuiDockSide, AuiToolBar, BitmapBundle, Button, CheckBox, ImageList, StaticText,
+    StatusBar, TextCtrl, ToolTip, TopLevelWindow, WindowCornerPreference,
 };
 
-// ── Inline SVG icons (Bootstrap-Icon-style, 24×24 viewBox) ──────────
-const ICON_NEW: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15h6"/></svg>"#;
-const ICON_OPEN: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>"#;
-const ICON_SAVE: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 3h11l3 3v15H5z M8 3v6h7V3 M8 14h8v7H8z"/></svg>"#;
-const ICON_CUT: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.12 8.12L20 20 M8.12 15.88L20 4"/></svg>"#;
-const ICON_COPY: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>"#;
-const ICON_PASTE: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="6" y="4" width="12" height="16"/><path d="M9 4V2h6v2"/></svg>"#;
+// Colourful inline SVG icons (24×24 viewBox) with filled backgrounds so
+// they stand out on the light-grey toolbar. White strokes on top.
+const ICON_NEW: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#4F46E5"/><path d="M14 6H8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10z" fill="none" stroke="white" stroke-width="1.6"/><path d="M14 6v4h4 M11 16h2 M12 13v5" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>"##;
+const ICON_OPEN: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#10B981"/><path d="M3 10a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_SAVE: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#F59E0B"/><path d="M6 4h10l3 3v13H5z M9 4v5h6V4 M8 13h8v7H8z" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_CUT: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#EF4444"/><circle cx="7" cy="8" r="2.2" fill="white"/><circle cx="7" cy="16" r="2.2" fill="white"/><path d="M9 9.5L20 20 M9 14.5L20 4" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_COPY: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#8B5CF6"/><rect x="9" y="9" width="11" height="11" rx="1.5" fill="none" stroke="white" stroke-width="1.6"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
+const ICON_PASTE: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#06B6D4"/><rect x="7" y="5" width="12" height="15" rx="1.5" fill="none" stroke="white" stroke-width="1.6"/><path d="M9 5V3h6v2" fill="none" stroke="white" stroke-width="1.6"/></svg>"##;
 
-// Toolbar command ids. We dispatch on these in the click handler.
 const ID_TOOL_NEW: u16 = 2001;
 const ID_TOOL_OPEN: u16 = 2002;
 const ID_TOOL_SAVE: u16 = 2003;
@@ -42,23 +36,29 @@ const ID_TOOL_CUT: u16 = 2004;
 const ID_TOOL_COPY: u16 = 2005;
 const ID_TOOL_PASTE: u16 = 2006;
 
+/// Vertical space reserved by the docked AuiToolBar (see `set_toolbar_height`).
+const TOOLBAR_H: i32 = 52;
+
 fn main() {
     let app = App::new();
 
-    let frame = Frame::builder()
-        .with_title("esempio2 — Mini Editor (AuiToolBar + ToolTip + StaticText)")
-        .with_size(760, 520)
-        .build();
+    // TopLevelWindow gives us Win11 DWM helpers (rounded corners).
+    let window = TopLevelWindow::new(
+        "esempio2 — Mini Editor (Win11 + icone colorate)",
+        780,
+        560,
+    );
+    let _ = window.set_window_corner_preference(WindowCornerPreference::Default);
+    let frame = window.frame().clone();
 
-    // ── Status bar at the bottom ────────────────────────────────────
     let status = StatusBar::new(&frame, 1);
     status.set_status_text(
-        "Hover any control to see its tooltip. Click ≡ to detach the toolbar.",
+        "Passa il mouse sui pulsanti della toolbar per i tooltip nativi Win32.",
         0,
     );
 
-    // ── Image list for the AuiToolBar (24×24) ───────────────────────
-    let icon_sizes: [(u32, u32); 3] = [(16, 16), (20, 20), (24, 24)];
+    // 40×40 colourful icons (HiDPI-friendly).
+    let icon_sizes: [(u32, u32); 3] = [(32, 32), (40, 40), (48, 48)];
 
     let bundle_new = BitmapBundle::from_svg_bytes(ICON_NEW, &icon_sizes);
     let bundle_open = BitmapBundle::from_svg_bytes(ICON_OPEN, &icon_sizes);
@@ -67,151 +67,116 @@ fn main() {
     let bundle_copy = BitmapBundle::from_svg_bytes(ICON_COPY, &icon_sizes);
     let bundle_paste = BitmapBundle::from_svg_bytes(ICON_PASTE, &icon_sizes);
 
-    let images = ImageList::new(24, 24);
-    if let Some(bmp) = bundle_new.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
-    }
-    if let Some(bmp) = bundle_open.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
-    }
-    if let Some(bmp) = bundle_save.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
-    }
-    if let Some(bmp) = bundle_cut.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
-    }
-    if let Some(bmp) = bundle_copy.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
-    }
-    if let Some(bmp) = bundle_paste.best_for_size((24, 24)) {
-        images.add_bitmap(bmp.hbitmap);
+    let images = ImageList::new(40, 40);
+    for bundle in [
+        &bundle_new,
+        &bundle_open,
+        &bundle_save,
+        &bundle_cut,
+        &bundle_copy,
+        &bundle_paste,
+    ] {
+        if let Some(bmp) = bundle.best_for_size((40, 40)) {
+            images.add_bitmap(bmp.hbitmap);
+        }
     }
 
-    // ── The AuiToolBar (NEW CONTROL #1) ─────────────────────────────
-    // The AuiToolBar docks itself to the top of the frame automatically;
-    // we don't add it to the BoxSizer below — its size is managed
-    // independently.
     let aui = AuiToolBar::new(&frame);
+    aui.set_toolbar_height(TOOLBAR_H);
     aui.set_image_list(&images);
-    aui.add_tool(ID_TOOL_NEW, "New", 0);
-    aui.add_tool(ID_TOOL_OPEN, "Open", 1);
-    aui.add_tool(ID_TOOL_SAVE, "Save", 2);
+    // Labels become native toolbar tooltips via TB_ADDSTRING in realize().
+    aui.add_tool(ID_TOOL_NEW, "Nuovo documento (Ctrl+N)", 0);
+    aui.add_tool(ID_TOOL_OPEN, "Apri file…", 1);
+    aui.add_tool(ID_TOOL_SAVE, "Salva documento (Ctrl+S)", 2);
     aui.add_separator();
-    aui.add_tool(ID_TOOL_CUT, "Cut", 3);
-    aui.add_tool(ID_TOOL_COPY, "Copy", 4);
-    aui.add_tool(ID_TOOL_PASTE, "Paste", 5);
+    aui.add_tool(ID_TOOL_CUT, "Taglia selezione", 3);
+    aui.add_tool(ID_TOOL_COPY, "Copia selezione", 4);
+    aui.add_tool(ID_TOOL_PASTE, "Incolla dagli appunti", 5);
     aui.realize();
 
-    // Tool click → update the status bar.
     let status_for_tools = status.clone();
     aui.on_tool_clicked(&frame, move |id| {
         let label = match id {
-            ID_TOOL_NEW => "New",
-            ID_TOOL_OPEN => "Open",
-            ID_TOOL_SAVE => "Save",
-            ID_TOOL_CUT => "Cut",
-            ID_TOOL_COPY => "Copy",
-            ID_TOOL_PASTE => "Paste",
+            ID_TOOL_NEW => "Nuovo",
+            ID_TOOL_OPEN => "Apri",
+            ID_TOOL_SAVE => "Salva",
+            ID_TOOL_CUT => "Taglia",
+            ID_TOOL_COPY => "Copia",
+            ID_TOOL_PASTE => "Incolla",
             _ => "?",
         };
-        status_for_tools.set_status_text(&format!("AuiToolBar → {label}"), 0);
+        status_for_tools.set_status_text(&format!("Toolbar → {label}"), 0);
     });
 
-    // Dock-state-change → update the status bar.
     let status_for_dock = status.clone();
     aui.on_dock_state_change(move |side| {
         let label = match side {
-            AuiDockSide::Top => "top",
-            AuiDockSide::Bottom => "bottom",
-            AuiDockSide::Left => "left",
-            AuiDockSide::Right => "right",
-            AuiDockSide::Floating => "floating",
+            AuiDockSide::Top => "in alto",
+            AuiDockSide::Bottom => "in basso",
+            AuiDockSide::Left => "a sinistra",
+            AuiDockSide::Right => "a destra",
+            AuiDockSide::Floating => "flottante",
         };
-        status_for_dock.set_status_text(&format!("AuiToolBar is now docked to: {label}"), 0);
+        status_for_dock.set_status_text(&format!("Toolbar agganciata {label}"), 0);
     });
 
-    // ── StaticText (NEW CONTROL #2) — labels for the three regions ─
-    // AuiToolBar reserves the top ~28 px of the client area, so the
-    // sizer's content starts a bit further down. We position the
-    // StaticText labels at fixed coordinates so the layout matches
-    // what users would expect from a typical editor window.
-    let lbl_hint = StaticText::new(&frame, "📝  Type your document in the editor below.");
-    lbl_hint.as_widget_ref().borrow_mut().set_position(12, 42);
-    lbl_hint.as_widget_ref().borrow_mut().set_size(400, 20);
+    // Layout: everything below the 52 px toolbar band.
+    let content_top = TOOLBAR_H + 10;
 
-    let lbl_options = StaticText::new(&frame, "⚙  Options:");
+    let lbl_hint = StaticText::new(&frame, "Scrivi il documento nell'editor qui sotto.");
+    lbl_hint
+        .as_widget_ref()
+        .borrow_mut()
+        .set_position(12, content_top);
+    lbl_hint.as_widget_ref().borrow_mut().set_size(500, 22);
+    ToolTip::new("Etichetta descrittiva — solo lettura.").attach(&lbl_hint.as_widget_ref());
+
+    let editor = TextCtrl::multiline(
+        &frame,
+        "Benvenuto in esempio2!\n\n\
+         Cosa provare:\n\
+         • Passa il mouse sui pulsanti colorati della toolbar — ogni\n\
+           pulsante mostra un tooltip nativo Win32 (TB_ADDSTRING).\n\
+         • Clicca il gripper (≡) per staccare la toolbar; cliccalo di\n\
+           nuovo per riagganciarla.\n\
+         • La finestra usa angoli arrotondati Windows 11 (DWM).\n\
+         • La casella \"Mostra tooltip\" abilita/disabilita i tooltip\n\
+           ru_wx sugli altri controlli (editor, pulsanti, ecc.).\n",
+    );
+    editor
+        .as_widget_ref()
+        .borrow_mut()
+        .set_position(12, content_top + 28);
+    editor.as_widget_ref().borrow_mut().set_size(740, 175);
+    ToolTip::new("Area di modifica del documento.").attach(&editor.as_widget_ref());
+
+    let lbl_options = StaticText::new(&frame, "Opzioni:");
     lbl_options
         .as_widget_ref()
         .borrow_mut()
-        .set_position(12, 252);
-    lbl_options.as_widget_ref().borrow_mut().set_size(120, 20);
+        .set_position(12, content_top + 218);
+    lbl_options.as_widget_ref().borrow_mut().set_size(120, 22);
 
-    let lbl_toolbar = StaticText::new(&frame, "🧰  Toolbar controls:");
+    let lbl_toolbar = StaticText::new(&frame, "Controlli toolbar:");
     lbl_toolbar
         .as_widget_ref()
         .borrow_mut()
-        .set_position(280, 252);
-    lbl_toolbar.as_widget_ref().borrow_mut().set_size(160, 20);
+        .set_position(300, content_top + 218);
+    lbl_toolbar.as_widget_ref().borrow_mut().set_size(180, 22);
 
-    let lbl_info = StaticText::new(
-        &frame,
-        "ℹ  This example combines AuiToolBar + ToolTip + StaticText — the three\n\
-         controls most recently added to ru_wx.",
-    );
-    lbl_info.as_widget_ref().borrow_mut().set_position(12, 360);
-    lbl_info.as_widget_ref().borrow_mut().set_size(720, 40);
-
-    // ── ToolTip (NEW CONTROL #3) — attach to every interactive widget ─
-    // The ToolTip API works against the platform-independent `WidgetRef`
-    // so we can attach it to anything (StaticText, Button, AuiToolBar,
-    // TextCtrl, ...).
-
-    // StaticText labels: just a hint of what they are
-    ToolTip::new("Descriptive label — read-only.").attach(&lbl_hint.as_widget_ref());
-    ToolTip::new("Options section header.").attach(&lbl_options.as_widget_ref());
-    ToolTip::new("Toolbar controls section header.").attach(&lbl_toolbar.as_widget_ref());
-    ToolTip::new("A short note about this example.").attach(&lbl_info.as_widget_ref());
-
-    // The AuiToolBar itself: explain how to detach
-    ToolTip::new("Click the ≡ gripper to detach me, then click it again to re-dock.")
-        .attach(&aui.as_widget_ref());
-
-    // ── Multiline TextCtrl — the "document" being edited ───────────
-    let editor = TextCtrl::multiline(
-        &frame,
-        "Welcome to esempio2 — the Mini Editor!\n\n\
-         Try the following:\n\
-         • Click any toolbar button (or hover it for a tooltip).\n\
-         • Click the ≡ gripper on the toolbar to detach it to a\n\
-           floating window; click it again (or close the floating\n\
-           window) to re-dock.\n\
-         • Toggle the \"Show tooltips\" checkbox below to globally\n\
-           enable or disable every tooltip in this window.\n\
-         • Use the \"Float\" / \"Dock Top\" buttons to programmatically\n\
-           detach and re-dock the toolbar.\n",
-    );
-    editor.as_widget_ref().borrow_mut().set_position(12, 68);
-    editor.as_widget_ref().borrow_mut().set_size(720, 175);
-
-    ToolTip::new("The document you are editing. Type freely.").attach(&editor.as_widget_ref());
-
-    // ── Options row: CheckBox + buttons ────────────────────────────
-    let chk_tooltips = CheckBox::new(&frame, "Show tooltips");
+    let chk_tooltips = CheckBox::new(&frame, "Mostra tooltip (controlli ru_wx)");
     chk_tooltips
         .as_widget_ref()
         .borrow_mut()
-        .set_position(12, 280);
-    chk_tooltips.as_widget_ref().borrow_mut().set_size(140, 24);
+        .set_position(12, content_top + 246);
+    chk_tooltips.as_widget_ref().borrow_mut().set_size(240, 24);
     chk_tooltips.set_checked(true);
+    ToolTip::new(
+        "Abilita o disabilita i tooltip ru_wx su editor, pulsanti e label.\n\
+         I tooltip nativi della toolbar restano sempre attivi.",
+    )
+    .attach(&chk_tooltips.as_widget_ref());
 
-    ToolTip::new("Globally enable or disable every tooltip in this window. Try unchecking me!")
-        .attach(&chk_tooltips.as_widget_ref());
-
-    // Wire the checkbox to toggle the global tooltip state and update
-    // the status bar. `on_toggle` receives no arguments — we read the
-    // new state from the checkbox via `is_checked()` inside the closure.
-    // We clone the CheckBox so the closure owns a copy (the `on_toggle`
-    // call borrows the original via `&self`).
     let chk_for_cb = chk_tooltips.clone();
     let status_for_chk = status.clone();
     chk_tooltips.on_toggle(&frame, move || {
@@ -219,43 +184,39 @@ fn main() {
         ToolTip::enable(checked);
         status_for_chk.set_status_text(
             if checked {
-                "Tooltips enabled"
+                "Tooltip ru_wx abilitati"
             } else {
-                "Tooltips disabled"
+                "Tooltip ru_wx disabilitati (toolbar nativa ancora attiva)"
             },
             0,
         );
     });
 
-    // ── Toolbar-control buttons ────────────────────────────────────
-    let btn_float = Button::new(&frame, "Float");
+    let btn_float = Button::new(&frame, "Stacca");
     btn_float
         .as_widget_ref()
         .borrow_mut()
-        .set_position(280, 278);
+        .set_position(300, content_top + 244);
     btn_float.as_widget_ref().borrow_mut().set_size(90, 30);
-    ToolTip::new("Detach the AuiToolBar to a floating window at a fixed position.")
-        .attach(&btn_float.as_widget_ref());
+    ToolTip::new("Stacca la toolbar in una finestra flottante.").attach(&btn_float.as_widget_ref());
 
-    let btn_dock_top = Button::new(&frame, "Dock Top");
+    let btn_dock_top = Button::new(&frame, "Aggancia sopra");
     btn_dock_top
         .as_widget_ref()
         .borrow_mut()
-        .set_position(378, 278);
-    btn_dock_top.as_widget_ref().borrow_mut().set_size(90, 30);
-    ToolTip::new("Re-dock the AuiToolBar to the top edge of the frame.")
-        .attach(&btn_dock_top.as_widget_ref());
+        .set_position(398, content_top + 244);
+    btn_dock_top.as_widget_ref().borrow_mut().set_size(110, 30);
+    ToolTip::new("Riaggancia la toolbar al bordo superiore.").attach(&btn_dock_top.as_widget_ref());
 
-    let btn_cycle = Button::new(&frame, "Cycle Dock");
+    let btn_cycle = Button::new(&frame, "Cicla bordo");
     btn_cycle
         .as_widget_ref()
         .borrow_mut()
-        .set_position(476, 278);
-    btn_cycle.as_widget_ref().borrow_mut().set_size(100, 30);
-    ToolTip::new("Cycle the toolbar through Top → Bottom → Left → Right → Top.")
+        .set_position(516, content_top + 244);
+    btn_cycle.as_widget_ref().borrow_mut().set_size(110, 30);
+    ToolTip::new("Ruota: alto → basso → sinistra → destra → alto.")
         .attach(&btn_cycle.as_widget_ref());
 
-    // ── Wire up the buttons ────────────────────────────────────────
     let aui_for_float = aui.clone();
     btn_float.on_click(&frame, move || {
         aui_for_float.float_at(420, 220);
@@ -266,11 +227,9 @@ fn main() {
         aui_for_dock_top.dock_to(AuiDockSide::Top);
     });
 
-    // Cycle: top → bottom → left → right → top. We can't read the
-    // current dock side from the closure without an Rc, so we keep a
-    // local mutable index behind an Rc<RefCell<...>>.
     use std::cell::RefCell;
-    let cycle_idx: std::rc::Rc<RefCell<u8>> = std::rc::Rc::new(RefCell::new(0));
+    use std::rc::Rc;
+    let cycle_idx: Rc<RefCell<u8>> = Rc::new(RefCell::new(0));
     let aui_for_cycle = aui.clone();
     let cycle_idx_for_cb = cycle_idx.clone();
     btn_cycle.on_click(&frame, move || {
@@ -289,16 +248,17 @@ fn main() {
         aui_for_cycle.dock_to(side);
     });
 
-    // ── Vertical sizer for the bottom controls (purely demonstrative —
-    // we manually positioned them so the editor has absolute
-    // coordinates, but this sizer shows how a real app would compose
-    // them).
-    let mut sizer = BoxSizer::vertical();
-    sizer.add(lbl_hint.as_widget_ref());
-    sizer.add_stretch(1);
-    sizer.add(editor.as_widget_ref());
-    sizer.add(lbl_info.as_widget_ref());
-    let _ = sizer; // intentionally not applied to the frame
+    let lbl_info = StaticText::new(
+        &frame,
+        "Toolbar 40×40 con icone colorate · tooltip nativi Win32 su ogni tool ·\n\
+         angoli arrotondati Win11 (DWMWA_WINDOW_CORNER_PREFERENCE).",
+    );
+    lbl_info
+        .as_widget_ref()
+        .borrow_mut()
+        .set_position(12, content_top + 290);
+    lbl_info.as_widget_ref().borrow_mut().set_size(740, 40);
+    ToolTip::new("Note tecniche su questo esempio.").attach(&lbl_info.as_widget_ref());
 
     app.run(frame);
 }

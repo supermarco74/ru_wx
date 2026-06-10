@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `TextCtrl` → `StatusBar` — type into a text field, click
 //! a button, see the value appear in the status bar.
 //!
@@ -31,7 +34,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TextCtrl → StatusBar")
         .with_size(1000, 600)
-        .build();
+        .with_modern_style().build();
 
     // 4 fields so each one gets ≈ 1/4 of the bar. Field 0 is the
     // "main" one for the text-input round-trip; fields 1–3 are
