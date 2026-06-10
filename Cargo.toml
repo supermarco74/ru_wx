@@ -3,6 +3,7 @@ name = "ru_wx"
 version = "0.6.4"
 edition = "2021"
 description = "Pure Rust cross-platform GUI library with a wxWidgets-like API and native widgets. No C++ bindings."
+authors = ["Marco Muratore <supermarco74@gmail.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/supermarco74/ru_wx"
 homepage = "https://github.com/supermarco74/ru_wx"
