@@ -1,5 +1,9 @@
 ﻿gui library in rust porting  and implementation from  wxwingets
 # ru_wx
+more detailed on
+https://ru_wx.easytaskflow.app/
+
+<img width="780" height="580" alt="minieditor_esempio" src="https://github.com/user-attachments/assets/36757fb4-4139-4adf-aa36-9ad0594992a8" />
 
 
 **ru_wx** is a cross-platform GUI library written in **pure Rust**, with a [wxWidgets](https://www.wxwidgets.org/)-inspired API and native platform controls.
