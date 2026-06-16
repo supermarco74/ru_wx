@@ -39,8 +39,9 @@ use crate::dc::image_list::ImageList;
 use crate::window::panel::Panel;
 use crate::core::widget::{Widget, WidgetRef};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -114,7 +115,6 @@ struct TabInner {
     /// The `Panel` backing each page, in insertion order. We keep the
     /// full `Panel` (a cloned `Rc`) rather than just the HWND so we can
     /// re-layout the page's contents when the tab control is resized.
-    #[cfg(target_os = "windows")]
     page_panels: Vec<Panel>,
     /// Index of the currently-selected page. Always 0 when no pages
     /// have been added yet.
@@ -560,6 +560,14 @@ impl Tab {
         #[cfg(not(target_os = "windows"))]
         {
             let _ = index;
+        }
+    }
+
+    /// Hide every page panel while keeping the tab strip interactive.
+    /// Used by ribbon-style layouts where tools live outside the tab pages.
+    pub fn hide_all_pages(&self) {
+        for page in self.inner.borrow().page_panels.iter() {
+            page.as_widget_ref().borrow_mut().set_visible(false);
         }
     }
 

@@ -14,7 +14,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 30")
         .with_size(480, 280)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Round 30: arrays + IPC + geometry2d.", 0);
     let _hint = StaticText::new(&frame, "ScopedPtr / WxAny / Socket:");

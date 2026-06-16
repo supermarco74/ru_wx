@@ -44,7 +44,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StaticBox (live groups)")
         .with_size(560, 440)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Theme: Light — 0 options enabled", 0);

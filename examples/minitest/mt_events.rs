@@ -12,7 +12,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — input events")
         .with_size(480, 240)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Press a key or click the client area.", 0);
     let _hint = StaticText::new(&frame, "Key / mouse / focus / size / move events:");

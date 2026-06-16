@@ -72,8 +72,9 @@ use std::rc::Rc;
 use crate::window::frame::Frame;
 use crate::core::widget::{Widget, WidgetRef};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -1080,5 +1081,3 @@ unsafe extern "system" fn property_grid_wnd_proc(
 }
 
 // Quiet the unused-import lints on non-Windows builds.
-#[cfg(not(target_os = "windows"))]
-use crate::platform::win32 as _win32_marker;

@@ -33,8 +33,9 @@ use crate::core::geometry::Rect;
 use crate::dc::image_list::ImageList;
 use crate::core::widget::Widget;
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -156,12 +157,16 @@ enum ToolSpec {
 
 struct AuiToolBarInner {
     /// Handle of the inner `ToolbarWindow32` control.
+    #[cfg(target_os = "windows")]
     hwnd: HWND,
     /// Handle of the small gripper static control.
+    #[cfg(target_os = "windows")]
     gripper_hwnd: HWND,
     /// Handle of the parent frame.
+    #[cfg(target_os = "windows")]
     frame_hwnd: HWND,
     /// Handle of the floating popup window (null when docked).
+    #[cfg(target_os = "windows")]
     floating_hwnd: HWND,
     /// WM_COMMAND id reserved for the gripper. Dispatched by the
     /// frame's command handler to toggle float/dock.
@@ -727,10 +732,6 @@ impl AuiToolBar {
             let _ = frame;
             AuiToolBar {
                 inner: Rc::new(RefCell::new(AuiToolBarInner {
-                    hwnd: std::ptr::null_mut(),
-                    gripper_hwnd: std::ptr::null_mut(),
-                    frame_hwnd: std::ptr::null_mut(),
-                    floating_hwnd: std::ptr::null_mut(),
                     gripper_id: 0,
                     tb_id: 0,
                     dock_side: AuiDockSide::Top,
@@ -981,7 +982,10 @@ impl AuiToolBar {
     /// `true` if the toolbar is currently floating as a stand-alone
     /// window.
     pub fn is_floating(&self) -> bool {
-        !self.inner.borrow().floating_hwnd.is_null()
+        #[cfg(target_os = "windows")]
+        return !self.inner.borrow().floating_hwnd.is_null();
+        #[cfg(not(target_os = "windows"))]
+        false
     }
 
     /// Detach the toolbar to a floating top-level window positioned

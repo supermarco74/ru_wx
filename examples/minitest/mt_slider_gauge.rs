@@ -37,7 +37,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Slider / Gauge / Spin / Timer")
         .with_size(560, 640)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Move a slider, spin a value, start the timer…", 0);

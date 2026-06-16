@@ -30,7 +30,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — CheckBox / RadioBox / RadioButton")
         .with_size(480, 460)
-        .with_modern_style().build();
+        .build();
 
     // Field 0 = checkbox summary, field 1 = radio button group.
     let status = StatusBar::new(&frame, 2);

@@ -54,7 +54,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Toolbook + icons")
         .with_size(560, 420)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Click a tool icon to switch pages.", 0);

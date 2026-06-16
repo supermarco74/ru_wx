@@ -16,7 +16,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 34")
         .with_size(520, 320)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Round 34: ribbon + controls + drag image.", 0);
     let _hint = StaticText::new(&frame, "RibbonPage / VListBox / GenericDirCtrl:");

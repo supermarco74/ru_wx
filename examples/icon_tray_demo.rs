@@ -39,7 +39,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx · IconTray Demo")
         .with_size(520, 360)
-        .with_modern_style().build();
+        .build();
 
     // --- Status label: shows the most recent tray event ---
     let status = StaticText::new(&frame, "Status: tray icon is active. Right-click it.");

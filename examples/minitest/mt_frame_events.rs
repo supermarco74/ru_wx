@@ -14,7 +14,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — frame events round 19")
         .with_size(480, 220)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Minimize, maximize, or move the mouse.", 0);
     let _hint = StaticText::new(&frame, "Iconize / maximize / mouse enter-leave:");

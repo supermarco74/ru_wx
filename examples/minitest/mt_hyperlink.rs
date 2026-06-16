@@ -56,7 +56,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — HyperlinkCtrl")
         .with_size(520, 320)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Click a link…", 0);

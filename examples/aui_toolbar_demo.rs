@@ -67,7 +67,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("wxAuiToolBar demo — big colourful icons + click counter")
         .with_size(760, 480)
-        .with_modern_style().build();
+        .build();
 
     // Status bar at the bottom — used to report tool clicks and
     // dock-state changes.

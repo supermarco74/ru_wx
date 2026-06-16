@@ -53,8 +53,9 @@ use crate::window::popup_menu::PopupMenu;
 use crate::dc::image_list::ImageList;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -199,6 +200,29 @@ const CDIS_SELECTED: u32 = 0x0000_0001;
 const HDM_FIRST: u32 = 0x1200;
 #[cfg(target_os = "windows")]
 const HDM_HITTEST: u32 = HDM_FIRST + 6;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::UI::Controls::{
+    HDI_FORMAT, HDITEMW, HDF_SORTDOWN, HDF_SORTUP, HDM_GETITEMW, HDM_SETITEMW,
+    HDN_DIVIDERDBLCLICKW, HDN_ITEMCLICKW, LVSCW_AUTOSIZE, LVSCW_AUTOSIZE_USEHEADER,
+    LVM_ENSUREVISIBLE, LVM_GETCOLUMNORDERARRAY, LVM_GETSELECTEDCOUNT,
+    LVM_SETCOLUMNORDERARRAY, LVS_EX_LABELTIP, LVN_GETINFOTIPW, LVN_ITEMACTIVATE,
+    NMLVGETINFOTIPW, NMHEADERW, NMITEMACTIVATE,
+};
+
+/// `LVN_ITEMACTIVATE` — double-click / Enter on a row.
+#[cfg(target_os = "windows")]
+pub(crate) const LVN_ITEMACTIVATE_GRID: u32 = LVN_ITEMACTIVATE;
+
+/// `LVN_GETINFOTIPW` — ListView requests tooltip text for a cell.
+#[cfg(target_os = "windows")]
+pub(crate) const LVN_GETINFOTIP_GRID: u32 = LVN_GETINFOTIPW;
+
+#[cfg(target_os = "windows")]
+const LVM_SETITEMSTATE: u32 = LVM_FIRST + 43;
+#[cfg(target_os = "windows")]
+const LVIS_SELECTED: u32 = 0x0002;
+#[cfg(target_os = "windows")]
+const LVIS_FOCUSED: u32 = 0x0001;
 
 /// Image list slot for the small (cell) image list.
 #[cfg(target_os = "windows")]
@@ -971,6 +995,13 @@ impl Cell {
 
 // ── Inner state ──────────────────────────────────────────────────────
 
+#[cfg(target_os = "windows")]
+type RowContextMenuHandler = Box<dyn FnMut(&Frame, usize, usize)>;
+type SortChangedHandler = Box<dyn FnMut(Option<usize>, Option<SortOrder>)>;
+type RowActivatedHandler = Box<dyn FnMut(usize, usize)>;
+#[cfg(target_os = "windows")]
+type CellTooltipProvider = Box<dyn Fn(usize, usize) -> Option<String>>;
+
 struct GridInner {
     #[cfg(target_os = "windows")]
     hwnd: HWND,
@@ -1011,6 +1042,17 @@ struct GridInner {
     visual_frame: Option<Frame>,
     /// Column index targeted by the last header / body context menu.
     context_menu_col: usize,
+    /// Display row targeted by the last row context menu.
+    context_menu_row: usize,
+    /// Column under the cursor for the last row context menu.
+    context_menu_row_col: usize,
+    /// Active sort column / direction (drives header sort arrows).
+    sort_col: Option<usize>,
+    sort_order: Option<SortOrder>,
+    /// Click column header to sort (`HDN_ITEMCLICK`).
+    header_click_sort: bool,
+    /// Right-click on a data row opens the row context menu.
+    row_context_menu_enabled: bool,
     /// Serial used to name dynamically added columns.
     next_dynamic_col: usize,
     /// Whether [`Grid::enable_column_context_menu`] has been called.
@@ -1018,6 +1060,20 @@ struct GridInner {
     /// Frame passed to [`Grid::enable_column_context_menu`] (menu owner).
     #[cfg(target_os = "windows")]
     context_frame: Option<Frame>,
+    /// Invoked on row right-click when [`Self::row_context_menu_enabled`].
+    #[cfg(target_os = "windows")]
+    on_row_context_menu: Option<RowContextMenuHandler>,
+    /// Fired when sort column / direction changes (header click or API).
+    on_sort_changed: Option<SortChangedHandler>,
+    /// Fired on double-click / Enter (`LVN_ITEMACTIVATE`).
+    on_row_activated: Option<RowActivatedHandler>,
+    #[cfg(target_os = "windows")]
+    row_activate_hooks_enabled: bool,
+    /// Optional per-cell tooltip text (`LVN_GETINFOTIPW`).
+    #[cfg(target_os = "windows")]
+    cell_tooltip_provider: Option<CellTooltipProvider>,
+    #[cfg(target_os = "windows")]
+    infotip_hooks_enabled: bool,
     /// Maps each **display** row index to the **logical** (data) row
     /// that supplies its cell values. After [`Grid::sort_by_column`]
     /// this is a permutation of `0..row_count`; otherwise it is the
@@ -1091,9 +1147,21 @@ impl Grid {
                 visual_hooks_enabled: false,
                 visual_frame: None,
                 context_menu_col: 0,
+                context_menu_row: 0,
+                context_menu_row_col: 0,
+                sort_col: None,
+                sort_order: None,
+                header_click_sort: false,
+                row_context_menu_enabled: false,
                 next_dynamic_col: 1,
                 context_menu_enabled: false,
                 context_frame: None,
+                on_row_context_menu: None,
+                on_sort_changed: None,
+                on_row_activated: None,
+                row_activate_hooks_enabled: false,
+                cell_tooltip_provider: None,
+                infotip_hooks_enabled: false,
                 row_perm: Vec::new(),
                 cells: HashMap::new(),
                 provider: None,
@@ -1132,6 +1200,8 @@ impl Grid {
     pub fn new<W: Window>(_parent: &W) -> Self {
         Grid {
             inner: Rc::new(RefCell::new(GridInner {
+                id: 0,
+                rect: Rect::new(0, 0, 300, 200),
                 col_count: 0,
                 row_count: 0,
                 col_titles: Vec::new(),
@@ -1143,8 +1213,16 @@ impl Grid {
                 appearance: GridAppearance::default(),
                 font_desc: FontDesc::default(),
                 context_menu_col: 0,
+                context_menu_row: 0,
+                context_menu_row_col: 0,
+                sort_col: None,
+                sort_order: None,
+                header_click_sort: false,
+                row_context_menu_enabled: false,
                 next_dynamic_col: 1,
                 context_menu_enabled: false,
+                on_sort_changed: None,
+                on_row_activated: None,
                 row_perm: Vec::new(),
                 cells: HashMap::new(),
                 provider: None,
@@ -1504,6 +1582,15 @@ impl Grid {
         }
     }
 
+    /// Install column context menu, header-click sort, row context
+    /// menu and truncated-cell tooltips in one call.
+    pub fn enable_interactive_features(&self, frame: &Frame) {
+        self.enable_column_context_menu(frame);
+        self.enable_header_click_sort(frame);
+        self.enable_row_context_menu(frame);
+        self.set_label_tips(true);
+    }
+
     /// Install a right-click menu on the column headers (and on the
     /// grid body) with **Aggiungi colonna** / **Rimuovi colonna**.
     /// Also wires [`NM_CUSTOMDRAW`] so per-cell / per-row colours
@@ -1527,6 +1614,385 @@ impl Grid {
         }
         #[cfg(not(target_os = "windows"))]
         let _ = frame;
+    }
+
+    /// Enable right-click on a data row to invoke
+    /// [`Self::on_row_context_menu`]. The callback receives
+    /// `(display_row, column, frame)`.
+    pub fn enable_row_context_menu(&self, frame: &Frame) {
+        #[cfg(target_os = "windows")]
+        {
+            self.inner.borrow_mut().row_context_menu_enabled = true;
+            {
+                let mut i = self.inner.borrow_mut();
+                if i.context_frame.is_none() {
+                    i.context_frame = Some(frame.clone());
+                }
+            }
+            self.ensure_visual_hooks(frame);
+            install_list_subclass_if_needed(self);
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
+    }
+
+    /// Register the handler invoked when the user right-clicks a row
+    /// (requires [`Self::enable_row_context_menu`]).
+    pub fn on_row_context_menu<F>(&self, f: F)
+    where
+        F: FnMut(&Frame, usize, usize) + 'static,
+    {
+        #[cfg(target_os = "windows")]
+        {
+            self.inner.borrow_mut().on_row_context_menu = Some(Box::new(f));
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = f;
+    }
+
+    /// Click a column header to sort (toggles ↑/↓ on repeat clicks).
+    /// Updates `HDF_SORTUP` / `HDF_SORTDOWN` indicators on the header.
+    pub fn enable_header_click_sort(&self, frame: &Frame) {
+        #[cfg(target_os = "windows")]
+        {
+            self.inner.borrow_mut().header_click_sort = true;
+            self.ensure_visual_hooks(frame);
+            install_list_subclass_if_needed(self);
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
+    }
+
+    /// Register a callback invoked when the sort column or direction
+    /// changes (via [`Self::enable_header_click_sort`], [`Self::sort_by_column`],
+    /// or [`Self::clear_sort`]).
+    pub fn on_sort_changed<F>(&self, f: F)
+    where
+        F: FnMut(Option<usize>, Option<SortOrder>) + 'static,
+    {
+        self.inner.borrow_mut().on_sort_changed = Some(Box::new(f));
+    }
+
+    /// Return the active sort column and direction, if any.
+    pub fn sort_state(&self) -> (Option<usize>, Option<SortOrder>) {
+        let i = self.inner.borrow();
+        (i.sort_col, i.sort_order)
+    }
+
+    fn notify_sort_changed(&self) {
+        let (col, order) = self.sort_state();
+        if let Some(ref mut cb) = self.inner.borrow_mut().on_sort_changed {
+            cb(col, order);
+        }
+    }
+
+    /// Show tooltips for truncated cell text (`LVS_EX_LABELTIP`).
+    pub fn set_label_tips(&self, enabled: bool) {
+        #[cfg(target_os = "windows")]
+        set_listview_ex_style(self, LVS_EX_LABELTIP, enabled);
+        #[cfg(not(target_os = "windows"))]
+        let _ = enabled;
+    }
+
+    /// Automatically size all columns to fit their content (`LVS_EX_AUTOSIZECOLUMNS`).
+    pub fn set_autosize_columns(&self, enabled: bool) {
+        #[cfg(target_os = "windows")]
+        set_listview_ex_style(self, LVS_EX_AUTOSIZECOLUMNS, enabled);
+        #[cfg(not(target_os = "windows"))]
+        let _ = enabled;
+    }
+
+    /// Resize column `col` to fit header text and cell contents.
+    pub fn autosize_column(&self, col: usize) {
+        #[cfg(target_os = "windows")]
+        {
+            if col >= self.col_count() {
+                return;
+            }
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: valid ListView HWND and column index.
+            unsafe {
+                SendMessageW(
+                    hwnd,
+                    LVM_SETCOLUMNWIDTH,
+                    col,
+                    LVSCW_AUTOSIZE_USEHEADER as isize,
+                );
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = col;
+    }
+
+    /// Resize column `col` to fit cell contents only (ignore header width).
+    pub fn autosize_column_to_content(&self, col: usize) {
+        #[cfg(target_os = "windows")]
+        {
+            if col >= self.col_count() {
+                return;
+            }
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: valid ListView HWND and column index.
+            unsafe {
+                SendMessageW(hwnd, LVM_SETCOLUMNWIDTH, col, LVSCW_AUTOSIZE as isize);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = col;
+    }
+
+    /// Return the visual column order (after header drag-and-drop).
+    pub fn column_order(&self) -> Vec<usize> {
+        #[cfg(target_os = "windows")]
+        {
+            let n = self.col_count();
+            if n == 0 {
+                return Vec::new();
+            }
+            let mut order = vec![0i32; n];
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: `order` has `n` elements; ListView writes `n` indices.
+            let ok = unsafe {
+                SendMessageW(
+                    hwnd,
+                    LVM_GETCOLUMNORDERARRAY,
+                    n,
+                    order.as_mut_ptr() as isize,
+                )
+            };
+            if ok != 0 {
+                order.into_iter().map(|i| i as usize).collect()
+            } else {
+                (0..n).collect()
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let n = self.col_count();
+            (0..n).collect()
+        }
+    }
+
+    /// Restore the visual column order. `order.len()` must equal
+    /// [`Self::col_count`].
+    pub fn set_column_order(&self, order: &[usize]) -> bool {
+        if order.len() != self.col_count() {
+            return false;
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let ints: Vec<i32> = order.iter().map(|&i| i as i32).collect();
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: `ints` matches column count.
+            let ok = unsafe {
+                SendMessageW(
+                    hwnd,
+                    LVM_SETCOLUMNORDERARRAY,
+                    order.len(),
+                    ints.as_ptr() as isize,
+                )
+            };
+            ok != 0
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = order;
+            true
+        }
+    }
+
+    /// Provide custom tooltip text for `(display_row, col)`. Also
+    /// enables [`Self::set_label_tips`] automatically.
+    pub fn set_cell_tooltip_provider<F>(&self, frame: &Frame, f: F)
+    where
+        F: Fn(usize, usize) -> Option<String> + 'static,
+    {
+        #[cfg(target_os = "windows")]
+        {
+            self.inner.borrow_mut().cell_tooltip_provider = Some(Box::new(f));
+            self.set_label_tips(true);
+            self.ensure_infotip_hooks(frame);
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = (frame, f);
+    }
+
+    /// Register a callback for double-click / Enter on a row
+    /// (`LVN_ITEMACTIVATE`). Arguments: `(display_row, column)`.
+    pub fn on_row_activated<F>(&self, frame: &Frame, f: F)
+    where
+        F: FnMut(usize, usize) + 'static,
+    {
+        self.inner.borrow_mut().on_row_activated = Some(Box::new(f));
+        #[cfg(target_os = "windows")]
+        self.ensure_row_activate_hooks(frame);
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
+    }
+
+    #[cfg(target_os = "windows")]
+    fn ensure_row_activate_hooks(&self, frame: &Frame) {
+        let install = {
+            let mut i = self.inner.borrow_mut();
+            if i.row_activate_hooks_enabled {
+                false
+            } else {
+                i.row_activate_hooks_enabled = true;
+                true
+            }
+        };
+        if !install {
+            return;
+        }
+        let inner = self.inner.clone();
+        let id = self.inner.borrow().id;
+        frame.register_lv_item_activate_handler(id, Box::new(move |lparam| {
+            handle_lv_item_activate(&inner, lparam);
+        }));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn ensure_row_activate_hooks(&self, _frame: &Frame) {}
+
+    /// Select one **display** row and scroll it into view.
+    pub fn select_row(&self, display_row: usize) {
+        if display_row >= self.row_count() {
+            return;
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let hwnd = self.inner.borrow().hwnd;
+            select_display_row(hwnd, display_row);
+            // SAFETY: valid row index on a live ListView.
+            unsafe {
+                SendMessageW(hwnd, LVM_ENSUREVISIBLE, display_row, 0);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = display_row;
+    }
+
+    /// Scroll `display_row` into the visible area without changing selection.
+    pub fn ensure_row_visible(&self, display_row: usize) {
+        if display_row >= self.row_count() {
+            return;
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: valid row index on a live ListView.
+            unsafe {
+                SendMessageW(hwnd, LVM_ENSUREVISIBLE, display_row, 0);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = display_row;
+    }
+
+    /// Logical column width in pixels (DPI-scaled value stored at insert time).
+    pub fn column_width(&self, col: usize) -> Option<i32> {
+        self.inner.borrow().col_widths.get(col).copied()
+    }
+
+    /// Set column width in logical pixels.
+    pub fn set_column_width(&self, col: usize, width: i32) {
+        if col >= self.col_count() {
+            return;
+        }
+        self.inner.borrow_mut().col_widths[col] = width;
+        #[cfg(target_os = "windows")]
+        {
+            let hwnd = self.inner.borrow().hwnd;
+            let physical = get_dpi_for_window(hwnd).scale(width);
+            // SAFETY: valid ListView HWND and column index.
+            unsafe {
+                SendMessageW(hwnd, LVM_SETCOLUMNWIDTH, col, physical as isize);
+            }
+        }
+    }
+
+    /// Indices of all checked rows (requires [`Self::set_checkboxes`]).
+    pub fn checked_rows(&self) -> Vec<usize> {
+        let n = self.row_count();
+        (0..n).filter(|&r| self.is_checked(r)).collect()
+    }
+
+    /// Check or uncheck every row.
+    pub fn set_all_checked(&self, checked: bool) {
+        let n = self.row_count();
+        for r in 0..n {
+            self.set_checked(r, checked);
+        }
+    }
+
+    /// All currently selected **display** row indices.
+    pub fn selected_rows(&self) -> Vec<usize> {
+        #[cfg(target_os = "windows")]
+        {
+            let hwnd = self.inner.borrow().hwnd;
+            // SAFETY: standard ListView selection enumeration.
+            unsafe {
+                let count = SendMessageW(hwnd, LVM_GETSELECTEDCOUNT, 0, 0);
+                if count <= 0 {
+                    return Vec::new();
+                }
+                let mut rows = Vec::with_capacity(count as usize);
+                let mut idx = -1i32;
+                while rows.len() < count as usize {
+                    let next = SendMessageW(
+                        hwnd,
+                        LVM_GETNEXTITEM,
+                        idx as isize as usize,
+                        LVNI_SELECTED as isize,
+                    );
+                    if next < 0 {
+                        break;
+                    }
+                    rows.push(next as usize);
+                    idx = next as i32;
+                }
+                rows
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.get_selected_row().into_iter().collect()
+        }
+    }
+
+    /// Tab-separated cell values for one **display** row.
+    pub fn row_as_tsv(&self, display_row: usize) -> String {
+        if display_row >= self.row_count() {
+            return String::new();
+        }
+        (0..self.col_count())
+            .map(|c| self.cell_display_text(display_row, c))
+            .collect::<Vec<_>>()
+            .join("\t")
+    }
+
+    /// Copy one row (TSV) to the system clipboard.
+    pub fn copy_row_to_clipboard(&self, display_row: usize) -> bool {
+        let text = self.row_as_tsv(display_row);
+        if text.is_empty() {
+            return false;
+        }
+        crate::Clipboard::set_text(&text)
+    }
+
+    /// Copy all checked rows (header + values) as TSV to the clipboard.
+    pub fn copy_checked_rows_to_clipboard(&self) -> bool {
+        let checked = self.checked_rows();
+        if checked.is_empty() {
+            return false;
+        }
+        let header = (0..self.col_count())
+            .filter_map(|c| self.column_title(c))
+            .collect::<Vec<_>>()
+            .join("\t");
+        let body: Vec<String> = checked.iter().map(|&r| self.row_as_tsv(r)).collect();
+        let text = format!("{header}\n{}", body.join("\n"));
+        crate::Clipboard::set_text(&text)
     }
 
     /// Install list subclassing and `NM_CUSTOMDRAW` (idempotent).
@@ -1563,6 +2029,30 @@ impl Grid {
 
     #[cfg(not(target_os = "windows"))]
     fn ensure_visual_hooks(&self, _frame: &Frame) {}
+
+    #[cfg(target_os = "windows")]
+    fn ensure_infotip_hooks(&self, frame: &Frame) {
+        let install = {
+            let mut i = self.inner.borrow_mut();
+            if i.infotip_hooks_enabled {
+                false
+            } else {
+                i.infotip_hooks_enabled = true;
+                true
+            }
+        };
+        if !install {
+            return;
+        }
+        let inner = self.inner.clone();
+        let id = self.inner.borrow().id;
+        frame.register_lv_infotip_handler(id, Box::new(move |lparam| {
+            handle_lv_get_infotip(&inner, lparam);
+        }));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn ensure_infotip_hooks(&self, _frame: &Frame) {}
 
     #[cfg(target_os = "windows")]
     fn repaint_header(&self) {
@@ -1925,7 +2415,10 @@ impl Grid {
         {
             let mut i = self.inner.borrow_mut();
             i.font_desc = font.desc().clone();
-            i.font = Some(font.clone());
+            #[cfg(target_os = "windows")]
+            {
+                i.font = Some(font.clone());
+            }
         }
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI calls with validated arguments. `LVM_GETHEADER`
@@ -2095,18 +2588,36 @@ impl Grid {
             }
         });
         self.inner.borrow_mut().row_perm = perm;
+        {
+            let mut i = self.inner.borrow_mut();
+            i.sort_col = Some(col);
+            i.sort_order = Some(order);
+        }
         self.refresh();
         #[cfg(target_os = "windows")]
-        self.invalidate_view();
+        {
+            self.invalidate_view();
+            update_header_sort_indicators(&self.inner);
+        }
+        self.notify_sort_changed();
     }
 
     /// Restore the original row order (`0, 1, 2, …`).
     pub fn clear_sort(&self) {
         let n = self.row_count();
-        self.inner.borrow_mut().row_perm = (0..n).collect();
+        {
+            let mut i = self.inner.borrow_mut();
+            i.row_perm = (0..n).collect();
+            i.sort_col = None;
+            i.sort_order = None;
+        }
         self.refresh();
         #[cfg(target_os = "windows")]
-        self.invalidate_view();
+        {
+            self.invalidate_view();
+            update_header_sort_indicators(&self.inner);
+        }
+        self.notify_sort_changed();
     }
 
     /// Append one empty row at the bottom and populate it from the
@@ -2534,6 +3045,302 @@ thread_local! {
 }
 
 #[cfg(target_os = "windows")]
+fn install_list_subclass_if_needed(grid: &Grid) {
+    let (hwnd, enabled) = {
+        let i = grid.inner.borrow();
+        (i.hwnd, i.visual_hooks_enabled || i.row_context_menu_enabled || i.header_click_sort)
+    };
+    if !enabled || hwnd.is_null() {
+        return;
+    }
+    let key = hwnd as isize;
+    let already = GRID_LIST_ORIG_PROCS.with(|m| m.borrow().contains_key(&key));
+    if !already {
+        install_list_subclass(hwnd, grid.inner.clone());
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn set_listview_ex_style(grid: &Grid, flag: u32, enabled: bool) {
+    let hwnd = grid.inner.borrow().hwnd;
+    if hwnd.is_null() {
+        return;
+    }
+    // SAFETY: standard extended-style toggle on a live ListView.
+    unsafe {
+        let current = SendMessageW(hwnd, LVM_GETEXTENDEDLISTVIEWSTYLE, 0, 0) as u32;
+        let new = if enabled {
+            current | flag
+        } else {
+            current & !flag
+        };
+        SendMessageW(hwnd, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, new as isize);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn update_header_sort_indicators(inner: &Rc<RefCell<GridInner>>) {
+    let (header, col_count, sort_col, sort_order) = match inner.try_borrow() {
+        Ok(i) => (i.header_hwnd, i.col_count, i.sort_col, i.sort_order),
+        Err(_) => return,
+    };
+    if header.is_null() || col_count == 0 {
+        return;
+    }
+    // SAFETY: valid header HWND; `HDITEMW` fmt field is read/written per column.
+    unsafe {
+        for c in 0..col_count {
+            let mut item = HDITEMW {
+                mask: HDI_FORMAT,
+                cxy: 0,
+                pszText: std::ptr::null_mut(),
+                hbm: std::ptr::null_mut(),
+                cchTextMax: 0,
+                fmt: 0,
+                lParam: 0,
+                iImage: 0,
+                iOrder: 0,
+                r#type: 0,
+                pvFilter: std::ptr::null_mut(),
+                state: 0,
+            };
+            SendMessageW(
+                header,
+                HDM_GETITEMW,
+                c,
+                &mut item as *mut HDITEMW as isize,
+            );
+            item.fmt &= !(HDF_SORTUP | HDF_SORTDOWN);
+            if sort_col == Some(c) {
+                item.fmt |= match sort_order {
+                    Some(SortOrder::Ascending) => HDF_SORTUP,
+                    Some(SortOrder::Descending) => HDF_SORTDOWN,
+                    None => 0,
+                };
+            }
+            SendMessageW(
+                header,
+                HDM_SETITEMW,
+                c,
+                &mut item as *mut HDITEMW as isize,
+            );
+        }
+        InvalidateRect(header, std::ptr::null(), 1);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn select_display_row(list: HWND, row: usize) {
+    // SAFETY: ListView selection state update (`MAKELPARAM(state, stateMask)`).
+    unsafe {
+        SendMessageW(
+            list,
+            LVM_SETITEMSTATE,
+            usize::MAX,
+            (LVIS_SELECTED as isize) << 16,
+        );
+        let state = LVIS_SELECTED | LVIS_FOCUSED;
+        SendMessageW(
+            list,
+            LVM_SETITEMSTATE,
+            row,
+            ((state as isize) << 16) | state as isize,
+        );
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn hit_test_list_point(list: HWND, screen_x: i32, screen_y: i32) -> (i32, usize) {
+    // SAFETY: `list` is non-null; `ScreenToClient` only mutates `pt`.
+    unsafe {
+        let mut pt = POINT {
+            x: screen_x,
+            y: screen_y,
+        };
+        ScreenToClient(list, &mut pt);
+        let mut info = LvHitTestInfo {
+            pt,
+            flags: 0,
+            i_item: -1,
+            i_sub_item: 0,
+        };
+        let _ = SendMessageW(
+            list,
+            LVM_SUBITEMHITTEST,
+            0,
+            &mut info as *mut LvHitTestInfo as isize,
+        );
+        let col = if info.i_sub_item >= 0 {
+            info.i_sub_item as usize
+        } else {
+            0
+        };
+        (info.i_item, col)
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn handle_header_item_click(inner: &Rc<RefCell<GridInner>>, col: usize) {
+    let enabled = inner.try_borrow().ok().is_some_and(|i| i.header_click_sort);
+    if !enabled || col >= inner.try_borrow().ok().map(|i| i.col_count).unwrap_or(0) {
+        return;
+    }
+    let order = {
+        let i = match inner.try_borrow() {
+            Ok(i) => i,
+            Err(_) => return,
+        };
+        if i.sort_col == Some(col) {
+            match i.sort_order {
+                Some(SortOrder::Ascending) => SortOrder::Descending,
+                _ => SortOrder::Ascending,
+            }
+        } else {
+            SortOrder::Ascending
+        }
+    };
+    let grid = Grid {
+        inner: inner.clone(),
+    };
+    grid.sort_by_column(col, order);
+}
+
+#[cfg(target_os = "windows")]
+fn handle_header_divider_dblclick(inner: &Rc<RefCell<GridInner>>, col: usize) {
+    if col >= inner.try_borrow().ok().map(|i| i.col_count).unwrap_or(0) {
+        return;
+    }
+    let grid = Grid {
+        inner: inner.clone(),
+    };
+    grid.autosize_column(col);
+}
+
+#[cfg(target_os = "windows")]
+fn handle_lv_get_infotip(inner: &Rc<RefCell<GridInner>>, lparam: isize) {
+    // SAFETY: `lparam` is `NMLVGETINFOTIPW` from the ListView parent.
+    unsafe {
+        let p = lparam as *mut NMLVGETINFOTIPW;
+        if p.is_null() {
+            return;
+        }
+        let row = (*p).iItem;
+        let col = (*p).iSubItem;
+        if row < 0 {
+            return;
+        }
+        let tip = {
+            let Ok(i) = inner.try_borrow() else {
+                return;
+            };
+            i.cell_tooltip_provider
+                .as_ref()
+                .and_then(|f| f(row as usize, col as usize))
+        };
+        let Some(text) = tip else {
+            return;
+        };
+        if (*p).pszText.is_null() || (*p).cchTextMax <= 0 {
+            return;
+        }
+        let wide = to_wide(&text);
+        let max = ((*p).cchTextMax as usize).saturating_sub(1);
+        let copy_len = wide.len().min(max);
+        std::ptr::copy_nonoverlapping(wide.as_ptr(), (*p).pszText, copy_len);
+        *(*p).pszText.add(copy_len) = 0;
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn handle_lv_item_activate(inner: &Rc<RefCell<GridInner>>, lparam: isize) {
+    // SAFETY: `lparam` is `NMITEMACTIVATE` from the ListView parent.
+    unsafe {
+        let p = lparam as *const NMITEMACTIVATE;
+        if p.is_null() {
+            return;
+        }
+        let row = (*p).iItem;
+        let col = (*p).iSubItem;
+        if row < 0 {
+            return;
+        }
+        let mut cb = inner.borrow_mut().on_row_activated.take();
+        if let Some(ref mut handler) = cb {
+            handler(row as usize, col.max(0) as usize);
+        }
+        inner.borrow_mut().on_row_activated = cb;
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn open_row_context_menu(
+    inner: &Rc<RefCell<GridInner>>,
+    list: HWND,
+    screen_x: i32,
+    screen_y: i32,
+) {
+    let enabled = inner
+        .try_borrow()
+        .ok()
+        .is_some_and(|i| i.row_context_menu_enabled);
+    if !enabled {
+        return;
+    }
+    let (row, col) = hit_test_list_point(list, screen_x, screen_y);
+    if row < 0 {
+        return;
+    }
+    let row = row as usize;
+    let frame = {
+        let i = match inner.try_borrow() {
+            Ok(i) => i,
+            Err(_) => return,
+        };
+        match i.context_frame.clone() {
+            Some(f) => f,
+            None => return,
+        }
+    };
+    select_display_row(list, row);
+    {
+        let Ok(mut i) = inner.try_borrow_mut() else {
+            return;
+        };
+        i.context_menu_row = row;
+        i.context_menu_row_col = col;
+        i.last_selection = Some(row);
+    }
+    let mut cb = inner.borrow_mut().on_row_context_menu.take();
+    if let Some(ref mut handler) = cb {
+        handler(&frame, row, col);
+    }
+    inner.borrow_mut().on_row_context_menu = cb;
+}
+
+#[cfg(target_os = "windows")]
+fn open_grid_context_menu(hwnd: HWND, inner: &Rc<RefCell<GridInner>>, x: i32, y: i32) {
+    let header_is_target = inner.try_borrow().ok().is_some_and(|i| {
+        !i.header_hwnd.is_null() && hwnd == i.header_hwnd
+    });
+    if header_is_target {
+        open_column_context_menu(hwnd, inner, x, y);
+        return;
+    }
+    let (list, row_menu) = match inner.try_borrow() {
+        Ok(i) => (i.hwnd, i.row_context_menu_enabled),
+        Err(_) => return,
+    };
+    if hwnd == list && row_menu {
+        let (row, _) = hit_test_list_point(list, x, y);
+        if row >= 0 {
+            open_row_context_menu(inner, list, x, y);
+            return;
+        }
+    }
+    open_column_context_menu(hwnd, inner, x, y);
+}
+
+#[cfg(target_os = "windows")]
 fn install_list_subclass(hwnd: HWND, inner: Rc<RefCell<GridInner>>) {
     // SAFETY: `hwnd` is a live ListView returned by `CreateWindowExW`.
     unsafe {
@@ -2764,11 +3571,38 @@ unsafe extern "system" fn grid_list_wnd_proc(
             if !nm.is_null() {
                 let header = inner.try_borrow().ok().map(|i| i.header_hwnd);
                 if let Some(header) = header {
-                    if !header.is_null()
-                        && (*nm).hwnd_from == header
-                        && (*nm).code == NM_CUSTOMDRAW
-                    {
-                        return handle_header_custom_draw(&inner, lparam) as LRESULT;
+                    if !header.is_null() && (*nm).hwnd_from == header {
+                        if (*nm).code == NM_CUSTOMDRAW {
+                            return handle_header_custom_draw(&inner, lparam) as LRESULT;
+                        }
+                        if (*nm).code == HDN_ITEMCLICKW {
+                            let col = {
+                                let p = lparam as *const NMHEADERW;
+                                if p.is_null() {
+                                    -1
+                                } else {
+                                    (*p).iItem
+                                }
+                            };
+                            if col >= 0 {
+                                handle_header_item_click(&inner, col as usize);
+                            }
+                            return 0;
+                        }
+                        if (*nm).code == HDN_DIVIDERDBLCLICKW {
+                            let col = {
+                                let p = lparam as *const NMHEADERW;
+                                if p.is_null() {
+                                    -1
+                                } else {
+                                    (*p).iItem
+                                }
+                            };
+                            if col >= 0 {
+                                handle_header_divider_dblclick(&inner, col as usize);
+                            }
+                            return 0;
+                        }
                     }
                 }
             }
@@ -2787,7 +3621,7 @@ unsafe extern "system" fn grid_list_wnd_proc(
                     ((lparam as i32 >> 16) & 0xFFFF),
                 )
             };
-            open_column_context_menu(hwnd, &inner, x, y);
+            open_grid_context_menu(hwnd, &inner, x, y);
             return 0;
         }
     }
@@ -2818,7 +3652,7 @@ unsafe extern "system" fn grid_header_wnd_proc(
                     ((lparam as i32 >> 16) & 0xFFFF),
                 )
             };
-            open_column_context_menu(hwnd, &inner, x, y);
+            open_grid_context_menu(hwnd, &inner, x, y);
             return 0;
         }
     }

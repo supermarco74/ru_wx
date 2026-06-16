@@ -16,7 +16,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 35")
         .with_size(480, 280)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Round 35: grid editors + data-view renderers.", 0);
     let _hint = StaticText::new(&frame, "GridCell* / DataView* / RichText dialogs:");

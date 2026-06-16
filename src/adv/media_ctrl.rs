@@ -318,6 +318,9 @@ impl Drop for MediaCtrlInner {
 }
 
 #[cfg(not(target_os = "windows"))]
+use crate::core::widget::Window;
+
+#[cfg(not(target_os = "windows"))]
 impl MediaCtrl {
     /// Non-Windows stub: returns a no-op `MediaCtrl` whose
     /// `state()` is always `MediaState::Stopped`.

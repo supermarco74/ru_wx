@@ -30,6 +30,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer, WM_APP};
 /// `WM_APP + 0x100 + n` so the timer's tick id is well above `WM_APP`
 /// (the tray uses the `WM_APP + n` range for its shell messages; the
 /// gap avoids any chance of collision).
+#[cfg(target_os = "windows")]
 const TIMER_MSG_BASE: u32 = WM_APP + 0x100;
 
 /// Monotonically increasing per-process `WM_TIMER` redirect message id.
@@ -72,15 +73,13 @@ impl TimerState {
 }
 
 /// A `wxTimer`-like repeating / one-shot timer.
+#[cfg(target_os = "windows")]
 pub struct Timer {
-    #[cfg(target_os = "windows")]
     frame: Frame,
-    #[cfg(target_os = "windows")]
     state: Rc<RefCell<TimerState>>,
     /// The frame's HWND captured at construction (so we don't need to
     /// re-borrow the frame for `KillTimer` / `SetTimer` on drop or
     /// `stop`).
-    #[cfg(target_os = "windows")]
     hwnd: windows_sys::Win32::Foundation::HWND,
 }
 

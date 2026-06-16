@@ -7,9 +7,11 @@ use std::rc::Rc;
 use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
+use crate::core::font::Font;
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::{POINT, *};
 #[cfg(target_os = "windows")]
@@ -121,6 +123,26 @@ impl ListBox {
                 visible: true,
             })),
         }
+    }
+
+    /// Apply a custom font to the list contents.
+    ///
+    /// On Windows this sends `WM_SETFONT` with `lParam = 1` so the
+    /// control repaints immediately.
+    pub fn set_font(&self, font: &Font) {
+        #[cfg(target_os = "windows")]
+        unsafe {
+            use windows_sys::Win32::UI::WindowsAndMessaging::WM_SETFONT;
+            let hwnd = self.inner.borrow().hwnd;
+            windows_sys::Win32::UI::WindowsAndMessaging::SendMessageW(
+                hwnd,
+                WM_SETFONT,
+                font.hfont() as usize,
+                1,
+            );
+        }
+        #[cfg(not(target_os = "windows"))]
+        let _ = font;
     }
 
     /// Create a new multi-selection listbox as a child of the given parent window.
@@ -332,13 +354,19 @@ impl ListBox {
     /// Register a callback that fires when the selection changes (LBN_SELCHANGE).
     pub fn on_selection_change<F: FnMut() + 'static>(&self, frame: &Frame, callback: F) {
         let id = self.inner.borrow().id;
+        #[cfg(target_os = "windows")]
         frame.register_command_notify_handler(id, LBN_SELCHANGE as u16, Box::new(callback));
+        #[cfg(not(target_os = "windows"))]
+        let _ = (frame, id, callback);
     }
 
     /// Register a callback that fires when an item is double-clicked (LBN_DBLCLK).
     pub fn on_double_click<F: FnMut() + 'static>(&self, frame: &Frame, callback: F) {
         let id = self.inner.borrow().id;
+        #[cfg(target_os = "windows")]
         frame.register_command_notify_handler(id, LBN_DBLCLK as u16, Box::new(callback));
+        #[cfg(not(target_os = "windows"))]
+        let _ = (frame, id, callback);
     }
 
     /// Selection with [`ListBoxEvent`] payload (`wxListBoxEvent`).
@@ -423,6 +451,11 @@ impl Widget for ListBoxInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 

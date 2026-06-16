@@ -27,7 +27,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StatusBar")
         .with_size(560, 360)
-        .with_modern_style().build();
+        .build();
 
     // 4 fields → "ready/field-name/coords/state" style layout.
     let status = StatusBar::new(&frame, 4);

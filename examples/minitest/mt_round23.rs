@@ -15,7 +15,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 23")
         .with_size(480, 260)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Scroll the mouse wheel.", 0);
     let _hint = StaticText::new(&frame, "DC / MIME / control notify events:");

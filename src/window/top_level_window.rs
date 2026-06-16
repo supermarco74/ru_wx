@@ -88,7 +88,6 @@ impl TopLevelWindow {
         let frame = Frame::builder()
             .with_title(title)
             .with_size(width, height)
-            .with_modern_style()
             .build();
         TopLevelWindow { frame }
     }

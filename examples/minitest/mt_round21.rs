@@ -14,7 +14,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 21")
         .with_size(520, 300)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Type a key or use Add/Remove.", 0);
     let hint = StaticText::new(&frame, "Char hook / AddRemove / RichToolTip:");

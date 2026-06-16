@@ -25,7 +25,6 @@
 
 #[cfg(target_os = "windows")]
 use crate::dc::icon::svg_bytes_to_hbitmap;
-#[cfg(target_os = "windows")]
 use std::path::Path;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::HWND;

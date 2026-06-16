@@ -817,6 +817,12 @@ impl MemoryDC {
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {}
+    }
+
     /// Select `bmp` as the bitmap the DC draws into. The
     /// previous bitmap (or 1x1 default) is stored and will
     /// be restored in [`Drop`].
@@ -1043,9 +1049,6 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn set_pen(&mut self, _pen: Option<&Pen>) {}
-
     #[cfg(target_os = "windows")]
     fn set_brush(&mut self, brush: Option<&Brush>) {
         match brush {
@@ -1057,18 +1060,12 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn set_brush(&mut self, _brush: Option<&Brush>) {}
-
     #[cfg(target_os = "windows")]
     fn set_text_color(&mut self, colour: Colour) {
         unsafe {
             let _ = SetTextColor(self.hdc, colour.to_colorref());
         }
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn set_text_color(&mut self, _colour: Colour) {}
 
     #[cfg(target_os = "windows")]
     fn set_bk_color(&mut self, colour: Colour) {
@@ -1077,18 +1074,12 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn set_bk_color(&mut self, _colour: Colour) {}
-
     #[cfg(target_os = "windows")]
     fn set_bk_mode(&mut self, mode: BackgroundMode) {
         unsafe {
             let _ = SetBkMode(self.hdc, bk_mode_to_win32(mode));
         }
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn set_bk_mode(&mut self, _mode: BackgroundMode) {}
 
     #[cfg(target_os = "windows")]
     fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
@@ -1099,18 +1090,12 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn draw_line(&mut self, _x1: i32, _y1: i32, _x2: i32, _y2: i32) {}
-
     #[cfg(target_os = "windows")]
     fn draw_rect(&mut self, x: i32, y: i32, w: i32, h: i32) {
         unsafe {
             let _ = Rectangle(self.hdc, x, y, x + w, y + h);
         }
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn draw_rect(&mut self, _x: i32, _y: i32, _w: i32, _h: i32) {}
 
     #[cfg(target_os = "windows")]
     fn fill_rect(&mut self, x: i32, y: i32, w: i32, h: i32, colour: Colour) {
@@ -1127,18 +1112,12 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn fill_rect(&mut self, _x: i32, _y: i32, _w: i32, _h: i32, _colour: Colour) {}
-
     #[cfg(target_os = "windows")]
     fn draw_ellipse(&mut self, x: i32, y: i32, w: i32, h: i32) {
         unsafe {
             let _ = Ellipse(self.hdc, x, y, x + w, y + h);
         }
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn draw_ellipse(&mut self, _x: i32, _y: i32, _w: i32, _h: i32) {}
 
     #[cfg(target_os = "windows")]
     fn draw_text(&mut self, text: &str, x: i32, y: i32) {
@@ -1147,9 +1126,6 @@ impl Dc for ScreenDC {
             let _ = TextOutW(self.hdc, x, y, wide.as_ptr(), (wide.len() - 1) as i32);
         }
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn draw_text(&mut self, _text: &str, _x: i32, _y: i32) {}
 
     #[cfg(target_os = "windows")]
     fn draw_text_in_rect(&mut self, text: &str, rect: Rect, centre: bool) {
@@ -1172,16 +1148,10 @@ impl Dc for ScreenDC {
         }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn draw_text_in_rect(&mut self, _text: &str, _rect: Rect, _centre: bool) {}
-
     #[cfg(target_os = "windows")]
     fn draw_bitmap(&mut self, bitmap: &Bitmap, x: i32, y: i32) {
         let _ = (bitmap, x, y);
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn draw_bitmap(&mut self, _bitmap: &Bitmap, _x: i32, _y: i32) {}
 
     #[cfg(target_os = "windows")]
     fn text_extent(&self, text: &str) -> (i32, i32) {
@@ -1197,11 +1167,6 @@ impl Dc for ScreenDC {
         }
         (size.cx, size.cy)
     }
-
-    #[cfg(not(target_os = "windows"))]
-    fn text_extent(&self, _text: &str) -> (i32, i32) {
-        (0, 0)
-    }
 }
 
 #[cfg(test)]
@@ -1209,12 +1174,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn background_mode_round_trip() {
         // The numeric values are stable Win32 constants.
         assert_eq!(bk_mode_to_win32(BackgroundMode::Transparent), 1);
         assert_eq!(bk_mode_to_win32(BackgroundMode::Opaque), 2);
     }
 
+    #[cfg(target_os = "windows")]
     #[test]
     fn wide_null_terminates() {
         let w = to_wide_null("hi");

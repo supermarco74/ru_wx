@@ -34,8 +34,9 @@ use std::rc::Rc;
 
 use crate::window::frame::Frame;
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -119,6 +120,7 @@ struct ChoiceDialogInner {
     #[allow(dead_code)]
     choices_count: usize,
     #[allow(dead_code)]
+    #[cfg(target_os = "windows")]
     kind: ChoiceKind,
 }
 

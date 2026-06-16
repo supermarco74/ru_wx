@@ -22,7 +22,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Context (popup) menu")
         .with_size(460, 280)
-        .with_modern_style().build();
+        .build();
 
     let _hint = StaticText::new(
         &frame,

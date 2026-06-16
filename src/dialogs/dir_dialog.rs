@@ -13,33 +13,56 @@ use crate::window::frame::Frame;
 #[cfg(target_os = "windows")]
 use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
-use windows_sys::Win32::Foundation::HWND;
+use windows_sys::Win32::Foundation::{HWND, LPARAM};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::System::Com::CoTaskMemFree;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::Shell::{
-    SHBrowseForFolderW, SHGetPathFromIDListW, BIF_EDITBOX,
-    BIF_NEWDIALOGSTYLE, BIF_RETURNONLYFSDIRS,
-    BROWSEINFOW,
+    SHBrowseForFolderW, SHGetPathFromIDListW, BROWSEINFOW,
 };
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::UI::Shell::Common::ITEMIDLIST;
 // The `bif_flag_values_match_shellapi_h` test references the
 // remaining BIF_* constants for completeness. They are only
 // used in test builds, so the import is gated on `cfg(test)`
 // to keep the non-test build warning-free.
-#[cfg(test)]
+#[cfg(all(test, target_os = "windows"))]
 use windows_sys::Win32::UI::Shell::{
     BIF_DONTGOBELOWDOMAIN, BIF_NONEWFOLDERBUTTON, BIF_RETURNFSANCESTORS,
     BIF_SHAREABLE, BIF_VALIDATE,
 };
 #[cfg(target_os = "windows")]
-use windows_sys::Win32::UI::Shell::Common::ITEMIDLIST;
+use windows_sys::Win32::UI::WindowsAndMessaging::SendMessageW;
 
-// ── BIF_USENEWUI / BIF_DEFAULT not exported by windows-sys 0.59 ──────
-// Pinned from <shlobj.h>; see `bif_flag_values_match_shellapi_h` test.
-#[cfg(target_os = "windows")]
-const BIF_DEFAULT: u32 = 0x0000_0000;
-#[cfg(target_os = "windows")]
+// BIF flag values (pinned from <shlobj.h>) — stored on all platforms,
+// only sent to the shell on Windows.
+const BIF_RETURNONLYFSDIRS: u32 = 0x0001;
+const BIF_EDITBOX: u32 = 0x0010;
+const BIF_NEWDIALOGSTYLE: u32 = 0x0040;
 const BIF_USENEWUI: u32 = BIF_EDITBOX | BIF_NEWDIALOGSTYLE;
+
+// ── BIF_DEFAULT not exported by windows-sys 0.59 ──────
+// Pinned from <shlobj.h>; see `bif_flag_values_match_shellapi_h` test.
+const BIF_DEFAULT: u32 = 0x0000_0000;
+
+// BFFM messages — pinned from <shlobj.h>; not all exported by windows-sys 0.59.
+#[cfg(target_os = "windows")]
+const BFFM_INITIALIZED: u32 = 0x0001;
+#[cfg(target_os = "windows")]
+const BFFM_SETSELECTIONW: u32 = 0x0400 + 103;
+
+#[cfg(target_os = "windows")]
+unsafe extern "system" fn browse_for_folder_callback(
+    hwnd: HWND,
+    msg: u32,
+    _lparam: LPARAM,
+    data: LPARAM,
+) -> i32 {
+    if msg == BFFM_INITIALIZED && data != 0 {
+        SendMessageW(hwnd, BFFM_SETSELECTIONW, 1, data);
+    }
+    0
+}
 
 /// A folder-picker dialog.
 ///
@@ -185,8 +208,12 @@ impl DirDialog {
             // BROWSEINFOW contract. The shell writes the selected
             // item's display name here, not the full path.
             let mut display_name_buf = vec![0u16; 260];
-            let initial_wide;
             let root_pidl: *mut ITEMIDLIST = std::ptr::null_mut();
+            let initial_dir_wide = if !self.initial_dir.is_empty() {
+                Some(to_wide(&self.initial_dir))
+            } else {
+                None
+            };
 
             // SAFETY: Win32 FFI call with validated arguments.
             unsafe {
@@ -201,18 +228,9 @@ impl DirDialog {
                 };
                 bi.ulFlags = self.flags;
 
-                // If the user supplied an initial directory, the shell
-                // expects a fully-qualified path string in `lParam`
-                // and a callback that sets the selection via
-                // `SendMessageW(hwnd, BFFM_SETSELECTION, ...)`. To
-                // keep the wrapper simple we just stash the path in a
-                // thread-local so a future revision can wire up the
-                // callback without changing the public API. The
-                // directory is not yet applied on this first cut.
-                if !self.initial_dir.is_empty() {
-                    initial_wide = to_wide(&self.initial_dir);
-                    // (intentionally not yet wired to the BFFM callback)
-                    let _ = initial_wide;
+                if let Some(ref wide) = initial_dir_wide {
+                    bi.lpfn = Some(browse_for_folder_callback);
+                    bi.lParam = wide.as_ptr() as LPARAM;
                 }
 
                 let pidl = SHBrowseForFolderW(&bi);

@@ -32,7 +32,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — MenuBar")
         .with_size(520, 320)
-        .with_modern_style().build();
+        .build();
 
     let label = StaticText::new(
         &frame,

@@ -39,7 +39,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Choice / ComboBox / BitmapComboBox")
         .with_size(500, 420)
-        .with_modern_style().build();
+        .build();
 
     // Field 0 = current selection, field 1 = item count.
     let status = StatusBar::new(&frame, 2);

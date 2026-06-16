@@ -54,7 +54,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Treebook + icons")
         .with_size(760, 470)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Click a tree node to switch pages.", 0);

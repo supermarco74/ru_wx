@@ -45,7 +45,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — ListCtrl report + icons")
         .with_size(560, 480)
-        .with_modern_style().build();
+        .build();
 
     let _hint = StaticText::new(&frame, "Service monitor — click a row, or add/remove rows.");
 

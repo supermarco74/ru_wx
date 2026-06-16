@@ -257,7 +257,10 @@ impl SplashScreen {
     /// Create a splash screen. The window is not yet visible — call
     /// [`SplashScreen::show`] to display it.
     pub fn new(parent: &Frame, bitmap: Bitmap, milliseconds: u32) -> Self {
-        Self::with_position(parent, bitmap, CW_USEDEFAULT, CW_USEDEFAULT, milliseconds)
+        #[cfg(target_os = "windows")]
+        return Self::with_position(parent, bitmap, CW_USEDEFAULT, CW_USEDEFAULT, milliseconds);
+        #[cfg(not(target_os = "windows"))]
+        return Self::with_position(parent, bitmap, 0, 0, milliseconds);
     }
 
     /// Create a splash screen at a specific position (screen
@@ -467,6 +470,9 @@ impl MiniFrame {
                 std::ptr::null_mut(),
             )
         };
+        if !hwnd.is_null() {
+            crate::platform::window_icon::apply_to_hwnd(hwnd, None);
+        }
         Self {
             inner: Rc::new(RefCell::new(MiniFrameInner { hwnd })),
         }
@@ -584,12 +590,12 @@ unsafe fn register_tip_class_once() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: crate::platform::window_icon::class_icons().0,
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_INFOBK + 1) as usize as HBRUSH,
             lpszMenuName: std::ptr::null(),
             lpszClassName: class_name.as_ptr(),
-            hIconSm: std::ptr::null_mut(),
+            hIconSm: crate::platform::window_icon::class_icons().1,
         };
         RegisterClassExW(&wc);
     });
@@ -609,12 +615,12 @@ unsafe fn register_splash_class_once() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: crate::platform::window_icon::class_icons().0,
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
             lpszMenuName: std::ptr::null(),
             lpszClassName: class_name.as_ptr(),
-            hIconSm: std::ptr::null_mut(),
+            hIconSm: crate::platform::window_icon::class_icons().1,
         };
         RegisterClassExW(&wc);
     });
@@ -634,12 +640,12 @@ unsafe fn register_mini_frame_class_once() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: crate::platform::window_icon::class_icons().0,
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
             lpszMenuName: std::ptr::null(),
             lpszClassName: class_name.as_ptr(),
-            hIconSm: std::ptr::null_mut(),
+            hIconSm: crate::platform::window_icon::class_icons().1,
         };
         RegisterClassExW(&wc);
     });

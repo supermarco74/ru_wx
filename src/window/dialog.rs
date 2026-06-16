@@ -13,8 +13,9 @@ use std::rc::Rc;
 use crate::window::frame::Frame;
 use crate::core::widget::WidgetRef;
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -64,6 +65,7 @@ impl Dialog {
             // Register dialog window class (idempotent)
             // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
             unsafe {
+                let (class_icon_big, class_icon_small) = crate::platform::window_icon::class_icons();
                 let wc = WNDCLASSEXW {
                     cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
                     style: CS_HREDRAW | CS_VREDRAW,
@@ -71,12 +73,12 @@ impl Dialog {
                     cbClsExtra: 0,
                     cbWndExtra: 0,
                     hInstance: hinstance,
-                    hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+                    hIcon: class_icon_big,
                     hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
                     hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
                     lpszMenuName: std::ptr::null(),
                     lpszClassName: class_name.as_ptr(),
-                    hIconSm: std::ptr::null_mut(),
+                    hIconSm: class_icon_small,
                 };
                 RegisterClassExW(&wc);
             }
@@ -128,6 +130,8 @@ impl Dialog {
             unsafe {
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, raw as isize);
             }
+
+            crate::platform::window_icon::apply_to_hwnd(hwnd, None);
 
             let dialog = Dialog { inner, parent_hwnd };
             // Match the parent's Windows 11 look: if the parent has

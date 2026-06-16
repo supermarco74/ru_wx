@@ -42,7 +42,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Tab + icons")
         .with_size(620, 460)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Switch tabs, then interact with each page.", 0);

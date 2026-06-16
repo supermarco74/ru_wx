@@ -48,7 +48,7 @@ fn main() {
     let launcher = Frame::builder()
         .with_title("Minitest — MDI control panel")
         .with_size(420, 360)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&launcher, 1);
     status.set_status_text("Click 'Open MDI parent' to spawn an MDI window.", 0);
 

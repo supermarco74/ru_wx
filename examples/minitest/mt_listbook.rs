@@ -41,7 +41,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Listbook")
         .with_size(760, 440)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Click a page in the list, or use Prev/Next.", 0);

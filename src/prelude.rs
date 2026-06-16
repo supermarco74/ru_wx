@@ -27,9 +27,7 @@
 //! the `Window` trait on Windows, etc.) are still reachable at
 //! `ru_wx::module_name` for users who need them.
 
-#[cfg(target_os = "windows")]
-pub use crate::core::widget::Window;
-pub use crate::core::widget::{Widget, WidgetRef};
+pub use crate::core::widget::{Widget, WidgetRef, Window};
 
 // --- Application & top-level windows ----------------------------------
 pub use crate::core::app::App;

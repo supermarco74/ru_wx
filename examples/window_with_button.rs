@@ -32,7 +32,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx Native Demo")
         .with_size(500, 350)
-        .with_modern_style().build();
+        .build();
 
     // --- StaticText ---
     let label = StaticText::new(&frame, "Hello from native Win32 widgets!");

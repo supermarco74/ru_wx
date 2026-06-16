@@ -39,7 +39,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — ScrolledWindow (live panning)")
         .with_size(700, 520)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Use the vertical scroll bar — the rows really move.", 0);

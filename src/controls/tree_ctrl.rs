@@ -8,8 +8,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -37,31 +38,22 @@ const TVM_SELECTITEM: u32 = 0x110B;
 const TVM_SETITEMW: u32 = 0x113F;
 
 /// TVGN_CARET — retrieve the currently selected item
-#[cfg(target_os = "windows")]
 const TVGN_CARET: u32 = 9;
 /// TVGN_ROOT — retrieve the first (top-level) item
-#[cfg(target_os = "windows")]
 const TVGN_ROOT: u32 = 0;
 /// TVGN_NEXT — retrieve the next sibling item
-#[cfg(target_os = "windows")]
 const TVGN_NEXT: u32 = 1;
 /// TVGN_PREVIOUS — retrieve the previous sibling item
-#[cfg(target_os = "windows")]
 const TVGN_PREVIOUS: u32 = 2;
 /// TVGN_PARENT — retrieve the parent item
-#[cfg(target_os = "windows")]
 const TVGN_PARENT: u32 = 3;
 /// TVGN_CHILD — retrieve the first child item
-#[cfg(target_os = "windows")]
 const TVGN_CHILD: u32 = 4;
 /// TVGN_FIRSTVISIBLE — retrieve the first visible item
-#[cfg(target_os = "windows")]
 const TVGN_FIRSTVISIBLE: u32 = 5;
 /// TVGN_NEXTVISIBLE — retrieve the next visible item
-#[cfg(target_os = "windows")]
 const TVGN_NEXTVISIBLE: u32 = 6;
 /// TVGN_PREVIOUSVISIBLE — retrieve the previous visible item
-#[cfg(target_os = "windows")]
 const TVGN_PREVIOUSVISIBLE: u32 = 7;
 /// TVE_EXPAND — expand the item
 #[cfg(target_os = "windows")]
@@ -684,6 +676,7 @@ impl TreeCtrl {
         frame.register_notify_handler(
             id,
             Box::new(move |code| {
+                #[cfg(target_os = "windows")]
                 if code != TVN_SELCHANGED {
                     return;
                 }
@@ -712,7 +705,7 @@ impl TreeCtrl {
 
                 #[cfg(not(target_os = "windows"))]
                 {
-                    let _ = (inner, code);
+                    let _ = code;
                 }
             }),
         );
@@ -736,6 +729,11 @@ impl Widget for TreeCtrlInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 

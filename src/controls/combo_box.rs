@@ -9,8 +9,9 @@ use crate::core::geometry::Rect;
 use crate::dc::image_list::ImageList;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -368,6 +369,11 @@ impl Widget for ComboBoxInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 

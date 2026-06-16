@@ -42,7 +42,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — SplitterWindow (master / detail)")
         .with_size(820, 520)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Pick a topic on the left, or drag the sash.", 0);

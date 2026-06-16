@@ -6,7 +6,8 @@ description = "Pure Rust cross-platform GUI library with a wxWidgets-like API an
 authors = ["Marco Muratore <supermarco74@gmail.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/supermarco74/ru_wx"
-homepage = "https://github.com/supermarco74/ru_wx"
+homepage = "https://ru_wx.easytaskflow.app/"
+documentation = "https://ru_wx.easytaskflow.app/"
 readme = "README.md"
 keywords = ["gui", "win32", "wxwidgets", "windows", "native"]
 categories = ["gui"]
@@ -25,9 +26,12 @@ exclude = [
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "gif"] }
 resvg = "0.44"
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 
 [build-dependencies]
 embed-resource = "2.4"
+resvg = "0.44"
+ico = "0.4"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.59", features = [
@@ -48,9 +52,16 @@ windows-sys = { version = "0.59", features = [
     "Win32_System_Com",
     "Win32_System_Ole",
     "Win32_System_Memory",
+    "Win32_System_Registry",
+    "Win32_Networking_WinHttp",
+    "Win32_Security_Credentials",
     "Win32_Media_Multimedia",
     "Win32_Graphics_OpenGL",
     "Win32_Graphics_Dwm",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_Graphics_Printing",
+    "Win32_Storage_Xps",
 ] }
 
 [[example]]
@@ -70,6 +81,10 @@ name = "grid_demo"
 path = "examples/grid_demo.rs"
 
 [[example]]
+name = "cust_table_grid"
+path = "examples/cust_table_grid.rs"
+
+[[example]]
 name = "showcase_all"
 path = "examples/showcase_all.rs"
 
@@ -84,6 +99,10 @@ path = "examples/esempio2.rs"
 [[example]]
 name = "music_player"
 path = "examples/music_player.rs"
+
+[[example]]
+name = "advanced_ui_demo"
+path = "examples/advanced_ui_demo.rs"
 
 # ── Minitests: one focused example per migrated component ──────────────
 [[example]]
@@ -333,3 +352,11 @@ path = "examples/minitest/mt_round34.rs"
 [[example]]
 name = "mt_round35"
 path = "examples/minitest/mt_round35.rs"
+
+[[example]]
+name = "cross_platform_stubs"
+path = "examples/cross_platform_stubs.rs"
+
+[[example]]
+name = "stub_app_demo"
+path = "examples/stub_app_demo.rs"

@@ -28,7 +28,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TextCtrl")
         .with_size(580, 520)
-        .with_modern_style().build();
+        .build();
 
     // Field 0 = messages, field 1 = live character counter.
     let status = StatusBar::new(&frame, 2);

@@ -5,13 +5,13 @@
 
 use std::io;
 
+use flate2::read::ZlibDecoder;
+use std::io::Read;
+
 use crate::io::memory_input_stream::MemoryInputStream;
 use crate::io::stream::WxInputStream;
 
 /// Decompressed read wrapper (`wxZlibInputStream`).
-///
-/// Stores decompressed payload; callers pass already-expanded bytes until
-/// a native zlib backend is wired.
 pub struct ZlibInputStream {
     inner: MemoryInputStream,
 }
@@ -23,8 +23,19 @@ impl ZlibInputStream {
         }
     }
 
+    pub fn from_compressed(compressed: Vec<u8>) -> io::Result<Self> {
+        let mut decoder = ZlibDecoder::new(compressed.as_slice());
+        let mut out = Vec::new();
+        decoder.read_to_end(&mut out)?;
+        Ok(Self::from_decompressed(out))
+    }
+
+    /// Back-compat alias for older call sites.
     pub fn from_compressed_stub(compressed: Vec<u8>) -> Self {
-        Self::from_decompressed(compressed)
+        match Self::from_compressed(compressed.clone()) {
+            Ok(s) => s,
+            Err(_) => Self::from_decompressed(compressed),
+        }
     }
 }
 

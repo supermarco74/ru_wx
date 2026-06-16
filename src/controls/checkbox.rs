@@ -8,8 +8,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, read_window_text, to_wide};
+use crate::platform::win32::{read_window_text, to_wide};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -181,6 +182,11 @@ impl Widget for CheckBoxInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 

@@ -99,7 +99,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StaticBitmap gallery")
         .with_size(560, 520)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("SVG bundle, SVGBitmap, MemoryDC art, HICON, set_bitmap/clear", 0);

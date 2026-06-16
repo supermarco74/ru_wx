@@ -30,7 +30,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StaticLine (form separators)")
         .with_size(520, 420)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Fill in the form and press Submit.", 0);

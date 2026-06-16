@@ -133,7 +133,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx — Grid Demo (Advanced Table)")
         .with_size(1000, 720)
-        .with_modern_style().build();
+        .build();
     frame.set_size(1000, 720);
     step!("frame created, hwnd={:?}", frame.hwnd());
 
@@ -160,7 +160,8 @@ fn main() {
     grid.apply_win11_theme(&frame);
     grid.set_font_desc(FontDesc::new("Segoe UI", 8), true);
     grid.enable_column_context_menu(&frame);
-    step!("checkboxes + appearance enabled");
+    grid.enable_interactive_features(&frame);
+    step!("checkboxes + appearance + header sort + tooltips enabled");
 
     // ── Columns ──────────────────────────────────────────────────────
     // The 13 columns total ~975 px which fits comfortably inside a

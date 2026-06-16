@@ -42,11 +42,14 @@ pub type WidgetRef = Rc<RefCell<dyn Widget>>;
 /// implements this — currently `Frame` and `Panel`. Widgets that take a
 /// parent are generic over `W: Window` so they can be created as a child
 /// of either.
-///
-/// On non-Windows platforms this trait is a no-op placeholder; widgets
-/// still use `Frame` as their parent type in signatures.
 #[cfg(target_os = "windows")]
 pub trait Window {
     /// Return the platform-native window handle (HWND on Windows).
     fn hwnd(&self) -> HWND;
+}
+
+/// On non-Windows platforms this trait exposes the stub native handle (`isize`).
+#[cfg(not(target_os = "windows"))]
+pub trait Window {
+    fn hwnd(&self) -> isize;
 }

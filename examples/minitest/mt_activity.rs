@@ -12,7 +12,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — ActivityIndicator / FileCtrl")
         .with_size(480, 220)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Activity indicator running.", 0);
     let _h = StaticText::new(&frame, "wxActivityIndicator + wxFileCtrl + wxFileHistory:");

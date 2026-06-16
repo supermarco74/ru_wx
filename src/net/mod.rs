@@ -23,16 +23,19 @@ pub use socket_event::{SocketEvent, SocketEventKind};
 pub use socket_server::SocketServer;
 pub use url::Url;
 
-use std::io;
+use std::cell::RefCell;
+use std::io::{self, Read, Write};
+use std::net::TcpStream;
 
 /// Replaceable socket event callback slot.
-type SocketEventHandler = std::cell::RefCell<Option<Box<dyn FnMut(&SocketEvent)>>>;
+type SocketEventHandler = RefCell<Option<Box<dyn FnMut(&SocketEvent)>>>;
 
-/// TCP socket placeholder (`wxSocket`).
+/// TCP socket (`wxSocket`).
 pub struct Socket {
     host: String,
     port: u16,
     connected: bool,
+    stream: RefCell<Option<TcpStream>>,
     on_event: SocketEventHandler,
 }
 
@@ -42,7 +45,8 @@ impl Default for Socket {
             host: String::new(),
             port: 0,
             connected: false,
-            on_event: std::cell::RefCell::new(None),
+            stream: RefCell::new(None),
+            on_event: RefCell::new(None),
         }
     }
 }
@@ -63,18 +67,44 @@ impl Socket {
     }
 
     pub fn connect(&mut self, host: &str, port: u16) -> io::Result<()> {
+        let addr = format!("{host}:{port}");
+        let stream = TcpStream::connect(addr)?;
+        stream.set_read_timeout(None).ok();
+        stream.set_write_timeout(None).ok();
         self.host = host.to_string();
         self.port = port;
         self.connected = true;
+        *self.stream.borrow_mut() = Some(stream);
         Ok(())
     }
 
+    pub fn disconnect(&mut self) {
+        *self.stream.borrow_mut() = None;
+        self.connected = false;
+    }
+
     pub fn is_connected(&self) -> bool {
-        self.connected
+        self.connected && self.stream.borrow().is_some()
     }
 
     pub fn endpoint(&self) -> (&str, u16) {
         (&self.host, self.port)
+    }
+
+    pub fn write_all(&self, data: &[u8]) -> io::Result<()> {
+        let mut guard = self.stream.borrow_mut();
+        let stream = guard
+            .as_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotConnected, "socket not connected"))?;
+        stream.write_all(data)
+    }
+
+    pub fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut guard = self.stream.borrow_mut();
+        let stream = guard
+            .as_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotConnected, "socket not connected"))?;
+        stream.read(buf)
     }
 
     pub fn on_socket_event<F: FnMut(&SocketEvent) + 'static>(&self, f: F) {
@@ -88,11 +118,12 @@ impl Socket {
     }
 }
 
-/// HTTP request placeholder (`wxWebRequest`).
+/// HTTP request helper (`wxWebRequest`).
 #[derive(Debug, Clone)]
 pub struct WebRequest {
     url: String,
     method: String,
+    body: Vec<u8>,
 }
 
 impl WebRequest {
@@ -100,6 +131,7 @@ impl WebRequest {
         Self {
             url: url.to_string(),
             method: "GET".into(),
+            body: Vec::new(),
         }
     }
 
@@ -107,7 +139,13 @@ impl WebRequest {
         Self {
             url: url.to_string(),
             method: "POST".into(),
+            body: Vec::new(),
         }
+    }
+
+    pub fn with_body(mut self, body: impl AsRef<[u8]>) -> Self {
+        self.body = body.as_ref().to_vec();
+        self
     }
 
     pub fn url(&self) -> &str {
@@ -115,9 +153,14 @@ impl WebRequest {
     }
 
     pub fn execute(&self) -> io::Result<Vec<u8>> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            format!("WebRequest stub: {} {}", self.method, self.url),
-        ))
+        let client = HttpClient::new();
+        match self.method.as_str() {
+            "GET" => client.get(&self.url),
+            "POST" => client.post(&self.url, &self.body),
+            other => Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                format!("unsupported HTTP method: {other}"),
+            )),
+        }
     }
 }

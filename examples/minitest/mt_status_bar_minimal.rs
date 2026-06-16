@@ -17,7 +17,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — StatusBar only")
         .with_size(800, 200)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 4);
     status.set_status_text(

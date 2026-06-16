@@ -15,8 +15,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::{Colour, Rect};
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, read_window_text, to_wide};
+use crate::platform::win32::{read_window_text, to_wide};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::{RECT, *};
 #[cfg(target_os = "windows")]
@@ -76,6 +77,8 @@ struct ButtonImageList {
 struct ButtonInner {
     #[cfg(target_os = "windows")]
     hwnd: HWND,
+    #[cfg(not(target_os = "windows"))]
+    stub_handle: isize,
     id: u16,
     label: String,
     rect: Rect,
@@ -127,6 +130,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: label.to_string(),
                 rect: Rect::new(0, 0, 100, 30),
@@ -174,6 +179,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: label.to_string(),
                 rect: Rect::new(0, 0, 120, 32),
@@ -235,6 +242,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: label.to_string(),
                 rect: Rect::new(0, 0, 200, 36),
@@ -361,6 +370,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: label.to_string(),
                 rect: Rect::new(0, 0, 100, 30),
@@ -427,6 +438,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: String::new(),
                 rect: Rect::new(0, 0, 100, 30),
@@ -489,6 +502,8 @@ impl Button {
             inner: Rc::new(RefCell::new(ButtonInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 id,
                 label: String::new(),
                 rect: Rect::new(0, 0, 100, 30),
@@ -594,6 +609,10 @@ impl Widget for ButtonInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.stub_handle
         }
     }
 

@@ -26,8 +26,9 @@ use crate::dc::bitmap_bundle::{BitmapBundle, RawBitmap};
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -322,6 +323,13 @@ impl StaticBitmap {
                 windows_sys::Win32::UI::WindowsAndMessaging::DestroyIcon(handle as HICON);
             }
         }
+        let mut inner = self.inner.borrow_mut();
+        inner.current_handle = 0;
+        inner.image_kind = StaticBitmapImageKind::None;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn release_current(&self) {
         let mut inner = self.inner.borrow_mut();
         inner.current_handle = 0;
         inner.image_kind = StaticBitmapImageKind::None;

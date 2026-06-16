@@ -73,7 +73,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — MediaCtrl (MCI)")
         .with_size(440, 280)
-        .with_modern_style().build();
+        .build();
 
     // ── Status / info labels ──────────────────────────────────────
     let info = StaticText::new(&frame, "loading…");

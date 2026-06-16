@@ -31,8 +31,15 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::core::accelerator::Accelerator;
+#[cfg(target_os = "windows")]
 use crate::core::dpi::{get_dpi_for_point, get_dpi_for_window, Dpi};
+#[cfg(not(target_os = "windows"))]
+use crate::core::dpi::{get_system_dpi, Dpi};
+#[cfg(target_os = "windows")]
 use crate::dnd::drop_target::{self, DroppedFiles};
+#[cfg(not(target_os = "windows"))]
+use crate::dnd::drop_target::DroppedFiles;
+#[cfg(target_os = "windows")]
 use crate::dnd::ole_dnd::{self, OleDropError, OleDropTarget, OleDroppedData, OleDropPosition};
 use crate::core::geometry::Colour;
 use crate::window::menu::MenuBar;
@@ -48,7 +55,7 @@ use windows_sys::Win32::Graphics::Gdi::*;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 #[cfg(target_os = "windows")]
-use windows_sys::Win32::UI::Controls::NMHDR;
+use windows_sys::Win32::UI::Controls::{DRAWITEMSTRUCT, MEASUREITEMSTRUCT, NMHDR};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::Shell::{DragAcceptFiles, HDROP};
 #[cfg(target_os = "windows")]
@@ -68,8 +75,26 @@ pub(crate) type EventHandlerSlot<E> = Option<Box<dyn FnMut(&E)>>;
 /// handler can mutate the event, e.g. [`crate::IdleEvent::request_more`]).
 pub(crate) type MutEventHandlers<E> = Vec<Box<dyn FnMut(&mut E)>>;
 
+/// Parameters for a `WM_DRAWITEM` callback registered on [`Frame`].
+#[derive(Debug, Clone)]
+pub struct DrawItemRequest {
+    pub index: u32,
+    pub rect: crate::core::geometry::Rect,
+    pub hdc: isize,
+    pub selected: bool,
+}
+
+/// Parameters for a `WM_MEASUREITEM` callback registered on [`Frame`].
+#[derive(Debug, Clone, Copy)]
+pub struct MeasureItemRequest {
+    pub index: u32,
+}
+
 pub(crate) struct FrameData {
+    #[cfg(target_os = "windows")]
     pub hwnd: HWND,
+    #[cfg(not(target_os = "windows"))]
+    pub stub: crate::platform::stub_backend::StubFrame,
     pub widgets: Vec<WidgetRef>,
     pub command_handlers: HashMap<u16, Box<dyn FnMut()>>,
     /// Handlers keyed by `(control_id, WM_COMMAND notification code)`
@@ -158,6 +183,12 @@ pub(crate) struct FrameData {
     /// **returns** the `CDRF_*` flags the parent must pass back to
     /// the control.
     pub lv_custom_draw_handlers: HashMap<u16, Box<dyn FnMut(isize) -> u32>>,
+    /// Handlers invoked when a child `SysListView32` (e.g. [`crate::Grid`])
+    /// dispatches `LVN_GETINFOTIPW`. Keyed by the control's `idFrom`.
+    pub lv_infotip_handlers: HashMap<u16, Box<dyn FnMut(isize)>>,
+    /// Handlers invoked when a child `SysListView32` dispatches
+    /// `LVN_ITEMACTIVATE` (double-click / Enter).
+    pub lv_item_activate_handlers: HashMap<u16, Box<dyn FnMut(isize)>>,
     /// Handlers invoked when the frame receives a user-defined message
     /// in the `WM_APP + n` range (used by the `IconTray` for shell
     /// notification area callback messages). Keyed by the message id.
@@ -180,7 +211,13 @@ pub(crate) struct FrameData {
     /// keeps `frame.rs` independent of `scroll_bar.rs`'s typed
     /// `ScrollEvent` enum - the `scroll_bar` module wraps its
     /// user callback into this signature in `on_scroll`.
-    pub scroll_handlers: HashMap<HWND, Box<dyn FnMut(u16, i32)>>,
+    pub scroll_handlers: HashMap<isize, Box<dyn FnMut(u16, i32)>>,
+    /// Handlers for `WM_DRAWITEM` on owner-drawn combo boxes and similar
+    /// controls. Keyed by the control's command id (`CtlID`).
+    pub draw_item_handlers: HashMap<u16, Box<dyn FnMut(DrawItemRequest)>>,
+    /// Handlers for `WM_MEASUREITEM`. Return value is the item height in
+    /// pixels.
+    pub measure_item_handlers: HashMap<u16, Box<dyn FnMut(MeasureItemRequest) -> u32>>,
     /// Handlers invoked when the frame receives a `WM_PAINT`
     /// message (i.e. the OS is asking the window to repaint its
     /// client area). The handler receives the Win32 `HDC` of the
@@ -276,6 +313,7 @@ pub(crate) struct FrameData {
     /// to this window. (`WM_DROPFILES` from the Shell-level
     /// protocol is independent and is governed by
     /// `drop_files_handler` above.)
+    #[cfg(target_os = "windows")]
     pub ole_drop_target: Option<OleDropTarget>,
 }
 
@@ -296,6 +334,10 @@ pub struct FrameBuilder {
     y: i32,
     quit_on_destroy: bool,
     modern_style: bool,
+    #[cfg(target_os = "windows")]
+    modern_backdrop: Option<crate::window::dwm_style::BackdropType>,
+    #[cfg(target_os = "windows")]
+    custom_icon: Option<isize>,
 }
 
 impl Frame {
@@ -304,16 +346,35 @@ impl Frame {
             title: String::from("ru_wx Window"),
             width: 800,
             height: 600,
+            #[cfg(target_os = "windows")]
             x: CW_USEDEFAULT,
+            #[cfg(target_os = "windows")]
             y: CW_USEDEFAULT,
+            #[cfg(not(target_os = "windows"))]
+            x: 0,
+            #[cfg(not(target_os = "windows"))]
+            y: 0,
             quit_on_destroy: true,
+            #[cfg(target_os = "windows")]
+            modern_style: true,
+            #[cfg(not(target_os = "windows"))]
             modern_style: false,
+            #[cfg(target_os = "windows")]
+            modern_backdrop: None,
+            #[cfg(target_os = "windows")]
+            custom_icon: None,
         }
     }
 
     /// Get the native window handle
+    #[cfg(target_os = "windows")]
     pub fn hwnd(&self) -> HWND {
         self.inner.borrow().hwnd
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn hwnd(&self) -> isize {
+        self.inner.borrow().stub.handle
     }
 
     /// The DPI value of the monitor that currently hosts this
@@ -337,6 +398,22 @@ impl Frame {
     /// the user only needs the multiplier, not the raw DPI
     /// value.
     #[cfg(target_os = "windows")]
+    pub fn scale_factor(&self) -> f32 {
+        self.dpi().scale_factor()
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn dpi(&self) -> Dpi {
+        get_system_dpi()
+    }
+
+    /// The scale factor relative to the 96-DPI baseline
+    /// (1.0 at 100%, 1.5 at 150%, 2.0 at 200%, 3.0 at 300%).
+    ///
+    /// Convenience wrapper around [`Frame::dpi`]; useful when
+    /// the user only needs the multiplier, not the raw DPI
+    /// value.
+    #[cfg(not(target_os = "windows"))]
     pub fn scale_factor(&self) -> f32 {
         self.dpi().scale_factor()
     }
@@ -461,6 +538,25 @@ impl Frame {
             .insert(id, handler);
     }
 
+    /// Register an infotip handler for a child `SysListView32`
+    /// (e.g. [`crate::Grid`]). Invoked on `LVN_GETINFOTIPW`; the
+    /// handler receives the full `lparam` (`NMLVGETINFOTIPW`).
+    pub fn register_lv_infotip_handler(&self, id: u16, handler: Box<dyn FnMut(isize)>) {
+        self.inner
+            .borrow_mut()
+            .lv_infotip_handlers
+            .insert(id, handler);
+    }
+
+    /// Register a row-activate handler for a child `SysListView32`
+    /// (e.g. [`crate::Grid`]). Invoked on `LVN_ITEMACTIVATE`.
+    pub fn register_lv_item_activate_handler(&self, id: u16, handler: Box<dyn FnMut(isize)>) {
+        self.inner
+            .borrow_mut()
+            .lv_item_activate_handlers
+            .insert(id, handler);
+    }
+
     /// Register a cache-hint handler for a child `ListCtrl` in
     /// `LVS_OWNERDATA` (virtual) mode. The handler is keyed by
     /// the control's `idFrom` and is invoked whenever the frame
@@ -546,7 +642,7 @@ impl Frame {
     /// The signature is kept generic (no `ScrollEvent` enum) so
     /// `frame.rs` does not depend on the `scroll_bar` module. The
     /// `ScrollBar::on_scroll` wrapper does the conversion.
-    pub fn register_scroll_handler<F>(&self, hwnd: HWND, handler: F)
+    pub fn register_scroll_handler<F>(&self, hwnd: isize, handler: F)
     where
         F: FnMut(u16, i32) + 'static,
     {
@@ -558,8 +654,29 @@ impl Frame {
 
     /// Remove a previously-registered scroll handler. Called by
     /// `ScrollBar::drop` so the closure doesn't outlive the control.
-    pub fn unregister_scroll_handler(&self, hwnd: HWND) {
+    pub fn unregister_scroll_handler(&self, hwnd: isize) {
         self.inner.borrow_mut().scroll_handlers.remove(&hwnd);
+    }
+
+    /// Register an owner-draw paint handler for `WM_DRAWITEM`.
+    pub fn register_draw_item_handler(
+        &self,
+        id: u16,
+        handler: Box<dyn FnMut(DrawItemRequest)>,
+    ) {
+        self.inner.borrow_mut().draw_item_handlers.insert(id, handler);
+    }
+
+    /// Register an owner-draw measure handler for `WM_MEASUREITEM`.
+    pub fn register_measure_item_handler(
+        &self,
+        id: u16,
+        handler: Box<dyn FnMut(MeasureItemRequest) -> u32>,
+    ) {
+        self.inner
+            .borrow_mut()
+            .measure_item_handlers
+            .insert(id, handler);
     }
 
     /// Register a handler for the frame's `WM_PAINT` message. The
@@ -622,7 +739,15 @@ impl Frame {
     #[allow(dead_code)]
     pub(crate) fn for_testing() -> Frame {
         let data = FrameData {
+            #[cfg(target_os = "windows")]
             hwnd: std::ptr::null_mut(),
+            #[cfg(not(target_os = "windows"))]
+            stub: crate::platform::stub_backend::StubFrame::new(
+                crate::platform::stub_backend_for_target(),
+                "test",
+                800,
+                600,
+            ),
             widgets: Vec::new(),
             command_handlers: HashMap::new(),
             command_notify_handlers: HashMap::new(),
@@ -632,9 +757,13 @@ impl Frame {
             cache_hint_handlers: HashMap::new(),
             ttn_dispinfo_handlers: HashMap::new(),
             lv_custom_draw_handlers: HashMap::new(),
+            lv_infotip_handlers: HashMap::new(),
+            lv_item_activate_handlers: HashMap::new(),
             tray_message_handlers: HashMap::new(),
             timer_tick_routes: HashMap::new(),
             scroll_handlers: HashMap::new(),
+            draw_item_handlers: HashMap::new(),
+            measure_item_handlers: HashMap::new(),
             paint_handlers: Vec::new(),
             accelerators: Vec::new(),
             menu_bar: None,
@@ -669,6 +798,7 @@ impl Frame {
             mouse_tracking: false,
             quit_on_destroy: true,
             drop_files_handler: None,
+            #[cfg(target_os = "windows")]
             ole_drop_target: None,
         };
         Frame {
@@ -1152,27 +1282,22 @@ impl Frame {
     ///     }
     /// }).expect("first registration must succeed");
     /// ```
+    #[cfg(target_os = "windows")]
     pub fn set_ole_drop_callback<F>(&self, f: F) -> Result<(), OleDropError>
     where
         F: FnMut(OleDroppedData, OleDropPosition) + 'static,
     {
-        // Initialise the OLE COM runtime exactly once per
-        // process. The runtime treats repeat calls as a
-        // no-op, so this is safe to do on every
-        // `set_ole_drop_callback` call.
-        #[cfg(target_os = "windows")]
         ole_dnd::ensure_ole_initialized();
         let mut target = OleDropTarget::new(Box::new(f));
         let hwnd = self.inner.borrow().hwnd;
-        // `register` calls `RegisterDragDrop` on Windows
-        // and is a no-op stub on non-Windows. On a `null`
-        // HWND (e.g. the `for_testing` constructor), the
-        // Win32 call returns an error; the `?` propagates
-        // it and the new target is dropped (no entry is
-        // stored in `FrameData`).
         target.register(hwnd)?;
         self.inner.borrow_mut().ole_drop_target = Some(target);
         Ok(())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn set_ole_drop_callback<F>(&self, _f: F) -> Result<(), crate::OleDropError> {
+        Err(crate::OleDropError::RegisterFailed(0))
     }
 
     /// Set window title
@@ -1184,6 +1309,37 @@ impl Frame {
             let wide = to_wide(title);
             SetWindowTextW(hwnd, wide.as_ptr());
         }
+    }
+
+    /// Set the window icon (title bar, task bar, Alt+Tab).
+    ///
+    /// Pass a valid `HICON` from [`crate::svg_bytes_to_hicon`] or a loaded
+    /// resource. The library does **not** take ownership of the handle.
+    ///
+    /// Every frame gets the built-in `ru_wx` logo by default; call this
+    /// only when you need a custom icon.
+    #[cfg(target_os = "windows")]
+    pub fn set_icon(&self, hicon: isize) {
+        crate::platform::window_icon::apply_to_hwnd(
+            self.inner.borrow().hwnd,
+            Some(hicon as windows_sys::Win32::UI::WindowsAndMessaging::HICON),
+        );
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn set_icon(&self, _hicon: isize) {}
+
+    /// Return the large window icon (`WM_GETICON` / `ICON_BIG`), or `0`.
+    #[cfg(target_os = "windows")]
+    pub fn get_icon(&self) -> isize {
+        let hwnd = self.inner.borrow().hwnd;
+        // SAFETY: `hwnd` is a live frame window.
+        unsafe { SendMessageW(hwnd, WM_GETICON, ICON_BIG as usize, 0) as isize }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn get_icon(&self) -> isize {
+        0
     }
 
     /// Set window size. `w` and `h` are in **logical** (96-DPI)
@@ -1223,6 +1379,39 @@ impl Frame {
             let hwnd = self.inner.borrow().hwnd;
             DestroyWindow(hwnd);
         }
+        #[cfg(not(target_os = "windows"))]
+        self.request_close();
+    }
+
+    /// Stop the stub event loop (non-Windows placeholder backend).
+    #[cfg(not(target_os = "windows"))]
+    pub fn request_close(&self) {
+        let event = crate::CloseEvent::new();
+        if let Some(mut on_query) = self.inner.borrow_mut().on_query_close.take() {
+            on_query(&event);
+            self.inner.borrow_mut().on_query_close = Some(on_query);
+        }
+        if event.is_vetoed() {
+            return;
+        }
+        if let Some(mut on_close) = self.inner.borrow_mut().on_close.take() {
+            on_close();
+            self.inner.borrow_mut().on_close = Some(on_close);
+        }
+        self.inner.borrow_mut().stub.visible = false;
+    }
+
+    /// Dispatch a command id through the frame's handler table (stub / test helper).
+    #[cfg(not(target_os = "windows"))]
+    pub fn dispatch_command(&self, id: u16) -> bool {
+        let handler = self.inner.borrow_mut().command_handlers.remove(&id);
+        if let Some(mut handler) = handler {
+            handler();
+            self.inner.borrow_mut().command_handlers.insert(id, handler);
+            true
+        } else {
+            false
+        }
     }
 
     /// Perform layout using the sizer.
@@ -1256,6 +1445,18 @@ impl Frame {
                 sizer.layout(0, 0, w, h);
             }
             // Put the sizer back.
+            self.inner.borrow_mut().sizer = sizer;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let (w, h) = {
+                let inner = self.inner.borrow();
+                (inner.stub.rect.width, inner.stub.rect.height)
+            };
+            let mut sizer = self.inner.borrow_mut().sizer.take();
+            if let Some(ref mut sizer) = sizer {
+                sizer.layout(0, 0, w, h);
+            }
             self.inner.borrow_mut().sizer = sizer;
         }
     }
@@ -1333,11 +1534,33 @@ impl Frame {
                         rc2.borrow_mut().on_idle = handlers;
                         drop(rc2);
                     }
+                    crate::core::config::poll_registered_filesystem_watchers();
                 }
             }
 
             if !h_accel.is_null() {
                 DestroyAcceleratorTable(h_accel);
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.inner.borrow_mut().stub.show();
+            self.do_layout();
+            while self.inner.borrow().stub.visible {
+                let mut idle_ev = crate::IdleEvent::new();
+                let mut handlers = std::mem::take(&mut self.inner.borrow_mut().on_idle);
+                for h in handlers.iter_mut() {
+                    h(&mut idle_ev);
+                    if !self.inner.borrow().stub.visible {
+                        break;
+                    }
+                }
+                self.inner.borrow_mut().on_idle = handlers;
+                crate::core::config::poll_registered_filesystem_watchers();
+                if idle_ev.more_requested {
+                    continue;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(16));
             }
         }
     }
@@ -1372,6 +1595,13 @@ impl Window for Frame {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+impl Window for Frame {
+    fn hwnd(&self) -> isize {
+        self.hwnd()
+    }
+}
+
 impl FrameBuilder {
     pub fn with_title(mut self, title: &str) -> Self {
         self.title = title.to_string();
@@ -1398,43 +1628,56 @@ impl FrameBuilder {
         self
     }
 
-    /// Apply the Windows 11 modern style right after the window is
-    /// created: dark title bar following the OS appearance, Mica
-    /// backdrop and rounded corners (see
-    /// [`Frame::apply_modern_style`]). Harmless no-op on Windows
-    /// releases that don't support the DWM attributes.
+    /// Apply the Windows 11 modern style when building the frame: dark
+    /// title bar following the OS appearance, Mica backdrop and rounded
+    /// corners (see [`Frame::apply_modern_style`]).
+    ///
+    /// On Windows this is **already enabled by default** in
+    /// [`Frame::builder`]; call this to opt in explicitly when building
+    /// from a cloned builder that disabled it.
     pub fn with_modern_style(mut self) -> Self {
         self.modern_style = true;
         self
     }
 
+    /// Like [`Self::with_modern_style`] but uses **Mica Alt**
+    /// (`DWMSBT_TABBEDWINDOW`) — ideal for tabbed workbench UIs.
     #[cfg(target_os = "windows")]
+    pub fn with_modern_tabbed_style(mut self) -> Self {
+        self.modern_style = true;
+        self.modern_backdrop = Some(crate::window::dwm_style::BackdropType::MicaAlt);
+        self
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn with_modern_tabbed_style(mut self) -> Self {
+        self.modern_style = true;
+        self
+    }
+
+    /// Use a custom window icon instead of the built-in `ru_wx` logo.
+    ///
+    /// The handle is **not** owned by the frame — keep it alive for as
+    /// long as the window is shown, or use a stock / cached icon.
+    #[cfg(target_os = "windows")]
+    pub fn with_icon(mut self, hicon: isize) -> Self {
+        self.custom_icon = Some(hicon);
+        self
+    }
+
+    #[cfg(not(target_os = "windows"))]
     pub fn build(self) -> Frame {
-        // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
-        unsafe {
-            let hinstance = GetModuleHandleW(std::ptr::null());
-            let class_name = to_wide("RuWxFrameClass");
-
-            // Register window class (idempotent - will fail silently if already registered)
-            let wc = WNDCLASSEXW {
-                cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
-                style: CS_HREDRAW | CS_VREDRAW,
-                lpfnWndProc: Some(frame_wnd_proc),
-                cbClsExtra: 0,
-                cbWndExtra: 0,
-                hInstance: hinstance,
-                hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
-                hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
-                hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
-                lpszMenuName: std::ptr::null(),
-                lpszClassName: class_name.as_ptr(),
-                hIconSm: std::ptr::null_mut(),
-            };
-            RegisterClassExW(&wc);
-
-            // Create frame data
-            let frame_data = Box::new(FrameData {
-                hwnd: std::ptr::null_mut(),
+        let backend = crate::platform::stub_backend_for_target();
+        let mut stub = crate::platform::stub_backend::StubFrame::new(
+            backend,
+            &self.title,
+            self.width,
+            self.height,
+        );
+        stub.show();
+        Frame {
+            inner: Rc::new(RefCell::new(FrameData {
+                stub,
                 widgets: Vec::new(),
                 command_handlers: HashMap::new(),
                 command_notify_handlers: HashMap::new(),
@@ -1444,9 +1687,13 @@ impl FrameBuilder {
                 cache_hint_handlers: HashMap::new(),
                 ttn_dispinfo_handlers: HashMap::new(),
                 lv_custom_draw_handlers: HashMap::new(),
+                lv_infotip_handlers: HashMap::new(),
+            lv_item_activate_handlers: HashMap::new(),
                 tray_message_handlers: HashMap::new(),
                 timer_tick_routes: HashMap::new(),
                 scroll_handlers: HashMap::new(),
+                draw_item_handlers: HashMap::new(),
+                measure_item_handlers: HashMap::new(),
                 paint_handlers: Vec::new(),
                 accelerators: Vec::new(),
                 menu_bar: None,
@@ -1481,6 +1728,92 @@ impl FrameBuilder {
                 mouse_tracking: false,
                 quit_on_destroy: self.quit_on_destroy,
                 drop_files_handler: None,
+                #[cfg(target_os = "windows")]
+                ole_drop_target: None,
+            })),
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn build(self) -> Frame {
+        // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
+        unsafe {
+            let hinstance = GetModuleHandleW(std::ptr::null());
+            let class_name = to_wide("RuWxFrameClass");
+
+            let (class_icon_big, class_icon_small) = crate::platform::window_icon::class_icons();
+
+            // Register window class (idempotent - will fail silently if already registered)
+            let wc = WNDCLASSEXW {
+                cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
+                style: CS_HREDRAW | CS_VREDRAW,
+                lpfnWndProc: Some(frame_wnd_proc),
+                cbClsExtra: 0,
+                cbWndExtra: 0,
+                hInstance: hinstance,
+                hIcon: class_icon_big,
+                hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
+                hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
+                lpszMenuName: std::ptr::null(),
+                lpszClassName: class_name.as_ptr(),
+                hIconSm: class_icon_small,
+            };
+            RegisterClassExW(&wc);
+
+            // Create frame data
+            let frame_data = Box::new(FrameData {
+                hwnd: std::ptr::null_mut(),
+                widgets: Vec::new(),
+                command_handlers: HashMap::new(),
+                command_notify_handlers: HashMap::new(),
+                notify_handlers: HashMap::new(),
+                disp_info_handlers: HashMap::new(),
+                dtn_handlers: HashMap::new(),
+                cache_hint_handlers: HashMap::new(),
+                ttn_dispinfo_handlers: HashMap::new(),
+                lv_custom_draw_handlers: HashMap::new(),
+                lv_infotip_handlers: HashMap::new(),
+            lv_item_activate_handlers: HashMap::new(),
+                tray_message_handlers: HashMap::new(),
+                timer_tick_routes: HashMap::new(),
+                scroll_handlers: HashMap::new(),
+                draw_item_handlers: HashMap::new(),
+                measure_item_handlers: HashMap::new(),
+                paint_handlers: Vec::new(),
+                accelerators: Vec::new(),
+                menu_bar: None,
+                sizer: None,
+                background_colour: Colour::LIGHT_GREY,
+                on_resize: Vec::new(),
+                on_close: None,
+                on_query_close: None,
+                on_key_down: Vec::new(),
+                on_key_up: Vec::new(),
+                on_mouse: Vec::new(),
+                on_mouse_wheel: Vec::new(),
+                on_focus: Vec::new(),
+                on_size_event: Vec::new(),
+                on_move_event: Vec::new(),
+                on_idle: Vec::new(),
+                on_activate: Vec::new(),
+                on_char: Vec::new(),
+                on_char_hook: Vec::new(),
+                on_erase: None,
+                on_show: Vec::new(),
+                on_hide: Vec::new(),
+                on_iconize: Vec::new(),
+                on_maximize: Vec::new(),
+                on_mouse_enter: Vec::new(),
+                on_mouse_leave: Vec::new(),
+                on_capture_lost: Vec::new(),
+                on_context_menu: Vec::new(),
+                on_drop_files_event: Vec::new(),
+                on_sys_colour_changed: Vec::new(),
+                on_dpi_changed: Vec::new(),
+                mouse_tracking: false,
+                quit_on_destroy: self.quit_on_destroy,
+                drop_files_handler: None,
+                #[cfg(target_os = "windows")]
                 ole_drop_target: None,
             });
             let frame_data_ptr = Box::into_raw(frame_data);
@@ -1576,8 +1909,25 @@ impl FrameBuilder {
             // additional `unsafe` wrapper.
             DragAcceptFiles(hwnd, 1);
 
+            let custom_icon = self
+                .custom_icon
+                .map(|h| h as windows_sys::Win32::UI::WindowsAndMessaging::HICON);
+            crate::platform::window_icon::apply_to_hwnd(hwnd, custom_icon);
+
             let frame = Frame { inner };
             if self.modern_style {
+                #[cfg(target_os = "windows")]
+                {
+                    if let Some(backdrop) = self.modern_backdrop {
+                        crate::window::dwm_style::apply_modern_style_with_backdrop_hwnd(
+                            hwnd,
+                            backdrop,
+                        );
+                    } else {
+                        frame.apply_modern_style();
+                    }
+                }
+                #[cfg(not(target_os = "windows"))]
                 frame.apply_modern_style();
             }
             frame
@@ -1716,6 +2066,23 @@ unsafe extern "system" fn frame_wnd_proc(
                                 .insert(id, h);
                             handled = true;
                         }
+                    } else if code == crate::containers::grid::LVN_GETINFOTIP_GRID {
+                        let handler = rc.borrow_mut().lv_infotip_handlers.remove(&id);
+                        if let Some(mut h) = handler {
+                            h(lparam);
+                            rc.borrow_mut().lv_infotip_handlers.insert(id, h);
+                            handled = true;
+                        }
+                    } else if code == crate::containers::grid::LVN_ITEMACTIVATE_GRID {
+                        let handler =
+                            rc.borrow_mut().lv_item_activate_handlers.remove(&id);
+                        if let Some(mut h) = handler {
+                            h(lparam);
+                            rc.borrow_mut()
+                                .lv_item_activate_handlers
+                                .insert(id, h);
+                            handled = true;
+                        }
                     } else {
                         // Take the handler out so we don't hold a
                         // borrow across the user's callback.
@@ -1735,6 +2102,65 @@ unsafe extern "system" fn frame_wnd_proc(
             } else {
                 DefWindowProcW(hwnd, msg, wparam, lparam)
             }
+        }
+        WM_DRAWITEM => {
+            let dis = lparam as *const DRAWITEMSTRUCT;
+            if dis.is_null() {
+                return DefWindowProcW(hwnd, msg, wparam, lparam);
+            }
+            let id = unsafe { (*dis).CtlID as u16 };
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+            if ptr != 0 {
+                unsafe {
+                    Rc::increment_strong_count(ptr as *const RefCell<FrameData>);
+                }
+                let rc = unsafe { Rc::from_raw(ptr as *const RefCell<FrameData>) };
+                let req = DrawItemRequest {
+                    index: unsafe { (*dis).itemID },
+                    rect: crate::core::geometry::Rect::new(
+                        unsafe { (*dis).rcItem.left },
+                        unsafe { (*dis).rcItem.top },
+                        (unsafe { (*dis).rcItem.right - (*dis).rcItem.left }) as u32,
+                        (unsafe { (*dis).rcItem.bottom - (*dis).rcItem.top }) as u32,
+                    ),
+                    hdc: unsafe { (*dis).hDC as isize },
+                    selected: (unsafe { (*dis).itemState } & 1) != 0,
+                };
+                let handler = rc.borrow_mut().draw_item_handlers.remove(&id);
+                if let Some(mut h) = handler {
+                    h(req);
+                    rc.borrow_mut().draw_item_handlers.insert(id, h);
+                }
+                drop(rc);
+            }
+            1
+        }
+        WM_MEASUREITEM => {
+            let mis = lparam as *mut MEASUREITEMSTRUCT;
+            if mis.is_null() {
+                return DefWindowProcW(hwnd, msg, wparam, lparam);
+            }
+            let id = unsafe { (*mis).CtlID as u16 };
+            let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+            if ptr != 0 {
+                unsafe {
+                    Rc::increment_strong_count(ptr as *const RefCell<FrameData>);
+                }
+                let rc = unsafe { Rc::from_raw(ptr as *const RefCell<FrameData>) };
+                let req = MeasureItemRequest {
+                    index: unsafe { (*mis).itemID },
+                };
+                let mut height = 24u32;
+                if let Some(mut h) = rc.borrow_mut().measure_item_handlers.remove(&id) {
+                    height = h(req);
+                    rc.borrow_mut().measure_item_handlers.insert(id, h);
+                }
+                unsafe {
+                    (*mis).itemHeight = height;
+                }
+                drop(rc);
+            }
+            1
         }
         WM_COMMAND => {
             let id = (wparam & 0xFFFF) as u16;
@@ -1943,7 +2369,7 @@ unsafe extern "system" fn frame_wnd_proc(
             // callback may re-enter the frame, e.g. to update a
             // status bar; holding the borrow would panic on the
             // re-entry).
-            let scroll_hwnd = lparam as HWND;
+            let scroll_key = lparam;
             let code = (wparam & 0xFFFF) as u16;
             let pos = ((wparam >> 16) & 0xFFFF) as i32;
             let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
@@ -1955,10 +2381,10 @@ unsafe extern "system" fn frame_wnd_proc(
                     Rc::increment_strong_count(ptr as *const RefCell<FrameData>);
                 }
                 let rc = unsafe { Rc::from_raw(ptr as *const RefCell<FrameData>) };
-                let handler = rc.borrow_mut().scroll_handlers.remove(&scroll_hwnd);
+                let handler = rc.borrow_mut().scroll_handlers.remove(&scroll_key);
                 if let Some(mut h) = handler {
                     h(code, pos);
-                    rc.borrow_mut().scroll_handlers.insert(scroll_hwnd, h);
+                    rc.borrow_mut().scroll_handlers.insert(scroll_key, h);
                 }
                 drop(rc);
             }
@@ -2535,7 +2961,7 @@ unsafe extern "system" fn frame_wnd_proc(
             DefWindowProcW(hwnd, msg, wparam, lparam)
         }
         WM_TIMER => {
-            let timer_id = wparam as usize;
+            let timer_id = wparam;
             let ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
             if ptr != 0 {
                 unsafe {
@@ -3555,5 +3981,22 @@ mod tests {
         g.set_drop_files_callback(|_| {});
         assert!(g.inner.borrow().drop_files_handler.is_some());
         assert!(g.inner.borrow().ole_drop_target.is_some());
+    }
+
+    /// Stub `Frame` + `Button` command wiring on non-Windows backends.
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn stub_frame_button_dispatches_command() {
+        use crate::Button;
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let frame = Frame::builder().with_title("stub").build();
+        let btn = Button::new(&frame, "OK");
+        let clicked = Rc::new(Cell::new(false));
+        let clicked_cb = Rc::clone(&clicked);
+        btn.on_click(&frame, move || clicked_cb.set(true));
+        assert!(frame.dispatch_command(btn.id()));
+        assert!(clicked.get());
     }
 }

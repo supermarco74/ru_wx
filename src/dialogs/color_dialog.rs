@@ -201,19 +201,9 @@ impl ColorDialog {
         #[cfg(not(target_os = "windows"))]
         {
             let _ = self;
-            // Silence the unused warning on the `title` field.
-            let _ = to_wide(&self.title);
             None
         }
     }
-}
-
-// Mark `to_wide` as used on non-Windows (we silence the unused
-// import via the `_ = to_wide(...)` line in the cross-platform
-// branch).
-#[allow(dead_code)]
-fn _unused_to_wide_marker(s: &str) -> Vec<u16> {
-    crate::platform::win32::to_wide(s)
 }
 
 #[cfg(test)]

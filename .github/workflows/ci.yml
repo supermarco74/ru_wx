@@ -10,12 +10,9 @@ name: CI
 # to guarantee that the stubs compile and the headless test
 # layer (`cargo test --lib`) runs to completion.
 #
-# The Windows job additionally embeds the Common Controls v6
-# manifest into the example .exe files via the
-# `build_with_manifest.ps1` wrapper, because the library's
-# `build.rs` emits `cargo:rustc-link-lib` for the static `app.lib`
-# that is NOT forwarded to downstream `[[example]]` targets
-# (see `vecchie_elaborazioni/upgrade.md` Upgrade 6 for the long explanation).
+# The Windows job additionally verifies that the library's `build.rs`
+# embeds the Common Controls v6 manifest into example binaries via
+# `embed-resource` (linked automatically — no post-processing step).
 #
 # This CI runs:
 #   1. `cargo build` and `cargo build --release --examples`;
@@ -28,9 +25,8 @@ name: CI
 #      (default clippy group; pedantic is tracked separately
 #      in `clippy_text.txt` and not enforced in CI);
 #   7. `cargo fmt --all -- --check`;
-#   8. On Windows: `build_with_manifest.ps1 -p ru_wx --example
-#      input_controls_demo --release` and verifies the .exe
-#      actually launches (no `0xc0000142`).
+#   8. On Windows: build `input_controls_demo` in release and verify
+#      the embedded manifest + smoke-launch (no `0xc0000142`).
 #
 # The example .exe is NOT launched on Linux/macOS: the runner is
 # headless and there is no equivalent of the Windows Manifest
@@ -134,9 +130,8 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job 2: Windows-only manifest-embedding smoke test.
   #
-  # Verifies that the `build_with_manifest.ps1` wrapper actually
-  # embeds the Common Controls v6 manifest into the example .exe
-  # and that the resulting .exe launches without 0xc0000142.
+  # Verifies that `build.rs` embeds the Common Controls v6 manifest
+  # into the example binary and that the .exe launches without 0xc0000142.
   # ---------------------------------------------------------------------------
   smoke_launch_windows:
     name: smoke launch example (Windows / mt.exe)
@@ -151,15 +146,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      # The `build_with_manifest.ps1` script locates mt.exe from
-      # the Windows 10/11 SDK that is pre-installed on the
-      # `windows-latest` runner.
-      - name: Build example with manifest embedding
+      - name: Build example (release, manifest via build.rs)
         shell: pwsh
-        run: |
-          .\build_with_manifest.ps1 -p ru_wx `
-            --example input_controls_demo `
-            --release
+        run: cargo build -p ru_wx --example input_controls_demo --release
 
       # Verify the .exe actually contains the manifest. This is
       # the same ASCII-search verification that ships in

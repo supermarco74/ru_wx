@@ -10,7 +10,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Clipboard")
         .with_size(480, 240)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Copy / paste via wxClipboard.", 0);
     let input = TextCtrl::new(&frame, "Hello clipboard");

@@ -10,12 +10,18 @@ use std::rc::Rc;
 
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
-use crate::window::frame::Frame;
+use crate::window::frame::{DrawItemRequest, Frame, MeasureItemRequest};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::Graphics::Gdi::{
+    CreateSolidBrush, DeleteObject, DrawTextW, FillRect, GetSysColor, SetBkColor, SetTextColor,
+    DT_END_ELLIPSIS, DT_LEFT, DT_SINGLELINE, DT_VCENTER,
+};
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
@@ -25,6 +31,17 @@ const CBS_OWNERDRAWFIXED: u32 = 0x0010;
 const CBS_DROPDOWNLIST: u32 = 0x0003;
 #[cfg(target_os = "windows")]
 const CB_ADDSTRING: u32 = 0x0143;
+#[cfg(target_os = "windows")]
+const COLOR_HIGHLIGHT: i32 = 13;
+#[cfg(target_os = "windows")]
+const COLOR_HIGHLIGHTTEXT: i32 = 14;
+#[cfg(target_os = "windows")]
+const COLOR_WINDOW: i32 = 5;
+#[cfg(target_os = "windows")]
+const COLOR_WINDOWTEXT: i32 = 8;
+
+/// Optional custom paint callback for [`OwnerDrawnComboBox`].
+type OwnerDrawFn = Box<dyn FnMut(&DrawItemRequest, &str)>;
 
 struct OwnerDrawnComboBoxInner {
     #[cfg(target_os = "windows")]
@@ -33,6 +50,7 @@ struct OwnerDrawnComboBoxInner {
     rect: Rect,
     items: Vec<String>,
     visible: bool,
+    custom_draw: RefCell<Option<OwnerDrawFn>>,
 }
 
 #[derive(Clone)]
@@ -74,22 +92,61 @@ impl OwnerDrawnComboBox {
                 rect: Rect::new(0, 0, 160, 24),
                 items: Vec::new(),
                 visible: true,
+                custom_draw: RefCell::new(None),
             })),
         }
     }
 
     pub fn append(&self, label: &str) {
-        self.inner.borrow_mut().items.push(label.to_string());
+        let index = {
+            let mut inner = self.inner.borrow_mut();
+            inner.items.push(label.to_string());
+            inner.items.len() - 1
+        };
         #[cfg(target_os = "windows")]
         unsafe {
             let hwnd = self.inner.borrow().hwnd;
-            let wide = to_wide(label);
-            SendMessageW(hwnd, CB_ADDSTRING, 0, wide.as_ptr() as isize);
+            SendMessageW(hwnd, CB_ADDSTRING, 0, index as isize);
         }
+        let _ = index;
     }
 
     pub fn id(&self) -> u16 {
         self.inner.borrow().id
+    }
+
+    /// Register optional custom painting; default GDI text drawing is used otherwise.
+    pub fn on_draw_item<F: FnMut(&DrawItemRequest, &str) + 'static>(&self, f: F) {
+        *self.inner.borrow().custom_draw.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Wire `WM_DRAWITEM` / `WM_MEASUREITEM` handlers on `frame`.
+    pub fn attach_to_frame(&self, frame: &Frame) {
+        let inner = self.inner.clone();
+        let id = self.id();
+        frame.register_measure_item_handler(
+            id,
+            Box::new(|_req: MeasureItemRequest| 22),
+        );
+        frame.register_draw_item_handler(
+            id,
+            Box::new(move |req: DrawItemRequest| {
+                let label = inner
+                    .borrow()
+                    .items
+                    .get(req.index as usize)
+                    .cloned()
+                    .unwrap_or_default();
+                if let Some(ref mut custom) = *inner.borrow().custom_draw.borrow_mut() {
+                    custom(&req, &label);
+                    return;
+                }
+                #[cfg(target_os = "windows")]
+                default_draw_item(&req, &label);
+                #[cfg(not(target_os = "windows"))]
+                let _ = (&req, label);
+            }),
+        );
     }
 
     pub fn on_selection_change(&self, frame: &Frame, mut f: impl FnMut(usize) + 'static) {
@@ -98,6 +155,44 @@ impl OwnerDrawnComboBox {
 
     pub fn as_widget_ref(&self) -> WidgetRef {
         self.inner.clone()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn default_draw_item(req: &DrawItemRequest, label: &str) {
+    use crate::platform::win32::to_wide;
+    // SAFETY: GDI drawing in the owner-draw item HDC provided by the framework.
+    unsafe {
+        let hdc = req.hdc as HDC;
+        let bg = if req.selected {
+            GetSysColor(COLOR_HIGHLIGHT) as u32
+        } else {
+            GetSysColor(COLOR_WINDOW) as u32
+        };
+        let fg = if req.selected {
+            GetSysColor(COLOR_HIGHLIGHTTEXT) as u32
+        } else {
+            GetSysColor(COLOR_WINDOWTEXT) as u32
+        };
+        let brush = CreateSolidBrush(bg);
+        let mut rc = RECT {
+            left: req.rect.x,
+            top: req.rect.y,
+            right: req.rect.x + req.rect.width as i32,
+            bottom: req.rect.y + req.rect.height as i32,
+        };
+        FillRect(hdc, &rc, brush);
+        DeleteObject(brush);
+        SetBkColor(hdc, bg);
+        SetTextColor(hdc, fg);
+        let mut wide = to_wide(label);
+        DrawTextW(
+            hdc,
+            wide.as_mut_ptr(),
+            -1,
+            &mut rc,
+            DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS,
+        );
     }
 }
 
@@ -160,3 +255,6 @@ impl Widget for OwnerDrawnComboBoxInner {
 
     fn set_enabled(&mut self, _enabled: bool) {}
 }
+
+#[cfg(target_os = "windows")]
+use windows_sys::Win32::Graphics::Gdi::HDC;

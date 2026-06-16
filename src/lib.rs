@@ -1,12 +1,15 @@
 ﻿//! Nome modello scrittore: Composer
-//! Sito di riferimento: https://www.easytaskflow.app
+//! Sito di riferimento: https://ru_wx.easytaskflow.app/
 //!
 //! ru_wx - A cross-platform native GUI library for Rust
 //!
+//! Project site: <https://ru_wx.easytaskflow.app/>
+//! Source repository: <https://github.com/supermarco74/ru_wx>
+//!
 //! This library provides a wxWidgets-like API using native platform controls:
 //! - Windows: Win32 API (HWND-based controls)
-//! - macOS: AppKit (planned)
-//! - Linux: GTK (planned)
+//! - macOS: AppKit stub backend (placeholder; native bindings planned)
+//! - Linux: GTK stub backend (placeholder; native bindings planned)
 //!
 //! # Example
 //! ```no_run
@@ -192,7 +195,8 @@ pub use crate::containers::sizer_item::SizerItem;
 pub use crate::containers::static_box_sizer::StaticBoxSizer;
 pub use crate::containers::splitter_window::{SashEvent, SplitterOrientation, SplitterWindow};
 pub use crate::containers::data_view::{
-    DataViewColumn, DataViewCtrl, DataViewListCtrl, DataViewRenderer, DataViewTreeCtrl, TextRenderer,
+    DataViewColumn, DataViewCtrl, DataViewListCtrl, DataViewModel, DataViewRenderer,
+    DataViewTreeCtrl, InMemoryDataViewModel, TextRenderer,
 };
 pub use crate::containers::data_view_bitmap_renderer::DataViewBitmapRenderer;
 pub use crate::containers::data_view_choice_renderer::DataViewChoiceRenderer;
@@ -366,9 +370,7 @@ pub use crate::core::validator::{
 };
 pub use crate::core::timer::Timer;
 pub use crate::core::tooltip::ToolTip;
-pub use crate::core::widget::{Widget, WidgetRef};
-#[cfg(target_os = "windows")]
-pub use crate::core::widget::Window;
+pub use crate::core::widget::{Widget, WidgetRef, Window};
 pub use crate::dc::art_provider::{ArtClient, ArtId, ArtProvider};
 pub use crate::dc::auto_buffered_paint_dc::AutoBufferedPaintDC;
 pub use crate::dc::buffered_dc::BufferedDC;
@@ -385,6 +387,7 @@ pub use crate::dc::region::Region;
 pub use crate::dc::gl_canvas::GLCanvas;
 #[cfg(target_os = "windows")]
 pub use crate::dc::gl_canvas::gl11;
+#[cfg(target_os = "windows")]
 pub use crate::dc::icon::svg_bytes_to_hicon;
 pub use crate::dc::image::{Image, ImageError, Rgba};
 pub use crate::dc::image_list::ImageList;
@@ -485,6 +488,7 @@ pub use crate::printing::preview_control_bar::PreviewControlBar;
 pub use crate::printing::preview_frame::PreviewFrame;
 pub use crate::printing::printer_dc::PrinterDC;
 pub use crate::printing::{PageSetupDialog, PrintDialog, Printer, Printout, PrintPreview};
+pub use crate::platform::stub_backend::StubBackend;
 pub use crate::platform::appkit_stubs::{
     AppKitApp, AppKitButton, AppKitFrame, AppKitPanel, AppKitStaticText,
 };

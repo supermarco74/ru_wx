@@ -15,7 +15,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — round 22")
         .with_size(520, 280)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Click the hyperlink.", 0);
     let _hint = StaticText::new(&frame, "Picker events / streams / ItemContainer:");

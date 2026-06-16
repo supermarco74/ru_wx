@@ -38,7 +38,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — SearchCtrl + ListBox filter")
         .with_size(500, 460)
-        .with_modern_style().build();
+        .build();
 
     // Field 0 = messages / selection, field 1 = match counter.
     let status = StatusBar::new(&frame, 2);

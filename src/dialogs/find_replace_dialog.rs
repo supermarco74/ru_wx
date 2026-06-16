@@ -135,6 +135,18 @@ struct FindReplaceDialogInner {
     whole_word: bool,
 }
 
+#[cfg(not(target_os = "windows"))]
+struct FindReplaceDialogInner {
+    is_replace: bool,
+    closed: bool,
+    events: VecDeque<FindReplaceEvent>,
+    search_down: bool,
+    match_case: bool,
+    whole_word: bool,
+    find_buf: [u16; 256],
+    replace_buf: [u16; 256],
+}
+
 // ── Public type ────────────────────────────────────────────────────────
 
 /// A modeless find / replace dialog.
@@ -161,7 +173,7 @@ impl FindReplaceDialog {
             }
             #[cfg(not(target_os = "windows"))]
             {
-                std::ptr::null_mut()
+                std::ptr::null_mut::<core::ffi::c_void>()
             }
         };
 
@@ -181,17 +193,14 @@ impl FindReplaceDialog {
         };
         #[cfg(not(target_os = "windows"))]
         let inner = FindReplaceDialogInner {
-            dialog_hwnd: std::ptr::null_mut(),
-            helper_hwnd: std::ptr::null_mut(),
-            fr: Box::new(unsafe { std::mem::zeroed() }),
-            find_buf: [0u16; 256],
-            replace_buf: [0u16; 256],
             is_replace,
             closed: true,
             events: VecDeque::new(),
             search_down: true,
             match_case: false,
             whole_word: false,
+            find_buf: [0u16; 256],
+            replace_buf: [0u16; 256],
         };
 
         // Stash the parent HWND in a field that exists on all
@@ -217,35 +226,41 @@ impl FindReplaceDialog {
     /// Pre-populate the "Find what" field.
     pub fn set_find_text(&mut self, text: &str) {
         let mut inner = self.inner.borrow_mut();
-        // Write the Rust string into the wide buffer (truncating
-        // to fit, leaving room for the NUL terminator).
-        let wide = to_wide(text);
-        for (i, &c) in wide.iter().enumerate() {
-            if i >= inner.find_buf.len() - 1 {
-                break;
+        #[cfg(target_os = "windows")]
+        {
+            use crate::platform::to_wide;
+            let wide = to_wide(text);
+            for (i, &c) in wide.iter().enumerate() {
+                if i >= inner.find_buf.len() - 1 {
+                    break;
+                }
+                inner.find_buf[i] = c;
             }
-            inner.find_buf[i] = c;
+            // NUL terminator (the buffer is zero-initialised, so the
+            // first unused slot is already 0 unless the previous
+            // value was longer — in that case, force a NUL at the
+            // end of the copy).
+            let last = wide.len().min(inner.find_buf.len() - 1);
+            inner.find_buf[last] = 0;
+            // If the FINDREPLACEW struct has been initialised (i.e.
+            // the dialog has been shown at least once), update the
+            // live buffer pointer too — `FindTextW` will not
+            // re-read `lpstrFindWhat` after creation, so we must
+            // write the new value into the buffer the dialog is
+            // actually reading from.
+            if !inner.fr.lpstrFindWhat.is_null() {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        inner.find_buf.as_ptr(),
+                        inner.fr.lpstrFindWhat,
+                        inner.find_buf.len(),
+                    );
+                }
+            }
         }
-        // NUL terminator (the buffer is zero-initialised, so the
-        // first unused slot is already 0 unless the previous
-        // value was longer — in that case, force a NUL at the
-        // end of the copy).
-        let last = wide.len().min(inner.find_buf.len() - 1);
-        inner.find_buf[last] = 0;
-        // If the FINDREPLACEW struct has been initialised (i.e.
-        // the dialog has been shown at least once), update the
-        // live buffer pointer too — `FindTextW` will not
-        // re-read `lpstrFindWhat` after creation, so we must
-        // write the new value into the buffer the dialog is
-        // actually reading from.
-        if !inner.fr.lpstrFindWhat.is_null() {
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    inner.find_buf.as_ptr(),
-                    inner.fr.lpstrFindWhat,
-                    inner.find_buf.len(),
-                );
-            }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = text;
         }
     }
 
@@ -253,23 +268,31 @@ impl FindReplaceDialog {
     /// Find-only dialogs.
     pub fn set_replace_text(&mut self, text: &str) {
         let mut inner = self.inner.borrow_mut();
-        let wide = to_wide(text);
-        for (i, &c) in wide.iter().enumerate() {
-            if i >= inner.replace_buf.len() - 1 {
-                break;
+        #[cfg(target_os = "windows")]
+        {
+            use crate::platform::to_wide;
+            let wide = to_wide(text);
+            for (i, &c) in wide.iter().enumerate() {
+                if i >= inner.replace_buf.len() - 1 {
+                    break;
+                }
+                inner.replace_buf[i] = c;
             }
-            inner.replace_buf[i] = c;
+            let last = wide.len().min(inner.replace_buf.len() - 1);
+            inner.replace_buf[last] = 0;
+            if !inner.fr.lpstrReplaceWith.is_null() {
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        inner.replace_buf.as_ptr(),
+                        inner.fr.lpstrReplaceWith,
+                        inner.replace_buf.len(),
+                    );
+                }
+            }
         }
-        let last = wide.len().min(inner.replace_buf.len() - 1);
-        inner.replace_buf[last] = 0;
-        if !inner.fr.lpstrReplaceWith.is_null() {
-            unsafe {
-                std::ptr::copy_nonoverlapping(
-                    inner.replace_buf.as_ptr(),
-                    inner.fr.lpstrReplaceWith,
-                    inner.replace_buf.len(),
-                );
-            }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = text;
         }
     }
 
@@ -472,68 +495,6 @@ impl FindReplaceDialog {
     }
 }
 
-#[cfg(target_os = "windows")]
-impl FindReplaceDialogInner {
-    /// Recreate the Rc<RefCell<…>> we own so that
-    /// `ensure_helper_window` can stash a raw pointer to it.
-    /// We do this by storing a `Weak` to ourselves inside the
-    /// inner struct — that way the helper can always find the
-    /// dialog instance.
-    fn self_rc(&self) -> Rc<RefCell<FindReplaceDialogInner>> {
-        // The helper WndProc bypasses this and works with a
-        // raw pointer; this method is a placeholder for the
-        // Rust-side accessor. The raw pointer is set in
-        // `ensure_helper_window` directly from the outer Rc.
-        Rc::new(RefCell::new(FindReplaceDialogInner {
-            dialog_hwnd: self.dialog_hwnd,
-            helper_hwnd: self.helper_hwnd,
-            fr: Box::new(unsafe { std::mem::zeroed() }),
-            find_buf: self.find_buf,
-            replace_buf: self.replace_buf,
-            is_replace: self.is_replace,
-            closed: self.closed,
-            events: VecDeque::new(),
-            search_down: self.search_down,
-            match_case: self.match_case,
-            whole_word: self.whole_word,
-        }))
-    }
-}
-
-// Wait — the helper WndProc needs the *outer* `FindReplaceDialog`'s
-// `Rc<RefCell<…>>`, not a freshly-constructed one. We use a
-// different approach: store a raw pointer to the inner cell that
-// the outer `FindReplaceDialog` constructs at creation time. The
-// `ensure_helper_window` method consumes a clone of the Rc and
-// stores the raw pointer via `Rc::into_raw`.
-
-// The simplest way to make the helper WndProc see the outer
-// dialog is to construct the Rc inside `new()` (so the raw
-// pointer is available before `ensure_helper_window` is
-// called). The `self_rc` helper above is not actually used —
-// instead `ensure_helper_window` works on the cell that owns
-// the helper HWND. We achieve this by reordering the
-// construction in `new()` and dropping the `self_rc` helper:
-
-#[cfg(target_os = "windows")]
-impl FindReplaceDialog {
-    /// Internal constructor used by `new` to wire the raw
-    /// pointer the helper WndProc will dereference. The outer
-    /// `new` passes a clone of its own `Rc<RefCell<…>>` to this
-    /// method after creating the inner.
-    #[allow(dead_code)]
-    fn wire_helper_pointer(&self, outer_rc: Rc<RefCell<FindReplaceDialogInner>>) {
-        let mut inner = self.inner.borrow_mut();
-        let _ = &mut *inner;
-        let raw = Rc::into_raw(outer_rc);
-        // SAFETY: helper_hwnd is the live message-only window
-        // created in `ensure_helper_window`.
-        unsafe {
-            SetWindowLongPtrW(inner.helper_hwnd, GWLP_USERDATA, raw as isize);
-        }
-    }
-}
-
 // ── Helper WndProc ─────────────────────────────────────────────────────
 //
 // The Win32 find/replace common dialog sends `WM_FINDREPLACE`
@@ -678,11 +639,6 @@ impl Drop for FindReplaceDialog {
             }
         }
     }
-}
-
-#[allow(dead_code)]
-fn _unused_marker(_s: &str) -> Vec<u16> {
-    crate::platform::win32::to_wide(_s)
 }
 
 #[cfg(test)]

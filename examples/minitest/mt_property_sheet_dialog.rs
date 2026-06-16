@@ -35,7 +35,7 @@ fn main() {
     let launcher = Frame::builder()
         .with_title("Minitest — PropertySheetDialog")
         .with_size(440, 220)
-        .with_modern_style().build();
+        .build();
     let status = StatusBar::new(&launcher, 1);
     status.set_status_text("Click 'Open settings' to start the demo.", 0);
 

@@ -18,8 +18,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -407,22 +408,29 @@ impl DatePickerCtrl {
         frame.register_dtn_handler(
             id,
             Box::new(move |lparam| {
-                let nm_ptr = lparam as *const NmDateTimeChange;
-                if nm_ptr.is_null() {
-                    return;
+                #[cfg(target_os = "windows")]
+                {
+                    let nm_ptr = lparam as *const NmDateTimeChange;
+                    if nm_ptr.is_null() {
+                        return;
+                    }
+                    // SAFETY: the lparam is the pointer the control
+                    // handed us in the NMDATETIMECHANGE notification;
+                    // the pointer stays valid for the duration of the
+                    // WM_NOTIFY dispatch (the frame copies out the
+                    // fields it needs before returning from the
+                    // wndproc). Reading the dw_flags + st fields is
+                    // a plain struct read; no mutable aliasing can
+                    // occur because the notification is delivered
+                    // synchronously on this thread.
+                    let nm = unsafe { *nm_ptr };
+                    let new_value = nm.to_option();
+                    callback(new_value);
                 }
-                // SAFETY: the lparam is the pointer the control
-                // handed us in the NMDATETIMECHANGE notification;
-                // the pointer stays valid for the duration of the
-                // WM_NOTIFY dispatch (the frame copies out the
-                // fields it needs before returning from the
-                // wndproc). Reading the dw_flags + st fields is
-                // a plain struct read; no mutable aliasing can
-                // occur because the notification is delivered
-                // synchronously on this thread.
-                let nm = unsafe { *nm_ptr };
-                let new_value = nm.to_option();
-                callback(new_value);
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let _ = lparam;
+                }
             }),
         );
     }

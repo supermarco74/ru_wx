@@ -40,8 +40,9 @@ use std::rc::Rc;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 #[cfg(target_os = "windows")]

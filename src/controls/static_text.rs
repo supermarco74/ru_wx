@@ -15,7 +15,8 @@ use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, read_window_text, to_wide};
+use crate::platform::win32::{read_window_text, to_wide};
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -24,6 +25,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 struct StaticTextInner {
     #[cfg(target_os = "windows")]
     hwnd: HWND,
+    #[cfg(not(target_os = "windows"))]
+    stub_handle: isize,
     label: String,
     rect: Rect,
     visible: bool,
@@ -66,6 +69,8 @@ impl StaticText {
             inner: Rc::new(RefCell::new(StaticTextInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 label: text.to_string(),
                 rect: Rect::new(0, 0, 200, 20),
                 visible: true,
@@ -130,6 +135,10 @@ impl Widget for StaticTextInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.stub_handle
         }
     }
 

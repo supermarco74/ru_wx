@@ -80,7 +80,34 @@ impl PrintDialog {
     }
 
     pub fn show_modal(&mut self) -> bool {
-        true
+        #[cfg(target_os = "windows")]
+        {
+            use std::mem;
+            use windows_sys::Win32::UI::Controls::Dialogs::{
+                PrintDlgW, PRINTDLGW, PD_ALLPAGES, PD_RETURNDC,
+            };
+
+            // SAFETY: standard Win32 print dialog.
+            unsafe {
+                let mut pd: PRINTDLGW = mem::zeroed();
+                pd.lStructSize = mem::size_of::<PRINTDLGW>() as u32;
+                pd.Flags = PD_ALLPAGES | PD_RETURNDC;
+                pd.nFromPage = self.from_page as u16;
+                pd.nToPage = self.to_page as u16;
+                pd.nCopies = self.copies as u16;
+                if PrintDlgW(&mut pd) != 0 {
+                    self.from_page = pd.nFromPage as u32;
+                    self.to_page = pd.nToPage as u32;
+                    self.copies = pd.nCopies as u32;
+                    return true;
+                }
+                false
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            true
+        }
     }
 }
 

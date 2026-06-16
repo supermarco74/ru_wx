@@ -43,10 +43,11 @@ use crate::window::top_level_window::WindowCornerPreference;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Graphics::Dwm::{
     DwmGetWindowAttribute, DwmSetWindowAttribute, DWMSBT_AUTO, DWMSBT_MAINWINDOW, DWMSBT_NONE,
-    DWMSBT_TABBEDWINDOW, DWMSBT_TRANSIENTWINDOW, DWMWA_SYSTEMBACKDROP_TYPE,
-    DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWM_SYSTEMBACKDROP_TYPE,
-    DWM_WINDOW_CORNER_PREFERENCE,
+    DWMSBT_TABBEDWINDOW, DWMSBT_TRANSIENTWINDOW, DWMWA_BORDER_COLOR, DWMWA_CAPTION_COLOR,
+    DWMWA_SYSTEMBACKDROP_TYPE, DWMWA_TEXT_COLOR, DWMWA_USE_IMMERSIVE_DARK_MODE,
+    DWMWA_WINDOW_CORNER_PREFERENCE, DWM_SYSTEMBACKDROP_TYPE, DWM_WINDOW_CORNER_PREFERENCE,
 };
+use crate::core::geometry::Colour;
 
 /// The Windows 11 backdrop material drawn behind the client area
 /// (`DWMWA_SYSTEMBACKDROP_TYPE`). Values mirror the Win32
@@ -182,11 +183,116 @@ pub(crate) fn corner_preference_hwnd(
 /// accepted.
 #[cfg(target_os = "windows")]
 pub(crate) fn apply_modern_style_hwnd(hwnd: windows_sys::Win32::Foundation::HWND) -> bool {
+    apply_modern_style_with_backdrop_hwnd(hwnd, BackdropType::Mica)
+}
+
+/// Apply dark title bar + chosen backdrop + default corners.
+#[cfg(target_os = "windows")]
+pub(crate) fn apply_modern_style_with_backdrop_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    backdrop: BackdropType,
+) -> bool {
     let dark = crate::core::appearance::Appearance::System.resolve();
     let ok = set_dark_title_bar_hwnd(hwnd, dark);
-    set_backdrop_hwnd(hwnd, BackdropType::Mica);
+    set_backdrop_hwnd(hwnd, backdrop);
     set_corner_preference_hwnd(hwnd, WindowCornerPreference::Default);
     ok
+}
+
+#[cfg(target_os = "windows")]
+fn colorref_to_colour(cr: u32) -> Colour {
+    Colour::new(
+        (cr & 0xFF) as u8,
+        ((cr >> 8) & 0xFF) as u8,
+        ((cr >> 16) & 0xFF) as u8,
+        255,
+    )
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn get_dwm_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    attr: i32,
+) -> Option<Colour> {
+    let mut value: u32 = 0;
+    // SAFETY: live HWND; DWM writes a COLORREF-sized value.
+    let hr = unsafe {
+        DwmGetWindowAttribute(
+            hwnd,
+            attr as u32,
+            &mut value as *mut _ as *mut _,
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+    if hr >= 0 {
+        Some(colorref_to_colour(value))
+    } else {
+        None
+    }
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn set_dwm_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    attr: i32,
+    colour: Colour,
+) -> bool {
+    let value = colour.to_colorref();
+    // SAFETY: live HWND; DWM reads a COLORREF once.
+    let hr = unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            attr as u32,
+            &value as *const _ as *const _,
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+    hr >= 0
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn border_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+) -> Option<Colour> {
+    get_dwm_color_hwnd(hwnd, DWMWA_BORDER_COLOR)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn set_border_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    colour: Colour,
+) -> bool {
+    set_dwm_color_hwnd(hwnd, DWMWA_BORDER_COLOR, colour)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn caption_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+) -> Option<Colour> {
+    get_dwm_color_hwnd(hwnd, DWMWA_CAPTION_COLOR)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn set_caption_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    colour: Colour,
+) -> bool {
+    set_dwm_color_hwnd(hwnd, DWMWA_CAPTION_COLOR, colour)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn caption_text_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+) -> Option<Colour> {
+    get_dwm_color_hwnd(hwnd, DWMWA_TEXT_COLOR)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) fn set_caption_text_color_hwnd(
+    hwnd: windows_sys::Win32::Foundation::HWND,
+    colour: Colour,
+) -> bool {
+    set_dwm_color_hwnd(hwnd, DWMWA_TEXT_COLOR, colour)
 }
 
 /// Implement the five modern-style methods on a window wrapper that
@@ -265,6 +371,77 @@ macro_rules! impl_modern_style {
             }
             #[cfg(not(target_os = "windows"))]
             pub fn apply_modern_style(&self) -> bool {
+                false
+            }
+
+            /// Like [`Self::apply_modern_style`] but uses Mica Alt
+            /// (tabbed-window backdrop).
+            #[cfg(target_os = "windows")]
+            pub fn apply_modern_tabbed_style(&self) -> bool {
+                apply_modern_style_with_backdrop_hwnd(self.$hwnd(), BackdropType::MicaAlt)
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn apply_modern_tabbed_style(&self) -> bool {
+                false
+            }
+
+            /// Read the DWM border / accent colour (`DWMWA_BORDER_COLOR`).
+            #[cfg(target_os = "windows")]
+            pub fn border_color(&self) -> Option<Colour> {
+                border_color_hwnd(self.$hwnd())
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn border_color(&self) -> Option<Colour> {
+                None
+            }
+
+            /// Set the DWM border / accent colour.
+            #[cfg(target_os = "windows")]
+            pub fn set_border_color(&self, colour: Colour) -> bool {
+                set_border_color_hwnd(self.$hwnd(), colour)
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn set_border_color(&self, _colour: Colour) -> bool {
+                false
+            }
+
+            /// Read the non-client caption background colour.
+            #[cfg(target_os = "windows")]
+            pub fn caption_color(&self) -> Option<Colour> {
+                caption_color_hwnd(self.$hwnd())
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn caption_color(&self) -> Option<Colour> {
+                None
+            }
+
+            /// Set the non-client caption background colour.
+            #[cfg(target_os = "windows")]
+            pub fn set_caption_color(&self, colour: Colour) -> bool {
+                set_caption_color_hwnd(self.$hwnd(), colour)
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn set_caption_color(&self, _colour: Colour) -> bool {
+                false
+            }
+
+            /// Read the non-client caption text colour.
+            #[cfg(target_os = "windows")]
+            pub fn caption_text_color(&self) -> Option<Colour> {
+                caption_text_color_hwnd(self.$hwnd())
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn caption_text_color(&self) -> Option<Colour> {
+                None
+            }
+
+            /// Set the non-client caption text colour.
+            #[cfg(target_os = "windows")]
+            pub fn set_caption_text_color(&self, colour: Colour) -> bool {
+                set_caption_text_color_hwnd(self.$hwnd(), colour)
+            }
+            #[cfg(not(target_os = "windows"))]
+            pub fn set_caption_text_color(&self, _colour: Colour) -> bool {
                 false
             }
         }

@@ -121,10 +121,49 @@ type WatcherEventHandler = std::cell::RefCell<
     Option<Box<dyn FnMut(&crate::core::filesystem_watcher_event::FileSystemWatcherEvent)>>,
 >;
 
-/// Directory change notifications (`wxFileSystemWatcher`) — stub.
+static WATCHER_REGISTRY: std::sync::Mutex<Vec<usize>> = std::sync::Mutex::new(Vec::new());
+
+fn register_watcher(ptr: usize) {
+    if ptr == 0 {
+        return;
+    }
+    let mut reg = WATCHER_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if !reg.contains(&ptr) {
+        reg.push(ptr);
+    }
+}
+
+fn unregister_watcher(ptr: usize) {
+    let mut reg = WATCHER_REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.retain(|&p| p != ptr);
+}
+
+/// Drain pending events on every watcher that called [`FileSystemWatcher::start`].
+/// Called automatically from the frame idle loop; may also be invoked manually.
+pub fn poll_registered_filesystem_watchers() {
+    let registry = WATCHER_REGISTRY
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    for ptr in registry {
+        if ptr != 0 {
+            // SAFETY: pointers are registered in `start` and cleared in `stop`/`Drop`.
+            unsafe {
+                let w = &*(ptr as *const FileSystemWatcher);
+                w.poll();
+            }
+        }
+    }
+}
+
+/// Directory change notifications (`wxFileSystemWatcher`).
 pub struct FileSystemWatcher {
     paths: Vec<PathBuf>,
     on_event: WatcherEventHandler,
+    pending: std::sync::Arc<std::sync::Mutex<Vec<crate::core::filesystem_watcher_event::FileSystemWatcherEvent>>>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    threads: std::cell::RefCell<Vec<std::thread::JoinHandle<()>>>,
+    running: std::cell::RefCell<bool>,
 }
 
 impl Default for FileSystemWatcher {
@@ -132,6 +171,10 @@ impl Default for FileSystemWatcher {
         Self {
             paths: Vec::new(),
             on_event: std::cell::RefCell::new(None),
+            pending: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+            stop: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            threads: std::cell::RefCell::new(Vec::new()),
+            running: std::cell::RefCell::new(false),
         }
     }
 }
@@ -165,7 +208,48 @@ impl FileSystemWatcher {
         *self.on_event.borrow_mut() = Some(Box::new(f));
     }
 
-    /// Simulate a change event (stub until native watcher backend).
+    /// Start native watcher threads for all registered paths.
+    pub fn start(&mut self) {
+        if *self.running.borrow() {
+            return;
+        }
+        self.stop.store(false, std::sync::atomic::Ordering::SeqCst);
+        for path in self.paths.clone() {
+            let pending = std::sync::Arc::clone(&self.pending);
+            let stop = std::sync::Arc::clone(&self.stop);
+            let handle = std::thread::spawn(move || watch_path(path, pending, stop));
+            self.threads.borrow_mut().push(handle);
+        }
+        *self.running.borrow_mut() = true;
+        register_watcher(self as *const _ as usize);
+    }
+
+    /// Stop watcher threads.
+    pub fn stop(&mut self) {
+        unregister_watcher(self as *const _ as usize);
+        self.stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        while let Some(handle) = self.threads.borrow_mut().pop() {
+            let _ = handle.join();
+        }
+        *self.running.borrow_mut() = false;
+    }
+
+    /// Drain pending native events and invoke the registered callback.
+    pub fn poll(&self) {
+        let events: Vec<_> = self
+            .pending
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .drain(..)
+            .collect();
+        for event in events {
+            if let Some(ref mut cb) = *self.on_event.borrow_mut() {
+                cb(&event);
+            }
+        }
+    }
+
+    /// Inject a change event (tests and manual notification).
     pub fn notify_change(
         &self,
         path: impl AsRef<Path>,
@@ -176,6 +260,140 @@ impl FileSystemWatcher {
                 path.as_ref().display().to_string(),
                 change_type,
             ));
+        }
+    }
+}
+
+impl Drop for FileSystemWatcher {
+    fn drop(&mut self) {
+        unregister_watcher(self as *const _ as usize);
+        if *self.running.borrow() {
+            self.stop();
+        }
+    }
+}
+
+use crate::core::filesystem_watcher_event::{FileSystemChangeType, FileSystemWatcherEvent};
+
+fn watch_path(
+    path: PathBuf,
+    pending: std::sync::Arc<std::sync::Mutex<Vec<FileSystemWatcherEvent>>>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
+    #[cfg(target_os = "windows")]
+    {
+        watch_path_windows(path, pending, stop);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        watch_path_poll(path, pending, stop);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn watch_path_windows(
+    path: PathBuf,
+    pending: std::sync::Arc<std::sync::Mutex<Vec<FileSystemWatcherEvent>>>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
+    use crate::platform::win32::to_wide;
+    use std::ffi::c_void;
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileW, ReadDirectoryChangesW, FILE_ACTION_ADDED, FILE_ACTION_MODIFIED,
+        FILE_ACTION_REMOVED, FILE_ACTION_RENAMED_NEW_NAME, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_LIST_DIRECTORY, FILE_NOTIFY_CHANGE_FILE_NAME, FILE_NOTIFY_CHANGE_LAST_WRITE,
+        FILE_NOTIFY_INFORMATION, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+        OPEN_EXISTING,
+    };
+
+    let wide = to_wide(&path.display().to_string());
+    // SAFETY: directory handle for ReadDirectoryChangesW.
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            FILE_LIST_DIRECTORY,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return;
+    }
+
+    let mut buffer = vec![0u8; 16 * 1024];
+    while !stop.load(std::sync::atomic::Ordering::SeqCst) {
+        let mut bytes_returned = 0u32;
+        let ok = unsafe {
+            ReadDirectoryChangesW(
+                handle,
+                buffer.as_mut_ptr() as *mut c_void,
+                buffer.len() as u32,
+                1,
+                FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
+                &mut bytes_returned,
+                std::ptr::null_mut(),
+                None,
+            )
+        };
+        if ok == 0 || bytes_returned == 0 {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            continue;
+        }
+        let mut offset = 0usize;
+        while offset < bytes_returned as usize {
+            let info = unsafe {
+                &*(buffer.as_ptr().add(offset) as *const FILE_NOTIFY_INFORMATION)
+            };
+            let name_len = (info.FileNameLength / 2) as usize;
+            let name_wide =
+                unsafe { std::slice::from_raw_parts(info.FileName.as_ptr(), name_len) };
+            let name = String::from_utf16_lossy(name_wide);
+            let full = path.join(name);
+            let change_type = match info.Action {
+                FILE_ACTION_ADDED | FILE_ACTION_RENAMED_NEW_NAME => FileSystemChangeType::Create,
+                FILE_ACTION_REMOVED => FileSystemChangeType::Delete,
+                FILE_ACTION_MODIFIED => FileSystemChangeType::Modify,
+                _ => FileSystemChangeType::Modify,
+            };
+            if let Ok(mut queue) = pending.lock() {
+                queue.push(FileSystemWatcherEvent::new(
+                    full.display().to_string(),
+                    change_type,
+                ));
+            }
+            if info.NextEntryOffset == 0 {
+                break;
+            }
+            offset += info.NextEntryOffset as usize;
+        }
+    }
+    unsafe {
+        CloseHandle(handle);
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn watch_path_poll(
+    path: PathBuf,
+    pending: std::sync::Arc<std::sync::Mutex<Vec<FileSystemWatcherEvent>>>,
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+) {
+    let mut last = fs::metadata(&path).and_then(|m| m.modified()).ok();
+    while !stop.load(std::sync::atomic::Ordering::SeqCst) {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let modified = fs::metadata(&path).and_then(|m| m.modified()).ok();
+        if modified != last {
+            last = modified;
+            if let Ok(mut queue) = pending.lock() {
+                queue.push(FileSystemWatcherEvent::new(
+                    path.display().to_string(),
+                    FileSystemChangeType::Modify,
+                ));
+            }
         }
     }
 }

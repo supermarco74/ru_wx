@@ -90,7 +90,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Animation / AnimationCtrl")
         .with_size(480, 420)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("idle", 0);

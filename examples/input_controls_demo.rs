@@ -47,7 +47,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("ru_wx — Input Controls Demo (Tabbed)")
         .with_size(680, 720)
-        .with_modern_style().build();
+        .build();
     step!("frame created, hwnd={:?}", frame.hwnd());
 
     // ── Build the tab notebook ───────────────────────────────────────────

@@ -31,7 +31,7 @@ impl Region {
 
     #[cfg(not(target_os = "windows"))]
     pub fn from_rect(_rect: Rect) -> Self {
-        Self
+        Self {}
     }
 
     #[cfg(target_os = "windows")]

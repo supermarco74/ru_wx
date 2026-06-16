@@ -56,7 +56,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — GLCanvas (OpenGL 1.1)")
         .with_size(520, 460)
-        .with_modern_style().build();
+        .build();
 
     // ── Status / info labels ──────────────────────────────────────
     let info = StaticText::new(

@@ -25,7 +25,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — BitmapComboBox")
         .with_size(460, 320)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Pick an action.", 0);

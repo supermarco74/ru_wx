@@ -9,9 +9,9 @@
 //! ```bash
 //! cargo run --example esempio2
 //! ```
-//! On Windows 11, build with the Common Controls v6 manifest (see
-//! `build_with_manifest.ps1`) for PerMonitorV2 scaling and modern
-//! control theming.
+//! On Windows 11 the library embeds Common Controls v6 + PerMonitorV2 via
+//! `build.rs` and applies Mica / dark title bar automatically on every
+//! `Frame::builder().build()`.
 
 #![windows_subsystem = "windows"]
 

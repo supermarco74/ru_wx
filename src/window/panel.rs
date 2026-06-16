@@ -37,6 +37,8 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 struct PanelInner {
     #[cfg(target_os = "windows")]
     hwnd: HWND,
+    #[cfg(not(target_os = "windows"))]
+    stub_handle: isize,
     rect: Rect,
     widgets: Vec<WidgetRef>,
     background_colour: Colour,
@@ -111,6 +113,8 @@ impl Panel {
             inner: Rc::new(RefCell::new(PanelInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 rect: Rect::new(0, 0, 200, 200),
                 widgets: Vec::new(),
                 background_colour: Colour::LIGHT_GREY,
@@ -165,6 +169,8 @@ impl Panel {
             inner: Rc::new(RefCell::new(PanelInner {
                 #[cfg(target_os = "windows")]
                 hwnd,
+                #[cfg(not(target_os = "windows"))]
+                stub_handle: crate::platform::stub_backend::alloc_widget_handle(),
                 rect: Rect::new(0, 0, 100, 100),
                 widgets: Vec::new(),
                 background_colour: Colour::LIGHT_GREY,
@@ -274,7 +280,7 @@ impl Panel {
     }
     #[cfg(not(target_os = "windows"))]
     pub fn hwnd(&self) -> isize {
-        0
+        self.inner.borrow().stub_handle
     }
 
     /// Move the panel to the given absolute position (in the parent's
@@ -347,6 +353,11 @@ impl Widget for PanelInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 
@@ -431,6 +442,13 @@ impl Widget for PanelInner {
 #[cfg(target_os = "windows")]
 impl Window for Panel {
     fn hwnd(&self) -> HWND {
+        self.hwnd()
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl Window for Panel {
+    fn hwnd(&self) -> isize {
         self.hwnd()
     }
 }

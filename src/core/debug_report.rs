@@ -3,9 +3,10 @@
 //!
 //! Debug / crash reporting (`wxStackWalker`, `wxDebugReport`, `wxCrashReport`).
 
+use std::backtrace::Backtrace;
 use std::fmt::Write as _;
 
-/// Stack trace placeholder (`wxStackWalker`).
+/// Stack trace capture (`wxStackWalker`).
 #[derive(Debug, Default)]
 pub struct StackWalker {
     frames: Vec<String>,
@@ -13,9 +14,14 @@ pub struct StackWalker {
 
 impl StackWalker {
     pub fn capture() -> Self {
-        Self {
-            frames: vec!["(stack walk stub)".into()],
-        }
+        let bt = Backtrace::force_capture();
+        let text = bt.to_string();
+        let frames: Vec<String> = if text.trim().is_empty() {
+            vec!["(no stack frames captured)".into()]
+        } else {
+            text.lines().map(|line| line.trim().to_string()).collect()
+        };
+        Self { frames }
     }
 
     pub fn frames(&self) -> &[String] {
@@ -63,8 +69,27 @@ impl CrashReport {
 
     pub fn generate() -> DebugReport {
         let mut report = DebugReport::new();
-        report.add_text("crash", "stub crash report");
+        report.add_text("crash", "crash report generated");
         report.add_stack();
         report
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stack_walker_returns_at_least_one_frame() {
+        let walker = StackWalker::capture();
+        assert!(!walker.frames().is_empty());
+    }
+
+    #[test]
+    fn debug_report_includes_stack_section() {
+        let report = CrashReport::generate();
+        let text = report.to_text();
+        assert!(text.contains("[crash]"));
+        assert!(text.contains("at "));
     }
 }

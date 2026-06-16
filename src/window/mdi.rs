@@ -196,6 +196,7 @@ impl MDIParentFrame {
                 hinstance,
                 &mut cc as *mut CLIENTCREATESTRUCT as *mut _,
             );
+            crate::platform::window_icon::apply_to_hwnd(parent, None);
             (parent, client)
         };
         Self {
@@ -549,12 +550,12 @@ unsafe fn register_mdi_client_class_once() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: crate::platform::window_icon::class_icons().0,
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_APPWORKSPACE + 1) as usize as HBRUSH,
             lpszMenuName: std::ptr::null(),
             lpszClassName: class_name.as_ptr(),
-            hIconSm: std::ptr::null_mut(),
+            hIconSm: crate::platform::window_icon::class_icons().1,
         };
         RegisterClassExW(&wc);
         // Also register the MDICHILD class. We could register it
@@ -568,12 +569,12 @@ unsafe fn register_mdi_client_class_once() {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: LoadIconW(std::ptr::null_mut(), IDI_APPLICATION),
+            hIcon: crate::platform::window_icon::class_icons().0,
             hCursor: LoadCursorW(std::ptr::null_mut(), IDC_ARROW),
             hbrBackground: (COLOR_WINDOW + 1) as usize as HBRUSH,
             lpszMenuName: std::ptr::null(),
             lpszClassName: child_class.as_ptr(),
-            hIconSm: std::ptr::null_mut(),
+            hIconSm: crate::platform::window_icon::class_icons().1,
         };
         RegisterClassExW(&child_wc);
     });

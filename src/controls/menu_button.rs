@@ -39,7 +39,10 @@ impl MenuButton {
         let fid = self.button.id();
         let f = frame.clone();
         frame.register_command_handler(fid, Box::new(move || {
+            #[cfg(target_os = "windows")]
             menu.borrow().popup_at_cursor(f.hwnd());
+            #[cfg(not(target_os = "windows"))]
+            let _ = (&menu, &f);
         }));
     }
 

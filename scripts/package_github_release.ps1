@@ -1,7 +1,7 @@
 # Packages release .exe artifacts for GitHub Releases.
 #
-# Expects a prior release build with embedded manifests, e.g.:
-#   .\build_with_manifest.ps1 --release --examples
+# Expects a prior release build, e.g.:
+#   cargo build --release --examples
 #
 # Usage:
 #   .\scripts\package_github_release.ps1 -Version 0.6.4
@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $Src = Join-Path $Root "target\release\examples"
 if (-not (Test-Path $Src)) {
-    Write-Error "Build output not found: $Src`nRun: .\build_with_manifest.ps1 --release --examples"
+    Write-Error "Build output not found: $Src`nRun: cargo build --release --examples"
 }
 
 $DistRoot = Join-Path $Root $OutputDir
@@ -57,13 +57,14 @@ Requirements: Windows 10/11 x64 (MSVC build, Common Controls v6 manifest embedde
 
 Folders
 -------
-examples_win32\   Demo applications (showcase_all, music_player, grid_demo, …)
+examples_win32\   Demo applications (showcase_all, cust_table_grid, grid_demo, music_player, …)
 minitest_win32\   Focused per-component minitests (mt_*)
 
 Run any .exe directly — no separate runtime install is required.
 
-Source : https://github.com/supermarco74/ru_wx
-License: GPL-3.0-or-later
+Source     : https://github.com/supermarco74/ru_wx
+Website    : https://ru_wx.easytaskflow.app/
+License    : GPL-3.0-or-later
 "@
 
 $readme | Out-File -FilePath (Join-Path $Staging "README.txt") -Encoding utf8

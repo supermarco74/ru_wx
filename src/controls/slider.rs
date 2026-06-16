@@ -19,8 +19,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -289,7 +290,7 @@ impl Slider {
                 inner.borrow_mut().value = v;
                 callback();
             };
-            frame.register_scroll_handler(hwnd, wrapper);
+            frame.register_scroll_handler(hwnd as isize, wrapper);
         }
         #[cfg(not(target_os = "windows"))]
         {
@@ -314,7 +315,7 @@ impl Drop for Slider {
         if Rc::strong_count(&self.inner) == 1 {
             let inner = self.inner.borrow();
             if let Some(ref frame) = inner.scroll_frame {
-                frame.unregister_scroll_handler(inner.hwnd);
+                frame.unregister_scroll_handler(inner.hwnd as isize);
             }
         }
     }

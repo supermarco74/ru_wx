@@ -36,7 +36,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — PropertyGrid")
         .with_size(480, 380)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Click on any value cell to edit it.", 0);

@@ -367,6 +367,16 @@ pub fn set_process_dpi_awareness(level: DpiAwareness) -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
+pub fn get_dpi_for_window(_hwnd: isize) -> Dpi {
+    get_system_dpi()
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn get_dpi_for_point(_x: i32, _y: i32) -> Dpi {
+    get_system_dpi()
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn set_process_dpi_awareness(_level: DpiAwareness) -> bool {
     // No-op on non-Windows. The stub keeps the API uniform.
     false

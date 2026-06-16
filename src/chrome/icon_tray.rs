@@ -108,18 +108,13 @@ impl TrayState {
 /// callbacks (left click / double click / right click / balloon click).
 /// On `Drop` the icon is removed from the tray and the `HICON` is
 /// destroyed.
+#[cfg(target_os = "windows")]
 pub struct IconTray {
-    #[cfg(target_os = "windows")]
     frame: Frame,
-    #[cfg(target_os = "windows")]
     uid: u32,
-    #[cfg(target_os = "windows")]
     msg: u32,
-    #[cfg(target_os = "windows")]
     hicon: HICON,
-    #[cfg(target_os = "windows")]
     added: bool,
-    #[cfg(target_os = "windows")]
     state: Rc<RefCell<TrayState>>,
 }
 

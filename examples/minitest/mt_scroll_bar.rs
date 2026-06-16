@@ -53,7 +53,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — ScrollBar (interactive)")
         .with_size(640, 460)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Click arrows, page areas or drag a thumb…", 0);

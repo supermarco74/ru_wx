@@ -36,7 +36,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TreeCtrl + icons")
         .with_size(460, 560)
-        .with_modern_style().build();
+        .build();
 
     let _hint = StaticText::new(
         &frame,

@@ -36,8 +36,9 @@ use std::rc::Rc;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -375,11 +376,16 @@ impl ScrolledWindow {
     /// the crate (e.g. `set_drop_files_callback`).
     /// Register a callback that fires when the scroll window is
     /// resized (for example when a parent sizer reflows the view).
+    #[cfg(target_os = "windows")]
     pub fn on_resize<F: FnMut() + 'static>(&self, f: F) {
         let hwnd = self.inner.borrow().hwnd;
         RESIZE_HANDLERS.with(|m| m.borrow_mut().insert(hwnd, Box::new(f)));
     }
 
+    #[cfg(not(target_os = "windows"))]
+    pub fn on_resize<F: FnMut() + 'static>(&self, _f: F) {}
+
+    #[cfg(target_os = "windows")]
     pub fn on_scroll<F: FnMut(ScrollEvent) + 'static>(&self, mut f: F) {
         let hwnd = self.inner.borrow().hwnd;
         let handler = move |code: u16, pos: i32| {
@@ -399,6 +405,9 @@ impl ScrolledWindow {
         };
         HANDLERS.with(|m| m.borrow_mut().insert(hwnd, Box::new(handler)));
     }
+
+    #[cfg(not(target_os = "windows"))]
+    pub fn on_scroll<F: FnMut(ScrollEvent) + 'static>(&self, _f: F) {}
 
     /// Return a [`WidgetRef`] (`Rc<RefCell<dyn Widget>>`) for
     /// this control. Used by [`crate::containers::sizer::BoxSizer`] to
@@ -507,6 +516,13 @@ impl Widget for ScrolledWindowInner {
 impl Window for ScrolledWindow {
     fn hwnd(&self) -> HWND {
         self.inner.borrow().hwnd
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl Window for ScrolledWindow {
+    fn hwnd(&self) -> isize {
+        0
     }
 }
 

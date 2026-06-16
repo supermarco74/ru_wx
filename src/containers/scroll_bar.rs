@@ -34,8 +34,9 @@ use crate::window::frame::Frame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -418,50 +419,44 @@ impl ScrollBar {
         frame: &Frame,
         mut callback: F,
     ) {
-        let inner = self.inner.clone();
+        #[cfg(target_os = "windows")]
+        let hwnd = self.inner.borrow().hwnd;
         #[cfg(target_os = "windows")]
         {
             self.inner.borrow_mut().scroll_frame = Some(frame.clone());
-        }
-        #[cfg(target_os = "windows")]
-        let hwnd = self.inner.borrow().hwnd;
-        let wrapper = move |code: u16, pos: i32| {
-            // Sync the cached position with the control's actual
-            // position. SB_THUMBPOSITION / SB_THUMBTRACK carry
-            // the position in `wparam`'s high word, but reading
-            // the live value via SBM_GETPOS is the most
-            // robust way to keep the cache in sync across all
-            // event types (line/page scroll events also update
-            // the position).
-            #[cfg(target_os = "windows")]
-            {
-                let hwnd = inner.borrow().hwnd;
-                // SAFETY: FFI call to SendMessageW; `hwnd` is a live scroll bar window and the message / params are valid.
-                let v = unsafe { SendMessageW(hwnd, SBM_GETPOS, 0, 0) } as i32;
-                inner.borrow_mut().position = v;
-            }
-            let _ = &inner;
-            let ev = match code as u32 {
-                SB_LINEUP => ScrollEvent::LineUp,
-                SB_LINEDOWN => ScrollEvent::LineDown,
-                SB_PAGEUP => ScrollEvent::PageUp,
-                SB_PAGEDOWN => ScrollEvent::PageDown,
-                SB_THUMBPOSITION => ScrollEvent::ThumbRelease { position: pos },
-                SB_THUMBTRACK => ScrollEvent::ThumbTrack { position: pos },
-                SB_TOP => ScrollEvent::Top,
-                SB_BOTTOM => ScrollEvent::Bottom,
-                SB_ENDSCROLL => ScrollEvent::EndScroll,
-                _ => return, // unknown SB_* code — ignore
+            let inner = self.inner.clone();
+            let wrapper = move |code: u16, pos: i32| {
+                // Sync the cached position with the control's actual
+                // position. SB_THUMBPOSITION / SB_THUMBTRACK carry
+                // the position in `wparam`'s high word, but reading
+                // the live value via SBM_GETPOS is the most
+                // robust way to keep the cache in sync across all
+                // event types (line/page scroll events also update
+                // the position).
+                {
+                    let hwnd = inner.borrow().hwnd;
+                    // SAFETY: FFI call to SendMessageW; `hwnd` is a live scroll bar window and the message / params are valid.
+                    let v = unsafe { SendMessageW(hwnd, SBM_GETPOS, 0, 0) } as i32;
+                    inner.borrow_mut().position = v;
+                }
+                let ev = match code as u32 {
+                    SB_LINEUP => ScrollEvent::LineUp,
+                    SB_LINEDOWN => ScrollEvent::LineDown,
+                    SB_PAGEUP => ScrollEvent::PageUp,
+                    SB_PAGEDOWN => ScrollEvent::PageDown,
+                    SB_THUMBPOSITION => ScrollEvent::ThumbRelease { position: pos },
+                    SB_THUMBTRACK => ScrollEvent::ThumbTrack { position: pos },
+                    SB_TOP => ScrollEvent::Top,
+                    SB_BOTTOM => ScrollEvent::Bottom,
+                    SB_ENDSCROLL => ScrollEvent::EndScroll,
+                    _ => return, // unknown SB_* code — ignore
+                };
+                callback(ev);
             };
-            callback(ev);
-        };
-        #[cfg(target_os = "windows")]
-        frame.register_scroll_handler(hwnd, wrapper);
+            frame.register_scroll_handler(hwnd as isize, wrapper);
+        }
         #[cfg(not(target_os = "windows"))]
         {
-            // Non-Windows: drop the callback so its
-            // captures are released immediately. The frame
-            // argument is also unused in this branch.
             let _ = (frame, callback);
         }
     }
@@ -478,7 +473,7 @@ impl Drop for ScrollBar {
         if Rc::strong_count(&self.inner) == 1 {
             let inner = self.inner.borrow();
             if let Some(ref frame) = inner.scroll_frame {
-                frame.unregister_scroll_handler(inner.hwnd);
+                frame.unregister_scroll_handler(inner.hwnd as isize);
             }
         }
     }

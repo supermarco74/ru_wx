@@ -61,7 +61,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — wxDC painted scene")
         .with_size(820, 560)
-        .with_modern_style().build();
+        .build();
 
     let badge = build_badge(140);
     let hwnd = frame.hwnd();

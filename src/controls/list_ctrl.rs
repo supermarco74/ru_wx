@@ -7,8 +7,9 @@ use std::rc::Rc;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
 
+use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
-use crate::platform::win32::{next_control_id, to_wide};
+use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Foundation::*;
 #[cfg(target_os = "windows")]
@@ -285,10 +286,20 @@ pub(crate) const LVN_ODCACHEHINT: u32 = 0xFFFFFF4D;
 /// (the `cchTextMax` field the control passes in the `LVITEMW`).
 /// Callers that need more can use [`ListCtrl::insert_item`] /
 /// [`ListCtrl::set_item_text`] on a non-virtual list.
+#[cfg(target_os = "windows")]
 pub struct ListItem<'a> {
     item: &'a mut LVITEMW,
 }
 
+#[cfg(not(target_os = "windows"))]
+pub struct ListItem<'a> {
+    index: i32,
+    sub_item: i32,
+    mask: u32,
+    _marker: std::marker::PhantomData<&'a mut ()>,
+}
+
+#[cfg(target_os = "windows")]
 impl<'a> ListItem<'a> {
     /// Zero-based row index the ListView is asking about.
     pub fn index(&self) -> usize {
@@ -317,7 +328,6 @@ impl<'a> ListItem<'a> {
     /// the supplied string (truncation is **not** performed
     /// silently — the caller can choose to `set_text` a shorter
     /// string or move to a non-virtual list).
-    #[cfg(target_os = "windows")]
     pub fn set_text(&mut self, text: &str) -> Result<(), &'static str> {
         // The internal buffer the ListView handed us is at least
         // `cch_text_max` UTF-16 code units long. We allocate a
@@ -356,6 +366,25 @@ impl<'a> ListItem<'a> {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+impl<'a> ListItem<'a> {
+    pub fn index(&self) -> usize {
+        self.index.max(0) as usize
+    }
+
+    pub fn sub_item(&self) -> usize {
+        self.sub_item.max(0) as usize
+    }
+
+    pub fn is_text_requested(&self) -> bool {
+        self.mask & 1 != 0
+    }
+
+    pub fn set_text(&mut self, _text: &str) -> Result<(), &'static str> {
+        Ok(())
+    }
+}
+
 // ── CacheHint (public wrapper) ──────────────────────────────────────
 
 /// Per-range "prefetch this chunk" hint handed to a
@@ -377,10 +406,19 @@ impl<'a> ListItem<'a> {
 /// bound (`to()`) of the row range the control is about to
 /// ask for. The notification carries no write-back data
 /// (unlike [`ListItem`]) so there is no `set_*` method.
+#[cfg(target_os = "windows")]
 pub struct CacheHint<'a> {
     hint: &'a NMLVCACHEHINT,
 }
 
+#[cfg(not(target_os = "windows"))]
+pub struct CacheHint<'a> {
+    from: i32,
+    to: i32,
+    _marker: std::marker::PhantomData<&'a ()>,
+}
+
+#[cfg(target_os = "windows")]
 impl<'a> CacheHint<'a> {
     /// Zero-based inclusive lower bound of the row range the
     /// ListView is about to request via `LVN_GETDISPINFOW`.
@@ -392,6 +430,17 @@ impl<'a> CacheHint<'a> {
     /// ListView is about to request via `LVN_GETDISPINFOW`.
     pub fn to(&self) -> usize {
         self.hint.i_to.max(0) as usize
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl<'a> CacheHint<'a> {
+    pub fn from(&self) -> usize {
+        self.from.max(0) as usize
+    }
+
+    pub fn to(&self) -> usize {
+        self.to.max(0) as usize
     }
 }
 
@@ -533,6 +582,7 @@ impl ListCtrl {
 
         // Default: enable full-row select in report view
         if matches!(style, ListCtrlStyle::Report) {
+            #[cfg(target_os = "windows")]
             ctrl.set_extended_style(LVS_EX_FULLROWSELECT);
         }
 
@@ -792,17 +842,23 @@ impl ListCtrl {
     /// `LVIS_FOCUSED` to match the single-select focus halo that the
     /// ListView normally applies when the user clicks a row.
     pub fn select(&self, index: usize) {
+        #[cfg(target_os = "windows")]
         self.set_item_state(
             index,
             LVIS_SELECTED | LVIS_FOCUSED,
             LVIS_SELECTED | LVIS_FOCUSED,
         );
+        #[cfg(not(target_os = "windows"))]
+        let _ = index;
     }
 
     /// Programmatically deselect an item. Clears both `LVIS_SELECTED`
     /// and `LVIS_FOCUSED`.
     pub fn deselect(&self, index: usize) {
+        #[cfg(target_os = "windows")]
         self.set_item_state(index, 0, LVIS_SELECTED | LVIS_FOCUSED);
+        #[cfg(not(target_os = "windows"))]
+        let _ = index;
     }
 
     /// Clear the selection from all items. Iterates from 0 to
@@ -810,13 +866,22 @@ impl ListCtrl {
     pub fn clear_selection(&self) {
         let count = self.get_item_count();
         for i in 0..count {
+            #[cfg(target_os = "windows")]
             self.set_item_state(i, 0, LVIS_SELECTED | LVIS_FOCUSED);
         }
     }
 
     /// Return whether the item at the given index is currently selected.
     pub fn is_selected(&self, index: usize) -> bool {
-        (self.get_item_state(index, LVIS_SELECTED) & LVIS_SELECTED) != 0
+        #[cfg(target_os = "windows")]
+        {
+            (self.get_item_state(index, LVIS_SELECTED) & LVIS_SELECTED) != 0
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = index;
+            false
+        }
     }
 
     /// Return the number of selected items (0 if none). Uses
@@ -991,6 +1056,7 @@ impl ListCtrl {
         frame.register_notify_handler(
             id,
             Box::new(move |code| {
+                #[cfg(target_os = "windows")]
                 if code != LVN_ITEMCHANGED {
                     return;
                 }
@@ -1035,7 +1101,7 @@ impl ListCtrl {
 
                 #[cfg(not(target_os = "windows"))]
                 {
-                    let _ = (inner, code);
+                    let _ = code;
                 }
             }),
         );
@@ -1209,7 +1275,18 @@ impl ListCtrl {
                 }
                 #[cfg(not(target_os = "windows"))]
                 {
-                    let _ = (inner, lparam);
+                    let _ = lparam;
+                    let cb = inner.borrow_mut().on_get_disp_info.take();
+                    if let Some(mut c) = cb {
+                        let mut wrapper = ListItem {
+                            index: 0,
+                            sub_item: 0,
+                            mask: 1,
+                            _marker: std::marker::PhantomData,
+                        };
+                        c(&mut wrapper);
+                        inner.borrow_mut().on_get_disp_info = Some(c);
+                    }
                 }
             }),
         );
@@ -1316,7 +1393,17 @@ impl ListCtrl {
                 }
                 #[cfg(not(target_os = "windows"))]
                 {
-                    let _ = (inner, lparam);
+                    let _ = lparam;
+                    let cb = inner.borrow_mut().on_cache_hint.take();
+                    if let Some(mut c) = cb {
+                        let wrapper = CacheHint {
+                            from: 0,
+                            to: 0,
+                            _marker: std::marker::PhantomData,
+                        };
+                        c(&wrapper);
+                        inner.borrow_mut().on_cache_hint = Some(c);
+                    }
                 }
             }),
         );
@@ -1340,6 +1427,11 @@ impl Widget for ListCtrlInner {
         #[cfg(target_os = "windows")]
         {
             self.hwnd as isize
+        }
+    
+        #[cfg(not(target_os = "windows"))]
+        {
+            0
         }
     }
 

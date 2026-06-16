@@ -56,7 +56,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — pickers (colour / date / font / file / dir)")
         .with_size(640, 420)
-        .with_modern_style().build();
+        .build();
 
     // Field 0: last picker event. Field 1: live summary (from idle).
     let status = StatusBar::new(&frame, 2);

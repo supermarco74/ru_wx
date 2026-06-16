@@ -34,7 +34,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TipWindow")
         .with_size(540, 360)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 1);
     status.set_status_text("Click a button to show a tip popup.", 0);

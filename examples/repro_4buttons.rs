@@ -11,7 +11,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Repro 4 — 4 buttons, no StaticText/TextCtrl")
         .with_size(1000, 600)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 4);
     status.set_status_text("(empty)", 0);

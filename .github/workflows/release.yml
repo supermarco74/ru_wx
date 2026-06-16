@@ -104,9 +104,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build all examples (release + manifest)
+      - name: Build all examples (release)
         shell: pwsh
-        run: .\build_with_manifest.ps1 --release --examples
+        run: cargo build --release --examples
 
       - name: Package release archives
         shell: pwsh
@@ -124,10 +124,13 @@ jobs:
             dist/ru_wx-${{ steps.meta.outputs.version }}-examples-win64.zip
             dist/ru_wx-${{ steps.meta.outputs.version }}-minitests-win64.zip
           body: |
+            **Documentation:** [ru_wx.easytaskflow.app](https://ru_wx.easytaskflow.app/)
+
             ## Windows binaries (x64)
 
             Pre-built example and minitest executables for **Windows 10/11**.
-            Each `.exe` has the Common Controls v6 manifest embedded (required on modern Windows).
+            Each `.exe` links the Win11 manifest from `ru_wx/build.rs`
+            (Common Controls v6 + PerMonitorV2).
 
             | Archive | Contents |
             |---------|----------|
@@ -148,4 +151,6 @@ jobs:
             cargo run --example window_with_button
             ```
 
-            On Windows, use `build_with_manifest.ps1 --release --examples` (or `build_examples.bat`) to produce distributable `.exe` files locally.
+            On Windows, use `build_examples.bat` (or `cargo build --release --examples`)
+            to produce distributable `.exe` files locally. The manifest is linked
+            automatically from `build.rs`.

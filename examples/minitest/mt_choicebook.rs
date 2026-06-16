@@ -41,7 +41,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Choicebook")
         .with_size(560, 440)
-        .with_modern_style().build();
+        .build();
 
     let status = StatusBar::new(&frame, 2);
     status.set_status_text("Pick a page in the drop-down.", 0);

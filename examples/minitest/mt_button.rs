@@ -37,7 +37,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — Button forms")
         .with_size(460, 460)
-        .with_modern_style().build();
+        .build();
 
     // Status bar: field 0 = last action, field 1 = shared click counter.
     let status = StatusBar::new(&frame, 2);

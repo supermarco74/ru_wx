@@ -1,4 +1,5 @@
-//! Demo: lettore musicale MP3 con playlist, toolbar icone, drag-and-drop.
+//! Demo: lettore musicale MP3 con playlist, metadati ID3 (titolo, artista,
+//! album, anno, genere, copertina), toolbar icone e drag-and-drop.
 //!
 //! ```bash
 //! cargo run --example music_player
@@ -14,8 +15,8 @@ use std::time::{Duration, Instant};
 
 use ru_wx::{
     Accelerator, App, AuiToolBar, BitmapBundle, BoxSizer, Button, DroppedFiles, FileDialog,
-    FileDialogStyle, Frame, ImageList, ListBox, MediaCtrl, Menu, MenuBar, PopupMenu,
-    Slider, StaticText, StatusBar, Timer,
+    FileDialogStyle, Font, FontDialog, Frame, Image, ImageList, ListBox, MediaCtrl, Menu, MenuBar,
+    PopupMenu, RawBitmap, Slider, StaticBitmap, StaticText, StatusBar, Timer, Bitmap,
 };
 
 const ID_TOOL_LOAD: u16 = 2001;
@@ -25,8 +26,43 @@ const ID_TOOL_SAVE_PLAYLIST: u16 = 2003;
 const ICON_LOAD: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#10B981"/><path d="M12 6v8 M8 10l4-4 4 4 M6 18h12" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>"##;
 const ICON_PLAYLIST: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#4F46E5"/><path d="M7 8h10 M7 12h10 M7 16h6" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M17 14l3 2-3 2z" fill="white"/></svg>"##;
 const ICON_SAVE: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#2563EB"/><path d="M8 7h8v4H8z M8 15h8 M6 6h12v12H6z" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg>"##;
+const ICON_COVER_PLACEHOLDER: &[u8] = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="8" fill="#E5E7EB"/><circle cx="64" cy="64" r="28" fill="none" stroke="#9CA3AF" stroke-width="4"/><circle cx="64" cy="64" r="8" fill="#9CA3AF"/><path d="M64 36v-8 M64 100v-8 M36 64h-8 M100 64h-8" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/></svg>"##;
 
 const AUDIO_EXT: &[&str] = &["mp3", "wav", "wma", "flac", "ogg", "m4a"];
+const COVER_SIZE: u32 = 128;
+
+/// ID3v1 genre index → name (Winamp / ID3 spec list).
+const ID3_GENRES: [&str; 192] = [
+    "Blues", "Classic Rock", "Country", "Dance", "Disco", "Funk", "Grunge", "Hip-Hop",
+    "Jazz", "Metal", "New Age", "Oldies", "Other", "Pop", "R&B", "Rap", "Reggae", "Rock",
+    "Techno", "Industrial", "Alternative", "Ska", "Death Metal", "Pranks", "Soundtrack",
+    "Euro-Techno", "Ambient", "Trip-Hop", "Vocal", "Jazz+Funk", "Fusion", "Trance",
+    "Classical", "Instrumental", "Acid", "House", "Game", "Sound Clip", "Gospel", "Noise",
+    "Alt. Rock", "Bass", "Soul", "Punk", "Space", "Meditative", "Instrumental Pop",
+    "Instrumental Rock", "Ethnic", "Gothic", "Darkwave", "Techno-Industrial",
+    "Electronic", "Pop-Folk", "Eurodance", "Dream", "Southern Rock", "Comedy", "Cult",
+    "Gangsta Rap", "Top 40", "Christian Rap", "Pop/Funk", "Jungle", "Native American",
+    "Cabaret", "New Wave", "Psychedelic", "Rave", "Showtunes", "Trailer", "Lo-Fi",
+    "Tribal", "Acid Punk", "Acid Jazz", "Polka", "Retro", "Musical", "Rock & Roll",
+    "Hard Rock", "Folk", "Folk-Rock", "National Folk", "Swing", "Fast Fusion", "Bebop",
+    "Latin", "Revival", "Celtic", "Bluegrass", "Avantgarde", "Gothic Rock",
+    "Progressive Rock", "Psychedelic Rock", "Symphonic Rock", "Slow Rock", "Big Band",
+    "Chorus", "Easy Listening", "Acoustic", "Humour", "Speech", "Chanson", "Opera",
+    "Chamber Music", "Sonata", "Symphony", "Booty Bass", "Primus", "Porn Groove",
+    "Satire", "Slow Jam", "Club", "Tango", "Samba", "Folklore", "Ballad", "Power Ballad",
+    "Rhythmic Soul", "Freestyle", "Duet", "Punk Rock", "Drum Solo", "A Cappella",
+    "Euro-House", "Dance Hall", "Goa", "Drum & Bass", "Club-House", "Hardcore",
+    "Terror", "Indie", "BritPop", "Afro-Punk", "Polsk Punk", "Beat", "Christian Gangsta",
+    "Heavy Metal", "Black Metal", "Crossover", "Contemporary Christian", "Christian Rock",
+    "Merengue", "Salsa", "Thrash Metal", "Anime", "JPop", "Synthpop", "Abstract",
+    "Art Rock", "Baroque", "Bhangra", "Big Beat", "Breakbeat", "Chillout", "Downtempo",
+    "Dub", "EBM", "Eclectic", "Electro", "Electroclash", "Emo", "Experimental", "Garage",
+    "Global", "IDM", "Illbient", "Industro-Goth", "Jam Band", "Krautrock", "Leftfield",
+    "Lounge", "Math Rock", "New Romantic", "Nu-Breakz", "Post-Punk", "Post-Rock",
+    "Psytrance", "Shoegaze", "Space Rock", "Trop Rock", "World Music", "Neoclassical",
+    "Audiobook", "Audio Theatre", "Neue Deutsche Welle", "Podcast", "Indie Rock",
+    "G-Funk", "Dubstep", "Garage Rock", "Psybient",
+];
 
 /// Wall-clock progress when MCI `status position` is unavailable or stale.
 struct ProgressClock {
@@ -129,56 +165,166 @@ fn is_audio_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+#[derive(Clone, Default)]
+struct TrackMeta {
+    title: String,
+    artist: String,
+    album_artist: String,
+    album: String,
+    year: String,
+    genre: String,
+    track_num: String,
+    composer: String,
+    comment: String,
+    /// Cover art bytes (JPEG/PNG) from ID3 APIC frame.
+    cover: Option<Vec<u8>>,
+}
+
+impl TrackMeta {
+    fn display_artist(&self) -> &str {
+        if !self.artist.is_empty() {
+            &self.artist
+        } else if !self.album_artist.is_empty() {
+            &self.album_artist
+        } else {
+            ""
+        }
+    }
+}
+
 #[derive(Clone)]
 struct Track {
     path: PathBuf,
-    title: String,
-    artist: String,
-    size_bytes: u64,
+    meta: TrackMeta,
     display: String,
+    size_bytes: u64,
 }
 
 impl Track {
     fn from_path(path: PathBuf) -> Self {
         let size_bytes = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-        let (title, artist) = read_mp3_tags(&path);
-        let display = format_track_line(&title, &artist, size_bytes);
+        let mut meta = read_audio_metadata(&path);
+        if meta.title.is_empty() {
+            meta.title = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("Senza titolo")
+                .to_string();
+        }
+        let display = format_track_line(&meta, size_bytes);
         Self {
             path,
-            title,
-            artist,
-            size_bytes,
+            meta,
             display,
+            size_bytes,
         }
     }
 }
 
-fn format_track_line(title: &str, artist: &str, size_bytes: u64) -> String {
+fn format_track_line(meta: &TrackMeta, size_bytes: u64) -> String {
     let size = format_file_size(size_bytes);
-    if artist.is_empty() {
-        format!("{title:<48}  {size}")
-    } else {
-        format!("{title:<40}  {size:<10}  {artist}")
+    let artist = meta.display_artist();
+    let album = meta.album.as_str();
+    match (artist.is_empty(), album.is_empty()) {
+        (true, true) => format!("{:<42}  {size}", meta.title),
+        (false, true) => format!("{artist} — {:<32}  {size}", meta.title),
+        (true, false) => format!("{:<32}  [{album}]  {size}", meta.title),
+        (false, false) => format!("{artist} — {title}  [{album}]  {size}", title = meta.title),
     }
 }
 
-fn read_mp3_tags(path: &Path) -> (String, String) {
-    let fallback_title = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("Senza titolo")
-        .to_string();
+fn decode_genre(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.starts_with('(') && trimmed.ends_with(')') {
+        if let Ok(n) = trimmed[1..trimmed.len() - 1].parse::<usize>() {
+            if n < ID3_GENRES.len() {
+                return ID3_GENRES[n].to_string();
+            }
+        }
+    }
+    trimmed.to_string()
+}
+
+fn read_audio_metadata(path: &Path) -> TrackMeta {
     let Ok(data) = fs::read(path) else {
-        return (fallback_title, String::new());
+        return TrackMeta::default();
     };
+    let mut meta = read_id3v2(&data);
+    let v1 = read_id3v1(&data);
+    meta.merge_missing(v1);
+    meta
+}
+
+impl TrackMeta {
+    fn merge_missing(&mut self, other: Self) {
+        if self.title.is_empty() {
+            self.title = other.title;
+        }
+        if self.artist.is_empty() {
+            self.artist = other.artist;
+        }
+        if self.album.is_empty() {
+            self.album = other.album;
+        }
+        if self.year.is_empty() {
+            self.year = other.year;
+        }
+        if self.genre.is_empty() {
+            self.genre = other.genre;
+        }
+        if self.comment.is_empty() {
+            self.comment = other.comment;
+        }
+        if self.cover.is_none() {
+            self.cover = other.cover;
+        }
+    }
+}
+
+fn read_id3v1(data: &[u8]) -> TrackMeta {
+    if data.len() < 128 {
+        return TrackMeta::default();
+    }
+    let start = data.len() - 128;
+    if &data[start..start + 3] != b"TAG" {
+        return TrackMeta::default();
+    }
+    let slice = |off: usize, len: usize| -> String {
+        let raw = &data[start + off..start + off + len];
+        String::from_utf8_lossy(raw)
+            .trim_matches('\0')
+            .trim()
+            .to_string()
+    };
+    let genre_byte = data[start + 127];
+    let genre = if genre_byte == 255 {
+        String::new()
+    } else {
+        ID3_GENRES
+            .get(genre_byte as usize)
+            .copied()
+            .unwrap_or("")
+            .to_string()
+    };
+    TrackMeta {
+        title: slice(3, 30),
+        artist: slice(33, 30),
+        album: slice(63, 30),
+        year: slice(93, 4),
+        comment: slice(97, 30),
+        genre,
+        ..TrackMeta::default()
+    }
+}
+
+fn read_id3v2(data: &[u8]) -> TrackMeta {
+    let mut meta = TrackMeta::default();
     if data.len() < 10 || &data[0..3] != b"ID3" {
-        return (fallback_title, String::new());
+        return meta;
     }
     let id3_major = data[3];
     let tag_size = synchsafe_size(&data[6..10]) as usize;
     let tag_end = (10 + tag_size).min(data.len());
-    let mut title = String::new();
-    let mut artist = String::new();
     let mut pos = 10usize;
     while pos + 10 <= tag_end {
         let id = &data[pos..pos + 4];
@@ -198,16 +344,164 @@ fn read_mp3_tags(path: &Path) -> (String, String) {
         }
         let payload = &data[pos..pos + frame_size];
         pos += frame_size;
-        if id == b"TIT2" {
-            title = decode_id3_text(payload);
-        } else if id == b"TPE1" {
-            artist = decode_id3_text(payload);
+        match id {
+            b"TIT2" => meta.title = decode_id3_text(payload),
+            b"TPE1" => meta.artist = decode_id3_text(payload),
+            b"TPE2" => meta.album_artist = decode_id3_text(payload),
+            b"TCOM" => meta.composer = decode_id3_text(payload),
+            b"TALB" => meta.album = decode_id3_text(payload),
+            b"TYER" | b"TDRC" => {
+                let y = decode_id3_text(payload);
+                if meta.year.is_empty() {
+                    meta.year = y.chars().take(4).collect();
+                }
+            }
+            b"TCON" => meta.genre = decode_genre(&decode_id3_text(payload)),
+            b"TRCK" => meta.track_num = decode_id3_text(payload),
+            b"COMM" => {
+                if meta.comment.is_empty() {
+                    meta.comment = decode_id3_comm(payload);
+                }
+            }
+            b"APIC" | b"PIC " => {
+                if meta.cover.is_none() {
+                    meta.cover = parse_apic_payload(payload);
+                }
+            }
+            _ => {}
         }
     }
-    if title.is_empty() {
-        title = fallback_title;
+    meta
+}
+
+fn decode_id3_comm(payload: &[u8]) -> String {
+    if payload.len() < 5 {
+        return String::new();
     }
-    (title, artist)
+    let enc = payload[0];
+    let mut i = 4usize;
+    i = skip_id3_cstring(payload, i, enc);
+    if i >= payload.len() {
+        return String::new();
+    }
+    let mut buf = vec![enc];
+    buf.extend_from_slice(&payload[i..]);
+    decode_id3_text(&buf)
+}
+
+fn skip_id3_cstring(payload: &[u8], mut i: usize, enc: u8) -> usize {
+    if i >= payload.len() {
+        return i;
+    }
+    match enc {
+        1 | 2 => {
+            while i + 1 < payload.len() {
+                if payload[i] == 0 && payload[i + 1] == 0 {
+                    return i + 2;
+                }
+                i += 2;
+            }
+            payload.len()
+        }
+        _ => {
+            while i < payload.len() && payload[i] != 0 {
+                i += 1;
+            }
+            (i + 1).min(payload.len())
+        }
+    }
+}
+
+fn parse_apic_payload(payload: &[u8]) -> Option<Vec<u8>> {
+    if payload.is_empty() {
+        return None;
+    }
+    let enc = payload[0];
+    let mut i = 1usize;
+    while i < payload.len() && payload[i] != 0 {
+        i += 1;
+    }
+    if i >= payload.len() {
+        return None;
+    }
+    i += 1;
+    if i >= payload.len() {
+        return None;
+    }
+    i += 1;
+    i = skip_id3_cstring(payload, i, enc);
+    if i >= payload.len() {
+        return None;
+    }
+    Some(payload[i..].to_vec())
+}
+
+fn meta_label(field: &str, value: &str) -> String {
+    if value.trim().is_empty() {
+        format!("{field}: —")
+    } else {
+        format!("{field}: {value}")
+    }
+}
+
+fn set_cover_art(cover: &StaticBitmap, bytes: Option<&[u8]>) {
+    let loaded = bytes.and_then(|data| Image::load_from_memory(data).ok().map(|img| img.to_bitmap()));
+    let bmp = loaded.unwrap_or_else(|| Bitmap::from_svg_bytes(ICON_COVER_PLACEHOLDER, COVER_SIZE, COVER_SIZE));
+    cover.set_bitmap(RawBitmap {
+        hbitmap: bmp.handle(),
+        width: bmp.width,
+        height: bmp.height,
+    });
+}
+
+fn refresh_metadata_panel(
+    track: Option<&Track>,
+    cover: &StaticBitmap,
+    lbl_title: &StaticText,
+    lbl_artist: &StaticText,
+    lbl_album: &StaticText,
+    lbl_year: &StaticText,
+    lbl_genre: &StaticText,
+    lbl_track: &StaticText,
+    lbl_composer: &StaticText,
+    lbl_comment: &StaticText,
+    lbl_file: &StaticText,
+) {
+    let Some(track) = track else {
+        set_cover_art(cover, None);
+        lbl_title.set_label("Titolo: —");
+        lbl_artist.set_label("Artista: —");
+        lbl_album.set_label("Album: —");
+        lbl_year.set_label("Anno: —");
+        lbl_genre.set_label("Genere: —");
+        lbl_track.set_label("Traccia: —");
+        lbl_composer.set_label("Compositore: —");
+        lbl_comment.set_label("Commento: —");
+        lbl_file.set_label("File: —");
+        return;
+    };
+    let m = &track.meta;
+    set_cover_art(cover, m.cover.as_deref());
+    lbl_title.set_label(&meta_label("Titolo", &m.title));
+    lbl_artist.set_label(&meta_label(
+        "Artista",
+        if !m.artist.is_empty() {
+            &m.artist
+        } else {
+            m.album_artist.as_str()
+        },
+    ));
+    lbl_album.set_label(&meta_label("Album", &m.album));
+    lbl_year.set_label(&meta_label("Anno", &m.year));
+    lbl_genre.set_label(&meta_label("Genere", &m.genre));
+    lbl_track.set_label(&meta_label("Traccia", &m.track_num));
+    lbl_composer.set_label(&meta_label("Compositore", &m.composer));
+    lbl_comment.set_label(&meta_label("Commento", &m.comment));
+    lbl_file.set_label(&format!(
+        "File: {}  ({})",
+        track.path.file_name().and_then(|s| s.to_str()).unwrap_or("?"),
+        format_file_size(track.size_bytes)
+    ));
 }
 
 /// Decode playlist / text files: UTF-8 (with optional BOM), else Windows-1252-ish Latin-1.
@@ -448,8 +742,7 @@ fn main() {
     let app = App::new();
     let frame = Frame::builder()
         .with_title("ru_wx — Music Player")
-        .with_size(680, 560)
-        .with_modern_style()
+        .with_size(780, 640)
         .build();
 
     let status = StatusBar::new(&frame, 2);
@@ -483,13 +776,27 @@ fn main() {
 
     let playlist_label = StaticText::new(
         &frame,
-        "Playlist — doppio clic: riproduci | tasto destro: rimuovi | trascina file MP3 qui:",
+        "Playlist — doppio clic: riproduci | tasto destro: rimuovi | trascina MP3 qui | seleziona per metadati ID3:",
     );
     let playlist = ListBox::new(&frame);
     playlist
         .as_widget_ref()
         .borrow_mut()
-        .set_size(640, 280);
+        .set_size(480, 240);
+
+    // ── Pannello metadati ID3 (tag internet / embedded) ─────────────
+    let cover_art = StaticBitmap::with_size(&frame, COVER_SIZE, COVER_SIZE);
+    set_cover_art(&cover_art, None);
+
+    let meta_title = StaticText::new(&frame, "Titolo: —");
+    let meta_artist = StaticText::new(&frame, "Artista: —");
+    let meta_album = StaticText::new(&frame, "Album: —");
+    let meta_year = StaticText::new(&frame, "Anno: —");
+    let meta_genre = StaticText::new(&frame, "Genere: —");
+    let meta_track = StaticText::new(&frame, "Traccia: —");
+    let meta_composer = StaticText::new(&frame, "Compositore: —");
+    let meta_comment = StaticText::new(&frame, "Commento: —");
+    let meta_file = StaticText::new(&frame, "File: —");
 
     let time_label = StaticText::new(&frame, "00:00 / 00:00");
     let progress = Slider::new(&frame, 0, 1000, 0);
@@ -520,11 +827,42 @@ fn main() {
         })
     };
 
+    let refresh_meta: Rc<dyn Fn(Option<usize>)> = {
+        let tracks = tracks.clone();
+        let cover = cover_art.clone();
+        let meta_title = meta_title.clone();
+        let meta_artist = meta_artist.clone();
+        let meta_album = meta_album.clone();
+        let meta_year = meta_year.clone();
+        let meta_genre = meta_genre.clone();
+        let meta_track = meta_track.clone();
+        let meta_composer = meta_composer.clone();
+        let meta_comment = meta_comment.clone();
+        let meta_file = meta_file.clone();
+        Rc::new(move |index: Option<usize>| {
+            let track = index.and_then(|i| tracks.borrow().tracks.get(i).cloned());
+            refresh_metadata_panel(
+                track.as_ref(),
+                &cover,
+                &meta_title,
+                &meta_artist,
+                &meta_album,
+                &meta_year,
+                &meta_genre,
+                &meta_track,
+                &meta_composer,
+                &meta_comment,
+                &meta_file,
+            );
+        })
+    };
+
     let append_track: Rc<dyn Fn(PathBuf)> = {
         let playlist = playlist.clone();
         let tracks = tracks.clone();
         let status = status.clone();
         let update_count = update_status_count.clone();
+        let refresh_meta = refresh_meta.clone();
         Rc::new(move |path| {
             if !is_audio_file(&path) {
                 status.set_status_text("File non audio ignorato.", 0);
@@ -537,6 +875,7 @@ fn main() {
             status.set_status_text(&format!("Aggiunto: {label}"), 0);
             update_count();
             playlist.set_selection(idx);
+            refresh_meta(Some(idx));
         })
     };
 
@@ -559,6 +898,7 @@ fn main() {
         let programmatic_slider = programmatic_slider.clone();
         let track_finished_flag = track_finished_flag.clone();
         let clock = progress_clock.clone();
+        let refresh_meta = refresh_meta.clone();
         Rc::new(move |index: usize| {
             track_finished_flag.set(false);
             let path = {
@@ -570,6 +910,7 @@ fn main() {
                 }
             };
             playlist.set_selection(index);
+            refresh_meta(Some(index));
             let m = media.borrow_mut();
             if let Err(e) = m.load(&path) {
                 status.set_status_text(&format!("Errore caricamento: {e}"), 0);
@@ -583,9 +924,34 @@ fn main() {
                 .borrow()
                 .tracks
                 .get(index)
-                .map(|t| t.title.clone())
+                .map(|t| t.meta.title.clone())
                 .unwrap_or_else(|| "Brano".to_string());
-            status.set_status_text(&format!("In riproduzione: {title}"), 0);
+            let artist = tracks
+                .borrow()
+                .tracks
+                .get(index)
+                .and_then(|t| {
+                    let a = t.meta.display_artist();
+                    if a.is_empty() { None } else { Some(a.to_string()) }
+                });
+            let album = tracks
+                .borrow()
+                .tracks
+                .get(index)
+                .and_then(|t| {
+                    if t.meta.album.is_empty() {
+                        None
+                    } else {
+                        Some(t.meta.album.clone())
+                    }
+                });
+            let now_playing = match (artist.as_deref(), album.as_deref()) {
+                (Some(a), Some(al)) => format!("{a} — {title}  [{al}]"),
+                (Some(a), None) => format!("{a} — {title}"),
+                (None, Some(al)) => format!("{title}  [{al}]"),
+                (None, None) => title.clone(),
+            };
+            status.set_status_text(&format!("In riproduzione: {now_playing}"), 0);
             let len = m.length_ms().unwrap_or(0).max(1);
             clock.borrow_mut().begin(len);
             let max = len.min(i32::MAX as u64) as i32;
@@ -759,13 +1125,14 @@ fn main() {
         let status = status.clone();
         let do_stop = do_stop.clone();
         let update_count = update_status_count.clone();
+        let refresh_meta = refresh_meta.clone();
         Rc::new(move |index: usize| {
             let removed = {
                 let mut t = tracks.borrow_mut();
                 let name = t
                     .tracks
                     .get(index)
-                    .map(|tr| tr.title.clone())
+                    .map(|tr| tr.meta.title.clone())
                     .unwrap_or_default();
                 let was_playing = t.playing == Some(index);
                 t.remove(index);
@@ -776,6 +1143,8 @@ fn main() {
             if removed.1 {
                 do_stop();
             }
+            let sel = playlist.get_selection();
+            refresh_meta(sel);
             status.set_status_text(&format!("Rimosso: {}", removed.0), 0);
         })
     };
@@ -808,6 +1177,7 @@ fn main() {
     file_menu.append("E&sci", &frame, move || frame_exit.close());
 
     let mut opts_menu = Menu::new("&Opzioni");
+    let ui_font: Rc<RefCell<Option<Font>>> = Rc::new(RefCell::new(None));
     let stop_flag = stop_after_each.clone();
     let status_flag = status.clone();
     let opts_hmenu = opts_menu.hmenu();
@@ -842,6 +1212,46 @@ fn main() {
         },
     );
     stop_after_id_cell.set(stop_after_id);
+
+    // Font UI (playlist + metadati + tempo)
+    let ui_font_store = ui_font.clone();
+    let frame_for_font = frame.clone();
+    let playlist_for_font = playlist.clone();
+    let playlist_label_for_font = playlist_label.clone();
+    let meta_title_for_font = meta_title.clone();
+    let meta_artist_for_font = meta_artist.clone();
+    let meta_album_for_font = meta_album.clone();
+    let meta_year_for_font = meta_year.clone();
+    let meta_genre_for_font = meta_genre.clone();
+    let meta_track_for_font = meta_track.clone();
+    let meta_composer_for_font = meta_composer.clone();
+    let meta_comment_for_font = meta_comment.clone();
+    let meta_file_for_font = meta_file.clone();
+    let time_label_for_font = time_label.clone();
+    opts_menu.append(
+        "Font &testo…",
+        &frame,
+        move || {
+            let mut dlg = FontDialog::new(&frame_for_font);
+            if let Some(new_font) = dlg.show_modal() {
+                *ui_font_store.borrow_mut() = Some(new_font);
+                if let Some(ref font) = *ui_font_store.borrow() {
+                    playlist_for_font.set_font(font);
+                    playlist_label_for_font.set_font(font);
+                    meta_title_for_font.set_font(font);
+                    meta_artist_for_font.set_font(font);
+                    meta_album_for_font.set_font(font);
+                    meta_year_for_font.set_font(font);
+                    meta_genre_for_font.set_font(font);
+                    meta_track_for_font.set_font(font);
+                    meta_composer_for_font.set_font(font);
+                    meta_comment_for_font.set_font(font);
+                    meta_file_for_font.set_font(font);
+                    time_label_for_font.set_font(font);
+                }
+            }
+        },
+    );
 
     let mut ctrl_menu = Menu::new("&Controlli");
     let play_for_menu = do_play.clone();
@@ -903,6 +1313,13 @@ fn main() {
             append_drop(audio);
             status_drop.set_status_text(&format!("Aggiunti {n} file tramite drag-and-drop."), 0);
         }
+    });
+
+    // ── Selezione playlist → aggiorna metadati ───────────────────────
+    let refresh_sel = refresh_meta.clone();
+    let playlist_sel = playlist.clone();
+    playlist.on_selection_change(&frame, move || {
+        refresh_sel(playlist_sel.get_selection());
     });
 
     // ── Doppio clic ──────────────────────────────────────────────────
@@ -996,6 +1413,32 @@ fn main() {
     refresh.start(Duration::from_millis(100));
 
     // ── Layout ───────────────────────────────────────────────────────
+    let mut meta_lines = BoxSizer::vertical();
+    meta_lines.add(meta_title.as_widget_ref());
+    meta_lines.add(meta_artist.as_widget_ref());
+    meta_lines.add(meta_album.as_widget_ref());
+    meta_lines.add(meta_year.as_widget_ref());
+    meta_lines.add(meta_genre.as_widget_ref());
+    meta_lines.add(meta_track.as_widget_ref());
+    meta_lines.add(meta_composer.as_widget_ref());
+    meta_lines.add(meta_comment.as_widget_ref());
+    meta_lines.add(meta_file.as_widget_ref());
+
+    let mut meta_col = BoxSizer::vertical();
+    meta_col.add(cover_art.as_widget_ref());
+    meta_col.add_spacer(8);
+    meta_col.add_sizer(meta_lines);
+
+    let mut playlist_col = BoxSizer::vertical();
+    playlist_col.add(playlist_label.as_widget_ref());
+    playlist_col.add_spacer(4);
+    playlist_col.add_with_proportion(playlist.as_widget_ref(), 1);
+
+    let mut top_row = BoxSizer::horizontal();
+    top_row.add_sizer(meta_col);
+    top_row.add_spacer(12);
+    top_row.add_sizer_with_proportion(playlist_col, 1);
+
     let mut transport = BoxSizer::horizontal();
     transport.add(btn_play.as_widget_ref());
     transport.add(btn_pause.as_widget_ref());
@@ -1004,9 +1447,7 @@ fn main() {
     let mut sizer = BoxSizer::vertical();
     sizer.set_padding(8);
     sizer.add_spacer(toolbar_h);
-    sizer.add(playlist_label.as_widget_ref());
-    sizer.add_spacer(4);
-    sizer.add_with_proportion(playlist.as_widget_ref(), 1);
+    sizer.add_sizer_with_proportion(top_row, 1);
     sizer.add_spacer(8);
     sizer.add_sizer(transport);
     sizer.add_spacer(6);

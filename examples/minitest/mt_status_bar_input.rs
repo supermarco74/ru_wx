@@ -34,7 +34,7 @@ fn main() {
     let frame = Frame::builder()
         .with_title("Minitest — TextCtrl → StatusBar")
         .with_size(1000, 600)
-        .with_modern_style().build();
+        .build();
 
     // 4 fields so each one gets ≈ 1/4 of the bar. Field 0 is the
     // "main" one for the text-input round-trip; fields 1–3 are

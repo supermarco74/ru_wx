@@ -3,7 +3,8 @@
 //!
 //! Win32 platform utilities and helpers
 
-use std::sync::atomic::{AtomicU16, Ordering};
+#[cfg(target_os = "windows")]
+use crate::platform::ids;
 
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::Graphics::Gdi::GetDeviceCaps;
@@ -41,20 +42,9 @@ pub fn get_device_caps_dpi(hdc: windows_sys::Win32::Graphics::Gdi::HDC) -> u32 {
     }
 }
 
-/// Global counter for unique control IDs
-static NEXT_CONTROL_ID: AtomicU16 = AtomicU16::new(100);
-
 /// Get a unique control ID for Win32 child windows.
-///
-/// IDs are allocated from 100 upward and must stay below 9000 (the
-/// menu-item ID range starts at 9000). Panics if the space is
-/// exhausted to avoid silent ID collisions.
 pub fn next_control_id() -> u16 {
-    let id = NEXT_CONTROL_ID.fetch_add(1, Ordering::Relaxed);
-    if id >= 9000 {
-        panic!("ru_wx: control ID space exhausted (IDs must stay below 9000)");
-    }
-    id
+    ids::next_control_id()
 }
 
 /// Read the current window text via `GetWindowTextW`.
@@ -84,10 +74,7 @@ pub fn read_window_text(hwnd: windows_sys::Win32::Foundation::HWND) -> String {
     String::from_utf16_lossy(&buf[..copied as usize])
 }
 
-/// Global counter for unique menu item IDs (starting at 9000 to avoid collision with control IDs)
-static NEXT_MENU_ID: AtomicU16 = AtomicU16::new(9000);
-
 /// Get a unique menu item ID
 pub fn next_menu_id() -> u16 {
-    NEXT_MENU_ID.fetch_add(1, Ordering::Relaxed)
+    ids::next_menu_id()
 }
