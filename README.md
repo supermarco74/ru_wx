@@ -1,4 +1,4 @@
-﻿# ru_wx
+# ru_wx
 
 **Official site:** [ru_wx.easytaskflow.app](https://ru_wx.easytaskflow.app/) ·
 **Repository:** [github.com/supermarco74/ru_wx](https://github.com/supermarco74/ru_wx)
@@ -200,35 +200,90 @@ coordinate-driven actions are still Win32-only).
   inspector (`gdk4-x11`). On Debian/Ubuntu:
   `sudo apt install libgtk-4-dev libx11-dev`
 
-## Quick start
+## Using ru_wx in your project
 
-Add to your `Cargo.toml`:
+### From crates.io (recommended)
 
 ```toml
 [dependencies]
 ru_wx = "0.7.1"
 ```
 
-Minimal example:
+```bash
+cargo build
+```
+
+The crate pulls its own platform dependencies automatically: `windows-sys`
+and `windows-core` on Windows, `objc2` / `objc2-app-kit` on macOS, `gtk4` and
+`gdk4-x11` on Linux. No feature flag is needed to get the native backend of
+the platform you are compiling for.
+
+### From the Git repository
+
+```toml
+[dependencies]
+ru_wx = { git = "https://github.com/supermarco74/ru_wx" }
+```
+
+### Optional features
+
+```toml
+[dependencies]
+ru_wx = { version = "0.7.1", features = ["data-sqlite"] }
+```
+
+| Feature | What it adds |
+|---------|--------------|
+| *(none)* | Native backend of the host platform (Win32 / AppKit / GTK4) |
+| `data-sqlite` | SQLite driver for the `data` layer (`rusqlite`, bundled) |
+| `data-mysql` | MySQL / MariaDB driver for the `data` layer |
+| `data-db` | Both drivers at once |
+| `inspector` | Enables the `debug` inspector widget in release builds |
+
+The `winui3`, `winui3_xaml` and `winui3_reactor` features select parallel
+Windows-only backends. They are **not** enabled by default and `winui3_xaml`
+requires a local `windows-rs-study` checkout (see
+[WinUI3 / WinAppSDK backend](#winui3--winappsdk-backend-experimental)).
+
+### First program
 
 ```rust
 use ru_wx::*;
 
-let app = App::new();
-let frame = Frame::builder()
-    .with_title("Hello ru_wx")
-    .with_size(400, 300)
-    .build();
+fn main() {
+    let app = App::new();
+    let frame = Frame::builder()
+        .with_title("Hello ru_wx")
+        .with_size(400, 300)
+        .build();
 
-let button = Button::new(&frame, "Click me!");
-button.on_click(&frame, || {
-    println!("Clicked!");
-});
+    let button = Button::new(&frame, "Click me!");
+    button.on_click(&frame, || {
+        println!("Clicked!");
+    });
 
-app.run(frame);
+    app.run(frame);
+}
+```
+
+On Linux make sure a display is available — in a headless session the backend
+falls back to inert stub widgets instead of panicking.
+
+### Which backend gets compiled
+
+The crate root (`ru_wx::App`, `ru_wx::Frame`, `ru_wx::Button`, …) always
+resolves to the production backend for the target platform. Feature-gated
+backends are separate types under `ru_wx::platform::*`, so never mix them in
+the same `use` list:
+
+```rust
+// correct: platform-specific types live under ru_wx::platform
+use ru_wx::platform::winui3::Button as WinUIButton;
 ```
 
 ## Examples
+
+Run the bundled examples from a clone of this repository:
 
 ```bash
 # Window with a button

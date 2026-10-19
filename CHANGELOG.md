@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `optional`, so the four unpublished `windows-rs-study` crates were removed
   from `[target.'cfg(target_os = "windows")'.dependencies]`: keeping them made
   `cargo build` fail on any fresh clone that lacked that sibling checkout.
+- README now documents how to consume the crate from other projects
+  (crates.io, git dependency, feature flags, first program) instead of
+  duplicating the old "Quick start" block.
+- `cargo package` verified: the published tarball contains `src/`, `LICENSE`,
+  `README.md` and `CHANGELOG.md` and compiles standalone (1013 files,
+  3.3 MiB compressed).
 
 ### Known gaps
 - Linux: Dialog, TextDialog, FileDialog, DirDialog, ColourDialog, FontDialog,
