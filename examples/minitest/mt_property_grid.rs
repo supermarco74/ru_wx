@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `PropertyGrid` — two-column property sheet with
 //! in-place editors (`wxPropertyGrid`).
 //!
@@ -24,8 +27,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use ru_wx::{
-    App, BoxSizer, Button, Frame, PropertyGrid, PropertyValue, StaticText, StatusBar,
-    message_box, MessageBoxIcon, MessageBoxStyle,
+    message_box, App, BoxSizer, Button, Frame, MessageBoxIcon, MessageBoxStyle, PropertyGrid,
+    PropertyValue, StaticText, StatusBar,
 };
 
 fn main() {

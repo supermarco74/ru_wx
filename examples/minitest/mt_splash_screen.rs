@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `SplashScreen` — a top-most borderless bitmap window
 //! (`wxSplashScreen`).
 //!

@@ -36,6 +36,6 @@ app.run(frame);
 
 ## See also
 
-- [`prelude.rs`](./prelude.md) — one-import convenience re-exports.
-- [`widget.rs`](./widget.md) — the `Widget` and `Window` traits every concrete type implements.
-- [`app.rs`](./app.md) — the `App` entry point and event loop driver.
+- [`prelude.rs`](prelude.md) — one-import convenience re-exports.
+- [`widget.rs`](core/widget.md) — the `Widget` and `Window` traits every concrete type implements.
+- [`app.rs`](core/app.md) — the `App` entry point and event loop driver.

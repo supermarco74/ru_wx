@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `MiniFrame` — a small caption frame (`wxMiniFrame`).
 //!
 //! Demonstrates:
@@ -60,8 +63,12 @@ fn main() {
     // Hide explicitly
     let mini_for_hide = mini.clone();
     let btn_hide = Button::new(&frame, "Hide mini-frame");
+    let visible_for_hide = visible.clone();
+    let status_for_hide = status.clone();
     btn_hide.on_click(&frame, move || {
+        visible_for_hide.set(false);
         mini_for_hide.show(false);
+        status_for_hide.set_status_text("MiniFrame hidden", 0);
     });
 
     // Set a new title

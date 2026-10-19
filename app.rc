@@ -1,3 +1,5 @@
-#include <winuser.h>
-
-1 RT_MANIFEST "app.manifest"
+// Application resources are generated in build.rs (OUT_DIR) from:
+//   assets/ru_wx_window_icon.svg  ->  ru_wx_app.ico  (Explorer .exe icon)
+//   app.manifest                  ->  Win11 / Common Controls v6 manifest
+//
+// This file is kept for reference; embed-resource uses the generated copy.

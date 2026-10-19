@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ru_wx — confronto piattaforme</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1d222a; --testo: #e6e9ee; --tenue: #9aa4b2;
+    --lin: #e9a23b; --win: #4fa3f7; --mac: #b48ef7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2rem; background: var(--bg); color: var(--testo);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { margin: 0 0 .3rem; font-size: 1.6rem; }
+  .sommario { color: var(--tenue); margin-bottom: 1.5rem; }
+  .esempio { background: var(--panel); border: 1px solid #2a313c; border-radius: 10px;
+             padding: 1rem 1.2rem 1.2rem; margin-bottom: 1.4rem; }
+  .esempio h2 { margin: 0 0 .9rem; font-size: 1.1rem; font-family: ui-monospace, monospace;
+                color: #fff; border-bottom: 1px solid #2a313c; padding-bottom: .55rem; }
+  .riga { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  figure { margin: 0; min-width: 0; }
+  .etichetta { display: inline-block; font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+               text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px;
+               margin-bottom: .45rem; color: #14171c; }
+  .etichetta.lin { background: var(--lin); }
+  .etichetta.win { background: var(--win); }
+  .etichetta.mac { background: var(--mac); }
+  figure img { width: 100%; height: auto; border: 1px solid #2a313c; border-radius: 6px;
+               background: #000; display: block; }
+  .placeholder { display: flex; align-items: center; justify-content: center; aspect-ratio: 16/10;
+                 border: 1px dashed #39414e; border-radius: 6px; color: var(--tenue);
+                 font-size: .85rem; text-align: center; padding: .5rem; }
+  @media (max-width: 900px) { .riga { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>ru_wx — confronto piattaforme</h1>
+<p class="sommario">
+  93 esempi &middot; Linux: 89 screenshot &middot; Windows: 80 screenshot &middot;
+  macOS: 0 screenshot &middot; generato il 2026-10-08 01:34
+  (ricreare con <code>./genera_confronto.sh</code>) &middot; sorgente Windows: esempi/immaginiwin
+</p>
+<section class="esempio">
+  <h2>advanced_ui_demo</h2>
+  <div class="riga">
+        <figure class="mancante">
+          <span class="etichetta lin">Linux</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/advanced_ui_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/advanced_ui_demo.png" alt="advanced_ui_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>aui_manager_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/aui_manager_demo.png" target="_blank"><img src="../immagini_linux/aui_manager_demo.png" alt="aui_manager_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>aui_toolbar_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/aui_toolbar_demo.png" target="_blank"><img src="../immagini_linux/aui_toolbar_demo.png" alt="aui_toolbar_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/aui_toolbar_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/aui_toolbar_demo.png" alt="aui_toolbar_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>cloud_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/cloud_demo.png" target="_blank"><img src="../immagini_linux/cloud_demo.png" alt="cloud_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>cross_platform_stubs</h2>
+  <div class="riga">
+        <figure class="mancante">
+          <span class="etichetta lin">Linux</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/cross_platform_stubs.png" target="_blank"><img src="../../../esempi/immaginiwin/cross_platform_stubs.png" alt="cross_platform_stubs — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>cust_table_grid</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/cust_table_grid.png" target="_blank"><img src="../immagini_linux/cust_table_grid.png" alt="cust_table_grid — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/cust_table_grid.png" target="_blank"><img src="../../../esempi/immaginiwin/cust_table_grid.png" alt="cust_table_grid — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>esempio2</h2>
+  <div class="riga">
+        <figure class="mancante">
+          <span class="etichetta lin">Linux</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/esempio2.png" target="_blank"><img src="../../../esempi/immaginiwin/esempio2.png" alt="esempio2 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>file_explorer_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/file_explorer_demo.png" target="_blank"><img src="../immagini_linux/file_explorer_demo.png" alt="file_explorer_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>grid_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/grid_demo.png" target="_blank"><img src="../immagini_linux/grid_demo.png" alt="grid_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/grid_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/grid_demo.png" alt="grid_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>icon_tray_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/icon_tray_demo.png" target="_blank"><img src="../immagini_linux/icon_tray_demo.png" alt="icon_tray_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/icon_tray_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/icon_tray_demo.png" alt="icon_tray_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>input_controls_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/input_controls_demo.png" target="_blank"><img src="../immagini_linux/input_controls_demo.png" alt="input_controls_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/input_controls_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/input_controls_demo.png" alt="input_controls_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>inspector_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/inspector_demo.png" target="_blank"><img src="../immagini_linux/inspector_demo.png" alt="inspector_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mdi_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mdi_demo.png" target="_blank"><img src="../immagini_linux/mdi_demo.png" alt="mdi_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>minieditor_esempio</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/minieditor_esempio.png" target="_blank"><img src="../immagini_linux/minieditor_esempio.png" alt="minieditor_esempio — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_about</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_about.png" target="_blank"><img src="../immagini_linux/mt_about.png" alt="mt_about — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_about.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_about.png" alt="mt_about — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_activity</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_activity.png" target="_blank"><img src="../immagini_linux/mt_activity.png" alt="mt_activity — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_activity.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_activity.png" alt="mt_activity — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_animation</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_animation.png" target="_blank"><img src="../immagini_linux/mt_animation.png" alt="mt_animation — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_animation.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_animation.png" alt="mt_animation — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_bitmap_combo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_bitmap_combo.png" target="_blank"><img src="../immagini_linux/mt_bitmap_combo.png" alt="mt_bitmap_combo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_bitmap_combo.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_bitmap_combo.png" alt="mt_bitmap_combo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_bounds_screen</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_bounds_screen.png" target="_blank"><img src="../immagini_linux/mt_bounds_screen.png" alt="mt_bounds_screen — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_breadcrumb</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_breadcrumb.png" target="_blank"><img src="../immagini_linux/mt_breadcrumb.png" alt="mt_breadcrumb — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_button</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_button.png" target="_blank"><img src="../immagini_linux/mt_button.png" alt="mt_button — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_button.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_button.png" alt="mt_button — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_checkbox_radio</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_checkbox_radio.png" target="_blank"><img src="../immagini_linux/mt_checkbox_radio.png" alt="mt_checkbox_radio — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_checkbox_radio.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_checkbox_radio.png" alt="mt_checkbox_radio — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_choicebook</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_choicebook.png" target="_blank"><img src="../immagini_linux/mt_choicebook.png" alt="mt_choicebook — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_choicebook.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_choicebook.png" alt="mt_choicebook — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_choice_combo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_choice_combo.png" target="_blank"><img src="../immagini_linux/mt_choice_combo.png" alt="mt_choice_combo — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_choice_combo.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_choice_combo.png" alt="mt_choice_combo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_clipboard</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_clipboard.png" target="_blank"><img src="../immagini_linux/mt_clipboard.png" alt="mt_clipboard — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_clipboard.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_clipboard.png" alt="mt_clipboard — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_context_menu</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_context_menu.png" target="_blank"><img src="../immagini_linux/mt_context_menu.png" alt="mt_context_menu — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_context_menu.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_context_menu.png" alt="mt_context_menu — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_dc</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_dc.png" target="_blank"><img src="../immagini_linux/mt_dc.png" alt="mt_dc — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_dc.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_dc.png" alt="mt_dc — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_events</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_events.png" target="_blank"><img src="../immagini_linux/mt_events.png" alt="mt_events — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_events.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_events.png" alt="mt_events — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_frame_events</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_frame_events.png" target="_blank"><img src="../immagini_linux/mt_frame_events.png" alt="mt_frame_events — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_frame_events.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_frame_events.png" alt="mt_frame_events — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_gl_canvas</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_gl_canvas.png" target="_blank"><img src="../immagini_linux/mt_gl_canvas.png" alt="mt_gl_canvas — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_gl_canvas.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_gl_canvas.png" alt="mt_gl_canvas — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_hyperlink</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_hyperlink.png" target="_blank"><img src="../immagini_linux/mt_hyperlink.png" alt="mt_hyperlink — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_hyperlink.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_hyperlink.png" alt="mt_hyperlink — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_listbook</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_listbook.png" target="_blank"><img src="../immagini_linux/mt_listbook.png" alt="mt_listbook — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_listbook.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_listbook.png" alt="mt_listbook — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_list_box</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_list_box.png" target="_blank"><img src="../immagini_linux/mt_list_box.png" alt="mt_list_box — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_list_box.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_list_box.png" alt="mt_list_box — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_list_ctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_list_ctrl.png" target="_blank"><img src="../immagini_linux/mt_list_ctrl.png" alt="mt_list_ctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_list_ctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_list_ctrl.png" alt="mt_list_ctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_mdi</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_mdi.png" target="_blank"><img src="../immagini_linux/mt_mdi.png" alt="mt_mdi — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_mdi.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_mdi.png" alt="mt_mdi — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_media_ctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_media_ctrl.png" target="_blank"><img src="../immagini_linux/mt_media_ctrl.png" alt="mt_media_ctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_media_ctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_media_ctrl.png" alt="mt_media_ctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_menu</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_menu.png" target="_blank"><img src="../immagini_linux/mt_menu.png" alt="mt_menu — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_menu.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_menu.png" alt="mt_menu — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_mini_frame</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_mini_frame.png" target="_blank"><img src="../immagini_linux/mt_mini_frame.png" alt="mt_mini_frame — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_mini_frame.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_mini_frame.png" alt="mt_mini_frame — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_modern_style</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_modern_style.png" target="_blank"><img src="../immagini_linux/mt_modern_style.png" alt="mt_modern_style — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_modern_style.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_modern_style.png" alt="mt_modern_style — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_pickers</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_pickers.png" target="_blank"><img src="../immagini_linux/mt_pickers.png" alt="mt_pickers — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_pickers.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_pickers.png" alt="mt_pickers — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_property_grid</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_property_grid.png" target="_blank"><img src="../immagini_linux/mt_property_grid.png" alt="mt_property_grid — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_property_grid.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_property_grid.png" alt="mt_property_grid — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_property_sheet_dialog</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_property_sheet_dialog.png" target="_blank"><img src="../immagini_linux/mt_property_sheet_dialog.png" alt="mt_property_sheet_dialog — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_property_sheet_dialog.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_property_sheet_dialog.png" alt="mt_property_sheet_dialog — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round20</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round20.png" target="_blank"><img src="../immagini_linux/mt_round20.png" alt="mt_round20 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round20.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round20.png" alt="mt_round20 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round21</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round21.png" target="_blank"><img src="../immagini_linux/mt_round21.png" alt="mt_round21 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round21.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round21.png" alt="mt_round21 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round22</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round22.png" target="_blank"><img src="../immagini_linux/mt_round22.png" alt="mt_round22 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round22.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round22.png" alt="mt_round22 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round23</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round23.png" target="_blank"><img src="../immagini_linux/mt_round23.png" alt="mt_round23 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round23.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round23.png" alt="mt_round23 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round24</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round24.png" target="_blank"><img src="../immagini_linux/mt_round24.png" alt="mt_round24 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round24.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round24.png" alt="mt_round24 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round25</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round25.png" target="_blank"><img src="../immagini_linux/mt_round25.png" alt="mt_round25 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round25.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round25.png" alt="mt_round25 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round26</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round26.png" target="_blank"><img src="../immagini_linux/mt_round26.png" alt="mt_round26 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round26.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round26.png" alt="mt_round26 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round27</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round27.png" target="_blank"><img src="../immagini_linux/mt_round27.png" alt="mt_round27 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round27.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round27.png" alt="mt_round27 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round28</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round28.png" target="_blank"><img src="../immagini_linux/mt_round28.png" alt="mt_round28 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round28.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round28.png" alt="mt_round28 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round29</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round29.png" target="_blank"><img src="../immagini_linux/mt_round29.png" alt="mt_round29 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round29.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round29.png" alt="mt_round29 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round30</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round30.png" target="_blank"><img src="../immagini_linux/mt_round30.png" alt="mt_round30 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round30.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round30.png" alt="mt_round30 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round31</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round31.png" target="_blank"><img src="../immagini_linux/mt_round31.png" alt="mt_round31 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round31.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round31.png" alt="mt_round31 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round32</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round32.png" target="_blank"><img src="../immagini_linux/mt_round32.png" alt="mt_round32 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round32.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round32.png" alt="mt_round32 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round33</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round33.png" target="_blank"><img src="../immagini_linux/mt_round33.png" alt="mt_round33 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round33.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round33.png" alt="mt_round33 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round34</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round34.png" target="_blank"><img src="../immagini_linux/mt_round34.png" alt="mt_round34 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round34.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round34.png" alt="mt_round34 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_round35</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_round35.png" target="_blank"><img src="../immagini_linux/mt_round35.png" alt="mt_round35 — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_round35.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_round35.png" alt="mt_round35 — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_scroll_bar</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_scroll_bar.png" target="_blank"><img src="../immagini_linux/mt_scroll_bar.png" alt="mt_scroll_bar — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_scroll_bar.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_scroll_bar.png" alt="mt_scroll_bar — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_scrolled</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_scrolled.png" target="_blank"><img src="../immagini_linux/mt_scrolled.png" alt="mt_scrolled — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_scrolled.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_scrolled.png" alt="mt_scrolled — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_search</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_search.png" target="_blank"><img src="../immagini_linux/mt_search.png" alt="mt_search — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_search.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_search.png" alt="mt_search — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_simplebook</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_simplebook.png" target="_blank"><img src="../immagini_linux/mt_simplebook.png" alt="mt_simplebook — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_slider_gauge</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_slider_gauge.png" target="_blank"><img src="../immagini_linux/mt_slider_gauge.png" alt="mt_slider_gauge — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_slider_gauge.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_slider_gauge.png" alt="mt_slider_gauge — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_splash_screen</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_splash_screen.png" target="_blank"><img src="../immagini_linux/mt_splash_screen.png" alt="mt_splash_screen — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_splash_screen.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_splash_screen.png" alt="mt_splash_screen — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_splitter</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_splitter.png" target="_blank"><img src="../immagini_linux/mt_splitter.png" alt="mt_splitter — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_splitter.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_splitter.png" alt="mt_splitter — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_static_bitmap</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_static_bitmap.png" target="_blank"><img src="../immagini_linux/mt_static_bitmap.png" alt="mt_static_bitmap — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_static_bitmap.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_static_bitmap.png" alt="mt_static_bitmap — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_static_box</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_static_box.png" target="_blank"><img src="../immagini_linux/mt_static_box.png" alt="mt_static_box — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_static_box.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_static_box.png" alt="mt_static_box — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_static_line</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_static_line.png" target="_blank"><img src="../immagini_linux/mt_static_line.png" alt="mt_static_line — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_static_line.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_static_line.png" alt="mt_static_line — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_status_bar</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_status_bar.png" target="_blank"><img src="../immagini_linux/mt_status_bar.png" alt="mt_status_bar — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_status_bar.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_status_bar.png" alt="mt_status_bar — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_status_bar_input</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_status_bar_input.png" target="_blank"><img src="../immagini_linux/mt_status_bar_input.png" alt="mt_status_bar_input — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_status_bar_input.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_status_bar_input.png" alt="mt_status_bar_input — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_status_bar_minimal</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_status_bar_minimal.png" target="_blank"><img src="../immagini_linux/mt_status_bar_minimal.png" alt="mt_status_bar_minimal — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_status_bar_minimal.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_status_bar_minimal.png" alt="mt_status_bar_minimal — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_tab</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_tab.png" target="_blank"><img src="../immagini_linux/mt_tab.png" alt="mt_tab — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_tab.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_tab.png" alt="mt_tab — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_task_dialog</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_task_dialog.png" target="_blank"><img src="../immagini_linux/mt_task_dialog.png" alt="mt_task_dialog — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_text_ctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_text_ctrl.png" target="_blank"><img src="../immagini_linux/mt_text_ctrl.png" alt="mt_text_ctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_text_ctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_text_ctrl.png" alt="mt_text_ctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_time_sizer</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_time_sizer.png" target="_blank"><img src="../immagini_linux/mt_time_sizer.png" alt="mt_time_sizer — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_tip_window</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_tip_window.png" target="_blank"><img src="../immagini_linux/mt_tip_window.png" alt="mt_tip_window — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_tip_window.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_tip_window.png" alt="mt_tip_window — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_tmp_checkbox</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_tmp_checkbox.png" target="_blank"><img src="../immagini_linux/mt_tmp_checkbox.png" alt="mt_tmp_checkbox — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_toolbook</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_toolbook.png" target="_blank"><img src="../immagini_linux/mt_toolbook.png" alt="mt_toolbook — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_toolbook.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_toolbook.png" alt="mt_toolbook — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_treebook</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_treebook.png" target="_blank"><img src="../immagini_linux/mt_treebook.png" alt="mt_treebook — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_treebook.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_treebook.png" alt="mt_treebook — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_tree_ctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_tree_ctrl.png" target="_blank"><img src="../immagini_linux/mt_tree_ctrl.png" alt="mt_tree_ctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_tree_ctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_tree_ctrl.png" alt="mt_tree_ctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_window_corners</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_window_corners.png" target="_blank"><img src="../immagini_linux/mt_window_corners.png" alt="mt_window_corners — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_window_corners.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_window_corners.png" alt="mt_window_corners — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>mt_wizard</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/mt_wizard.png" target="_blank"><img src="../immagini_linux/mt_wizard.png" alt="mt_wizard — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/mt_wizard.png" target="_blank"><img src="../../../esempi/immaginiwin/mt_wizard.png" alt="mt_wizard — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>music_player</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/music_player.png" target="_blank"><img src="../immagini_linux/music_player.png" alt="music_player — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/music_player.png" target="_blank"><img src="../../../esempi/immaginiwin/music_player.png" alt="music_player — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_2btn_textctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_2btn_textctrl.png" target="_blank"><img src="../immagini_linux/repro_2btn_textctrl.png" alt="repro_2btn_textctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_2btn_textctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_2btn_textctrl.png" alt="repro_2btn_textctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_3buttons</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_3buttons.png" target="_blank"><img src="../immagini_linux/repro_3buttons.png" alt="repro_3buttons — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_3buttons.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_3buttons.png" alt="repro_3buttons — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_4buttons</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_4buttons.png" target="_blank"><img src="../immagini_linux/repro_4buttons.png" alt="repro_4buttons — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_4buttons.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_4buttons.png" alt="repro_4buttons — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_diag</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_diag.png" target="_blank"><img src="../immagini_linux/repro_diag.png" alt="repro_diag — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_diag.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_diag.png" alt="repro_diag — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_statictext</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_statictext.png" target="_blank"><img src="../immagini_linux/repro_statictext.png" alt="repro_statictext — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_statictext.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_statictext.png" alt="repro_statictext — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>repro_textctrl</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/repro_textctrl.png" target="_blank"><img src="../immagini_linux/repro_textctrl.png" alt="repro_textctrl — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/repro_textctrl.png" target="_blank"><img src="../../../esempi/immaginiwin/repro_textctrl.png" alt="repro_textctrl — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>ribbon_bar_demo</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/ribbon_bar_demo.png" target="_blank"><img src="../immagini_linux/ribbon_bar_demo.png" alt="ribbon_bar_demo — Linux" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta win">Windows</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>showcase_all</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/showcase_all.png" target="_blank"><img src="../immagini_linux/showcase_all.png" alt="showcase_all — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/showcase_all.png" target="_blank"><img src="../../../esempi/immaginiwin/showcase_all.png" alt="showcase_all — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>stub_app_demo</h2>
+  <div class="riga">
+        <figure class="mancante">
+          <span class="etichetta lin">Linux</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/stub_app_demo.png" target="_blank"><img src="../../../esempi/immaginiwin/stub_app_demo.png" alt="stub_app_demo — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+<section class="esempio">
+  <h2>window_with_button</h2>
+  <div class="riga">
+        <figure>
+          <span class="etichetta lin">Linux</span>
+          <a href="../immagini_linux/window_with_button.png" target="_blank"><img src="../immagini_linux/window_with_button.png" alt="window_with_button — Linux" loading="lazy"></a>
+        </figure>
+        <figure>
+          <span class="etichetta win">Windows</span>
+          <a href="../../../esempi/immaginiwin/window_with_button.png" target="_blank"><img src="../../../esempi/immaginiwin/window_with_button.png" alt="window_with_button — Windows" loading="lazy"></a>
+        </figure>
+        <figure class="mancante">
+          <span class="etichetta mac">macOS</span>
+          <div class="placeholder">screenshot non disponibile</div>
+        </figure>
+  </div>
+</section>
+</body>
+</html>

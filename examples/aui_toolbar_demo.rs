@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Standalone demo for `wxAuiToolBar` — a dockable toolbar that can be
 //! detached to a floating window and re-docked to the frame's edges.
 //!
@@ -30,6 +33,7 @@ use std::rc::Rc;
 
 use ru_wx::{
     App, AuiDockSide, AuiToolBar, BitmapBundle, Button, Frame, ImageList, StaticText, StatusBar,
+    ToolTip,
 };
 
 // Colorful inline SVG icons (24×24 viewBox) with **filled** coloured
@@ -102,12 +106,12 @@ fn main() {
     // Grow the bar so 40×40 icons fit with breathing room.
     aui.set_toolbar_height(52);
     aui.set_image_list(&images);
-    aui.add_tool(ID_TOOL_NEW, "New", 0);
-    aui.add_tool(ID_TOOL_OPEN, "Open", 1);
-    aui.add_tool(ID_TOOL_SAVE, "Save", 2);
+    aui.add_tool(ID_TOOL_NEW, "New document", 0);
+    aui.add_tool(ID_TOOL_OPEN, "Open file…", 1);
+    aui.add_tool(ID_TOOL_SAVE, "Save document", 2);
     aui.add_separator();
-    aui.add_tool(ID_TOOL_CUT, "Cut", 3);
-    aui.add_tool(ID_TOOL_COPY, "Copy", 4);
+    aui.add_tool(ID_TOOL_CUT, "Cut selection", 3);
+    aui.add_tool(ID_TOOL_COPY, "Copy selection", 4);
     aui.realize();
 
     // ---- Shared click counter. The single closure bumps the
@@ -118,12 +122,8 @@ fn main() {
     let click_count: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
     let last_tool: Rc<RefCell<String>> = Rc::new(RefCell::new(String::from("(none)")));
 
-    let lbl_count =
-        StaticText::new(&frame, "Total tool clicks: 0   |   Last tool: (none)");
-    lbl_count
-        .as_widget_ref()
-        .borrow_mut()
-        .set_position(10, 120);
+    let lbl_count = StaticText::new(&frame, "Total tool clicks: 0   |   Last tool: (none)");
+    lbl_count.as_widget_ref().borrow_mut().set_position(10, 120);
     lbl_count.as_widget_ref().borrow_mut().set_size(720, 24);
 
     // ---- Wire up tool clicks. The single callback fires for every
@@ -150,9 +150,7 @@ fn main() {
         *last_for_tools.borrow_mut() = label.to_string();
         let n = *count_for_tools.borrow();
         let last = last_for_tools.borrow().clone();
-        lbl_for_tools.set_label(&format!(
-            "Total tool clicks: {n}   |   Last tool: {last}"
-        ));
+        lbl_for_tools.set_label(&format!("Total tool clicks: {n}   |   Last tool: {last}"));
         status_for_tools.set_status_text(&format!("Tool clicked: {label}"), 0);
     });
 
@@ -196,12 +194,25 @@ fn main() {
     btn_left.as_widget_ref().borrow_mut().set_size(110, 30);
 
     let btn_right = Button::new(&frame, "Dock Right");
-    btn_right.as_widget_ref().borrow_mut().set_position(370, 160);
+    btn_right
+        .as_widget_ref()
+        .borrow_mut()
+        .set_position(370, 160);
     btn_right.as_widget_ref().borrow_mut().set_size(110, 30);
 
     let btn_float = Button::new(&frame, "Float");
-    btn_float.as_widget_ref().borrow_mut().set_position(490, 160);
+    btn_float
+        .as_widget_ref()
+        .borrow_mut()
+        .set_position(490, 160);
     btn_float.as_widget_ref().borrow_mut().set_size(110, 30);
+
+    // Per-widget ru_wx tooltips on the regular buttons (tooltips_class32).
+    ToolTip::new("Aggancia la toolbar in alto").attach(&btn_top.as_widget_ref());
+    ToolTip::new("Aggancia la toolbar in basso").attach(&btn_bottom.as_widget_ref());
+    ToolTip::new("Aggancia la toolbar a sinistra").attach(&btn_left.as_widget_ref());
+    ToolTip::new("Aggancia la toolbar a destra").attach(&btn_right.as_widget_ref());
+    ToolTip::new("Stacca la toolbar come finestra flottante").attach(&btn_float.as_widget_ref());
 
     // ---- Wire up the buttons. Each closure captures a clone of the
     // AuiToolBar (cheap) so the toolbar can be moved/docked even
@@ -263,5 +274,6 @@ fn main() {
     });
 
     // Run the app.
+    aui.bring_to_front();
     app.run(frame);
 }

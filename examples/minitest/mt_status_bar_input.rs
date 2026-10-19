@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `TextCtrl` → `StatusBar` — type into a text field, click
 //! a button, see the value appear in the status bar.
 //!
@@ -60,10 +63,7 @@ fn main() {
     });
 
     let s = status.clone();
-    let btn_long = Button::new(
-        &frame,
-        "Preset: long string (80+ chars, no truncation)",
-    );
+    let btn_long = Button::new(&frame, "Preset: long string (80+ chars, no truncation)");
     btn_long.on_click(&frame, move || {
         s.set_status_text(
             "The quick brown fox jumps over the lazy dog (1234567890)",

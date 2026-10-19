@@ -16,10 +16,10 @@ Platform-specific backends for the UI toolkit. Active-backend re-exports live he
 ## Conventions
 
 - Functions that wrap a single Win32 FFI call live in the matching platform module and are re-exported here.
-- Functions that return a handle are allowed to return a null pointer when the underlying call fails; callers are responsible for null-checking. The library also logs the failure through the [`crate::log`] system when appropriate.
+- Functions that return a handle are allowed to return a null pointer when the underlying call fails; callers are responsible for null-checking. The library also logs the failure through the [`crate::core::log`] system when appropriate.
 - No function in this module panics. `try_into` / lock failures fall back to a sensible default (96 DPI, an empty string, etc.).
 
 ## See also
 
-- [`win32.rs`](./win32.md) — the only active backend today.
-- [`dpi.rs`](./dpi.md) — DPI awareness is platform-specific and lives one level up.
+- [`win32.rs`](win32.md) — the only active backend today.
+- [`dpi.rs`](../core/dpi.md) — DPI awareness is platform-specific and lives one level up.

@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `PropertySheetDialog` — tabbed settings dialog
 //! (`wxPropertySheetDialog`).
 //!
@@ -21,8 +24,8 @@
 #![windows_subsystem = "windows"]
 
 use ru_wx::{
-    App, BoxSizer, Button, Frame, Panel, PropertySheetDialog, PropertySheetDialogResult, StaticText,
-    StatusBar,
+    App, BoxSizer, Button, Frame, Panel, PropertySheetDialog, PropertySheetDialogResult,
+    StaticText, StatusBar,
 };
 
 fn main() {

@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `BitmapComboBox` — a drop-down where each row carries a small icon.
 //!
 //! Run with:
@@ -12,9 +15,8 @@
 
 #![windows_subsystem = "windows"]
 
-use ru_wx::{
-    icon, App, BitmapComboBox, BoxSizer, Frame, ImageList, StaticText, StatusBar,
-};
+use ru_wx::dc::icon;
+use ru_wx::{App, BitmapComboBox, BoxSizer, Frame, ImageList, StaticText, StatusBar};
 
 fn main() {
     let app = App::new();
@@ -40,7 +42,9 @@ fn main() {
     ];
     for path in &icon_files {
         if let Some(hbmp) = icon::load_svg_as_hbitmap(std::path::Path::new(path), 16, 16) {
-            icons.add_bitmap(hbmp);
+            // `load_svg_as_hbitmap` returns an `HBITMAP` (`*mut c_void`).
+            // `ImageList::add_bitmap` accepts a `NativeHandle` (`isize`).
+            icons.add_bitmap(hbmp as isize);
         }
     }
 

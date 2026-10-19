@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `StatusBar` — 4 fields, 4 features exercised by buttons.
 //!
 //! Demonstrates the four main things you can do with a `StatusBar`:

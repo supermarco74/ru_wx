@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `WindowCornerPreference` — Windows 11 rounded corners.
 //!
 //! Demonstrates:

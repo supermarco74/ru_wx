@@ -1,17 +1,168 @@
 [package]
 name = "ru_wx"
-version = "0.6.4"
+version = "0.7.1"
 edition = "2021"
-description = "A pure Rust cross-platform GUI library with native widgets"
+description = "Cross-platform GUI library with native API calls per platform. No intermediate bindings or C++ dependencies."
+authors = ["Marco Muratore <supermarco74@gmail.com>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/supermarco74/ru_wx"
+homepage = "https://ru_wx.easytaskflow.app/"
+documentation = "https://ru_wx.easytaskflow.app/"
+readme = "README.md"
+keywords = ["gui", "win32", "wxwidgets", "windows", "native"]
+categories = ["gui"]
+exclude = [
+    "/dist/",
+    "/release/",
+    "/examples/examples_win32/",
+    "/examples/minitest_win32/",
+    "/examples/examples_macos/",
+    "/examples/minitest_macos/",
+    "**/*.exe",
+    "**/*.pdb",
+    "**/*.err",
+    "/tools/",
+    "/scripts/",
+    "/vecchie_elaborazioni/",
+]
 
 [dependencies]
+human-panic = "2.0"
 image = { version = "0.25", default-features = false, features = ["bmp", "png", "jpeg", "gif"] }
 resvg = "0.44"
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
+once_cell = "1.19"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Layer data (opzionale): driver DB dietro feature flag, mai in build base
+rusqlite = { version = "0.40", optional = true, features = ["bundled"] }
+mysql = { version = "28", optional = true }
+# Windows backend: win32 (windows_sys) per API classiche, winui3 per UI moderne
+# macOS backend: appkit (objc2) per chiamate native AppKit
+# Linux backend: gtk4 (gtk-rs) per chiamate native GTK4
 
 [build-dependencies]
 embed-resource = "2.4"
+resvg = "0.44"
+ico = "0.4"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# v4_10: PopoverMenuBar (menu bar a popup) è gated dietro questa feature
+# nell'sdk gtk-rs (nessuna feature è attiva di default).
+gtk4 = { version = "0.11", features = ["v4_10"] }
+# X11: accesso a XID/Display della superficie GTK, usato dall'inspector
+# per posizione finestra e screenshot (XGetImage).
+gdk4-x11 = "0.11"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSGeometry", "NSThread", "NSRunLoop", "NSNotification", "NSObject", "NSIndexSet", "NSTimer", "NSDictionary", "NSArray", "NSSortDescriptor", "NSURL", "NSDate", "NSDateFormatter", "NSBundle"] }
+objc2-app-kit = { version = "0.3", features = [
+    "NSApplication",
+    "NSWindow",
+    "NSView",
+    "NSButton",
+    "NSPopUpButton",
+    "NSComboBox",
+    "NSScrollView",
+    "NSTabView",
+    "NSTabViewItem",
+    "NSSlider",
+    "NSProgressIndicator",
+    "NSLevelIndicator",
+    "NSStepper",
+    "NSAlert",
+    "NSTextField",
+    "NSSecureTextField",
+    "NSCell",
+    "NSParagraphStyle",
+    "NSSearchField",
+    "NSControl",
+    "NSResponder",
+    "NSRunningApplication",
+    "NSMenu",
+    "NSMenuItem",
+    "NSColor",
+    "NSColorSpace",
+    "NSColorWell",
+    "NSFont",
+    "NSFontManager",
+    "NSFontPanel",
+    "NSPasteboard",
+    "NSAttributedString",
+    "NSStringDrawing",
+    "NSEvent",
+    "NSScreen",
+    "NSTableView",
+    "NSOutlineView",
+    "NSTableColumn",
+    "NSTableCellView",
+    "NSTableHeaderView",
+    "NSClipView",
+    "NSView",
+    "NSUserInterfaceItemIdentification",
+    "NSSplitView",
+    "NSDragging",
+    "NSDraggingSession",
+    "NSOpenPanel",
+    "NSSavePanel",
+    "NSColorPanel",
+    "NSPanel",
+    "NSScroller",
+    "NSText",
+    "NSTextView",
+    "NSOpenGLView",
+    "NSBox",
+    "NSDatePicker",
+    "NSWorkspace",
+    "NSStatusBar",
+    "NSStatusItem",
+    "NSToolbar",
+    "NSToolbarItem",
+    "NSVisualEffectView",
+    "NSTrackingArea",
+    "NSGraphics",
+    "NSBezierPath",
+    "objc2-quartz-core",
+    "NSPrintPanel",
+    "NSPrintInfo",
+    "NSPrintOperation",
+    "NSPageLayout",
+    "objc2-core-foundation",
+] }
+objc2-web-kit = { version = "0.3", features = [
+    "WKWebView",
+    "WKWebViewConfiguration",
+    "WKNavigationDelegate",
+    "WKNavigation",
+    "WKNavigationAction",
+    "block2",
+    "objc2-app-kit",
+    "objc2-core-foundation",
+] }
+objc2-core-foundation = { version = "0.3" }
+objc2-quartz-core = { version = "0.3", features = ["CALayer"] }
+objc2-core-graphics = { version = "0.3", features = [
+    "CGContext",
+    "CGColorSpace",
+    "CGBitmapContext",
+    "CGColor",
+    "CGImage",
+    "CGGeometry",
+] }
+objc2-core-media = { version = "0.3", features = ["CMTime"] }
+objc2-av-foundation = { version = "0.3", features = ["AVPlayer", "AVPlayerItem", "AVAsset", "block2", "objc2-core-media"] }
+objc2-av-kit = { version = "0.3", features = ["AVPlayerView"] }
+objc2-user-notifications = { version = "0.3", features = ["UNUserNotificationCenter", "UNNotificationRequest", "UNNotificationContent", "UNNotificationResponse", "block2"] }
+block2 = "0.6"
 
 [target.'cfg(target_os = "windows")'.dependencies]
+# Windows Core: for WinRT/WinUI3 native bindings
+# This provides windows_core::link!, Interface, HSTRING, etc.
+windows-core = { version = "0.62.2", default-features = false }
+# Windows App SDK bootstrap per framework-dependent deployment
+# Usato per MddBootstrapInitialize2 e API di versioning
 windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
@@ -26,13 +177,87 @@ windows-sys = { version = "0.59", features = [
     "Win32_UI_Shell_Common",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_HiDpi",
+    "Win32_System_DataExchange",
     "Win32_System_Com",
     "Win32_System_Ole",
     "Win32_System_Memory",
+    "Win32_System_Registry",
+    "Win32_Networking_WinHttp",
+    "Win32_Security_Credentials",
+    "Win32_Security_Cryptography",
     "Win32_Media_Multimedia",
+    "Win32_Media_Audio",
+    "Win32_Graphics_GdiPlus",
     "Win32_Graphics_OpenGL",
     "Win32_Graphics_Dwm",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_Graphics_Printing",
+    "Win32_Storage_Xps",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_ApplicationInstallationAndServicing",
 ] }
+
+# Features for backend selection on Windows
+[features]
+# Use the WinUI3 backend.
+#
+# Default is Win32. The WinUI3 backend lives under
+# `crate::platform::winui3` and provides:
+#   * its own App / Frame / Button / StaticText / TextCtrl / CheckBox /
+#     RadioButton / Panel / Choice / ListBox / ListView / Slider /
+#     Gauge / ComboBox / RadioBox / StatusBar / Tab / Menu types;
+#   * a callback dispatch layer (events.rs) with closure-based
+#     handlers wired through WM_COMMAND, WM_NOTIFY, WM_HSCROLL,
+#     WM_TIMER, WM_CLOSE;
+#   * new widgets: TreeCtrl, Splitter, StaticBox, StaticLine,
+#     Hyperlink, SearchCtrl, ProgressBar, SpinCtrl, BitmapButton,
+#     ToolBar;
+#   * helpers: Timer, AcceleratorTable, dialogs (message box / file /
+#     color picker), per-monitor V2 DPI helpers, SVG -> HICON,
+#     IconTray.
+#
+# Reach for it explicitly via
+#   use ru_wx::platform::winui3::*;
+# (or `ru_wx::platform::default_api::*`) when you want to exercise
+# it.
+#
+# The crate root (`ru_wx::Button`, `ru_wx::Frame`) always resolves to
+# the production-quality Win32 implementation; the WinUI3 modules are
+# parallel types. Do NOT enable this feature and then write
+# `use ru_wx::Button`, because the two `Button` types are distinct.
+#
+# Note: the WinUI3 backend currently re-uses the Win32 controls via
+# `CreateWindowExW` (i.e., it is a "modern Rust-idiomatic surface on
+# top of Win32 controls"). A real WinRT / XAML Islands binding is
+# not present in the Rust ecosystem yet; once it is, the existing
+# widget surface here will be a drop-in transition path.
+winui3 = []
+
+# Debug inspector: abilita il modulo `debug` anche nelle build non-debug.
+# In debug (`debug_assertions`) è attivo automaticamente.
+inspector = []
+
+# WinUI3_Xaml / WinUI3_Reactor: i backend nativi WinRT/XAML sono
+# sviluppati in locale e dipendono dal repository fratello
+# `windows-rs-study` (path dependency ../windows-rs-study/...).
+# Le quattro dipendenze windows-reactor / windows-numerics /
+# windows-collections / windows-future NON sono dichiarate qui: Cargo
+# risolve le dipendenze `path` anche quando sono `optional`, quindi la
+# loro presenza romperebbe `cargo build` per chi clona il crate senza
+# quel checkout. Le feature restano dichiarate (vuote) perché il codice
+# in src/platform/ vi fa riferimento con `#[cfg(feature = ...)]`.
+# Per compilare i due backend: clona windows-rs-study, ripristina le
+# quattro voci nel manifest e abilita la feature.
+winui3_xaml = []
+winui3_reactor = []
+
+# Layer data: provider DB multi-backend (SQLite / MySQL / MariaDB).
+# Disabilitato di default; abilitare con `--features data-sqlite`,
+# `data-mysql` o entrambe (`data-db`).
+data-sqlite = ["dep:rusqlite"]
+data-mysql = ["dep:mysql"]
+data-db = ["data-sqlite", "data-mysql"]
 
 [[example]]
 name = "window_with_button"
@@ -51,6 +276,10 @@ name = "grid_demo"
 path = "examples/grid_demo.rs"
 
 [[example]]
+name = "cust_table_grid"
+path = "examples/cust_table_grid.rs"
+
+[[example]]
 name = "showcase_all"
 path = "examples/showcase_all.rs"
 
@@ -59,8 +288,16 @@ name = "aui_toolbar_demo"
 path = "examples/aui_toolbar_demo.rs"
 
 [[example]]
-name = "esempio2"
-path = "examples/esempio2.rs"
+name = "minieditor_esempio"
+path = "examples/minieditor_esempio.rs"
+
+[[example]]
+name = "music_player"
+path = "examples/music_player.rs"
+
+[[example]]
+name = "advanced_ui_demo"
+path = "examples/advanced_ui_demo.rs"
 
 # ── Minitests: one focused example per migrated component ──────────────
 [[example]]
@@ -100,12 +337,25 @@ name = "mt_list_box"
 path = "examples/minitest/mt_list_box.rs"
 
 [[example]]
+name = "mt_listbox_winui3"
+path = "examples/minitest/mt_listbox_winui3.rs"
+required-features = ["winui3"]
+
+[[example]]
 name = "mt_slider_gauge"
 path = "examples/minitest/mt_slider_gauge.rs"
 
 [[example]]
 name = "mt_tree_ctrl"
 path = "examples/minitest/mt_tree_ctrl.rs"
+
+[[example]]
+name = "mt_list_ctrl"
+path = "examples/minitest/mt_list_ctrl.rs"
+
+[[example]]
+name = "mt_modern_style"
+path = "examples/minitest/mt_modern_style.rs"
 
 [[example]]
 name = "mt_status_bar"
@@ -164,6 +414,10 @@ name = "mt_listbook"
 path = "examples/minitest/mt_listbook.rs"
 
 [[example]]
+name = "mt_simplebook"
+path = "examples/minitest/mt_simplebook.rs"
+
+[[example]]
 name = "mt_choicebook"
 path = "examples/minitest/mt_choicebook.rs"
 
@@ -206,3 +460,405 @@ path = "examples/minitest/mt_property_grid.rs"
 [[example]]
 name = "mt_window_corners"
 path = "examples/minitest/mt_window_corners.rs"
+
+[[example]]
+name = "mt_hyperlink"
+path = "examples/minitest/mt_hyperlink.rs"
+
+[[example]]
+name = "mt_search"
+path = "examples/minitest/mt_search.rs"
+
+[[example]]
+name = "mt_clipboard"
+path = "examples/minitest/mt_clipboard.rs"
+
+[[example]]
+name = "mt_events"
+path = "examples/minitest/mt_events.rs"
+
+[[example]]
+name = "mt_pickers"
+path = "examples/minitest/mt_pickers.rs"
+
+[[example]]
+name = "mt_about"
+path = "examples/minitest/mt_about.rs"
+
+[[example]]
+name = "mt_activity"
+path = "examples/minitest/mt_activity.rs"
+
+[[example]]
+name = "mt_frame_events"
+path = "examples/minitest/mt_frame_events.rs"
+
+[[example]]
+name = "mt_round20"
+path = "examples/minitest/mt_round20.rs"
+
+[[example]]
+name = "mt_round21"
+path = "examples/minitest/mt_round21.rs"
+
+[[example]]
+name = "mt_round22"
+path = "examples/minitest/mt_round22.rs"
+
+[[example]]
+name = "mt_round23"
+path = "examples/minitest/mt_round23.rs"
+
+[[example]]
+name = "mt_round24"
+path = "examples/minitest/mt_round24.rs"
+
+[[example]]
+name = "mt_round25"
+path = "examples/minitest/mt_round25.rs"
+
+[[example]]
+name = "mt_round26"
+path = "examples/minitest/mt_round26.rs"
+
+[[example]]
+name = "mt_round27"
+path = "examples/minitest/mt_round27.rs"
+
+[[example]]
+name = "mt_round28"
+path = "examples/minitest/mt_round28.rs"
+
+[[example]]
+name = "mt_round29"
+path = "examples/minitest/mt_round29.rs"
+
+[[example]]
+name = "mt_round30"
+path = "examples/minitest/mt_round30.rs"
+
+[[example]]
+name = "mt_round31"
+path = "examples/minitest/mt_round31.rs"
+
+[[example]]
+name = "mt_round32"
+path = "examples/minitest/mt_round32.rs"
+
+[[example]]
+name = "mt_round33"
+path = "examples/minitest/mt_round33.rs"
+
+[[example]]
+name = "mt_round34"
+path = "examples/minitest/mt_round34.rs"
+
+[[example]]
+name = "mt_round35"
+path = "examples/minitest/mt_round35.rs"
+
+[[example]]
+name = "mt_time_sizer"
+path = "examples/minitest/mt_time_sizer.rs"
+
+[[example]]
+name = "mt_task_dialog"
+path = "examples/minitest/mt_task_dialog.rs"
+
+[[example]]
+name = "mt_breadcrumb"
+path = "examples/minitest/mt_breadcrumb.rs"
+
+[[example]]
+name = "mt_bounds_screen"
+path = "examples/minitest/mt_bounds_screen.rs"
+
+[[example]]
+name = "cross_platform_stubs"
+path = "examples/cross_platform_stubs.rs"
+
+[[example]]
+name = "stub_app_demo"
+path = "examples/stub_app_demo.rs"
+
+[[example]]
+name = "aui_manager_demo"
+path = "examples/aui_manager_demo.rs"
+
+[[example]]
+name = "mdi_demo"
+path = "examples/mdi_demo.rs"
+
+[[example]]
+name = "ribbon_bar_demo"
+path = "examples/ribbon_bar_demo.rs"
+
+[[example]]
+name = "file_explorer_demo"
+path = "examples/file_explorer_demo.rs"
+
+[[example]]
+name = "cloud_demo"
+path = "examples/cloud_demo.rs"
+
+[[example]]
+name = "test_duplicate"
+path = "examples/test_duplicate.rs"
+
+[[example]]
+name = "win32_modern_window"
+path = "examples/win32_modern_window.rs"
+required-features = ["winui3"]
+
+# WinUI3_Xaml native example (direct WinRT/XAML)
+[[example]]
+name = "winui3_xaml_basic"
+path = "examples/winui3_xaml_basic.rs"
+required-features = ["winui3_xaml"]
+
+# WinUI3_Reactor native example (Fluent UI with windows-reactor)
+[[example]]
+name = "winui3_reactor_basic"
+path = "examples/winui3_reactor_basic.rs"
+required-features = ["winui3_reactor"]
+
+# WinUI3 Native Minimal: solo finestra, X bloccata, zero controlli
+[[example]]
+name = "winui3_native_minimal"
+path = "examples/winui3_native_minimal.rs"
+required-features = ["winui3_reactor"]
+
+# ── WinUI3/XAML step-by-step demos (new bridge) ────────────────────────────
+[[example]]
+name = "wx_step1_window"
+path = "examples/winui3new/wx_step1_window.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step1_events"
+path = "examples/winui3new/wx_step1_events.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_button"
+path = "examples/winui3new/wx_step2_button.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_text"
+path = "examples/winui3new/wx_step2_text.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_input"
+path = "examples/winui3new/wx_step2_input.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_checks"
+path = "examples/winui3new/wx_step2_checks.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_slider"
+path = "examples/winui3new/wx_step2_slider.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step2_combo"
+path = "examples/winui3new/wx_step2_combo.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step3_panel"
+path = "examples/winui3new/wx_step3_panel.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "grid_form_demo"
+path = "examples/grid_form_demo.rs"
+required-features = ["data-sqlite"]
+
+[[example]]
+name = "wx_step3_sizer"
+path = "examples/winui3new/wx_step3_sizer.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step3_tab"
+path = "examples/winui3new/wx_step3_tab.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step3_splitter"
+path = "examples/winui3new/wx_step3_splitter.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step3_scroll"
+path = "examples/winui3new/wx_step3_scroll.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step4_menu"
+path = "examples/winui3new/wx_step4_menu.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step4_toolbar"
+path = "examples/winui3new/wx_step4_toolbar.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step4_status"
+path = "examples/winui3new/wx_step4_status.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step4_context"
+path = "examples/winui3new/wx_step4_context.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step5_msgbox"
+path = "examples/winui3new/wx_step5_msgbox.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step5_file"
+path = "examples/winui3new/wx_step5_file.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step5_color"
+path = "examples/winui3new/wx_step5_color.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step5_font"
+path = "examples/winui3new/wx_step5_font.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step5_dir"
+path = "examples/winui3new/wx_step5_dir.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step6_icon"
+path = "examples/winui3new/wx_step6_icon.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step6_bitmap"
+path = "examples/winui3new/wx_step6_bitmap.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step7_tree"
+path = "examples/winui3new/wx_step7_tree.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step7_listbox"
+path = "examples/winui3new/wx_step7_listbox.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step7_listctrl"
+path = "examples/winui3new/wx_step7_listctrl.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step7_link"
+path = "examples/winui3new/wx_step7_link.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step8_grid"
+path = "examples/winui3new/wx_step8_grid.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step8_grid_base"
+path = "examples/winui3new/wx_step8_grid_base.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step8_grid_cells"
+path = "examples/winui3new/wx_step8_grid_cells.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step8_grid_sort"
+path = "examples/winui3new/wx_step8_grid_sort.rs"
+required-features = ["winui3_xaml"]
+
+[[example]]
+name = "wx_step9_checklist"
+path = "examples/winui3new/wx_step9_checklist.rs"
+required-features = ["winui3_xaml"]
+
+# WinUI3-only examples (importano ru_wx::platform::winui3, gated su Windows)
+[[example]]
+name = "smoke_min"
+path = "examples/smoke_min.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "winui3_grid_showcase"
+path = "examples/winui3_grid_showcase.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "winui3_dashboard"
+path = "examples/winui3_dashboard.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "winui3_styled"
+path = "examples/winui3_styled.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "winui3_widgets_showcase"
+path = "examples/winui3_widgets_showcase.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_tree"
+path = "examples/smoke_tree.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_panel"
+path = "examples/smoke_panel.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_full"
+path = "examples/smoke_full.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_dbg"
+path = "examples/smoke_dbg.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_menu"
+path = "examples/smoke_menu.rs"
+required-features = ["winui3"]
+
+[[example]]
+name = "smoke_winui3_widgets"
+path = "examples/smoke_winui3_widgets.rs"
+required-features = ["winui3"]
+
+# Release profile: thin LTO + strip for smaller binaries.
+# Opt-level "z" is not used here because it can regress scroll/resize
+# performance on large Grid/ListCtrl widgets.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

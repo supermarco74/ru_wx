@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Cross-module integration tests.
 //!
 //! These tests live in the top-level `tests/` directory so they
@@ -169,12 +172,18 @@ fn rect_contains_and_colorref_agree() {
     assert!(r.contains(10, 20));
     assert!(!r.contains(40, 60));
 
-    // Pure red is 0x00BB_GG_RR = 0x0000_00FF.
-    assert_eq!(Colour::new(0xFF, 0, 0, 0).to_colorref(), 0x0000_00FF);
-    // Pure green is 0x00FF_00.
-    assert_eq!(Colour::new(0, 0xFF, 0, 0).to_colorref(), 0x0000_FF00);
-    // Pure blue is 0xFF_00_00.
-    assert_eq!(Colour::new(0, 0, 0xFF, 0).to_colorref(), 0x00FF_0000);
+    // `Colour::to_colorref` è un'esclusiva Windows (COLOURREF), quindi le
+    // asserzioni sul formato colore si eseguono solo lì.
+    #[cfg(target_os = "windows")]
+    {
+        // Pure red is 0x00BB_GG_RR = 0x0000_00FF.
+        assert_eq!(Colour::new(0xFF, 0, 0, 0).to_colorref(), 0x0000_00FF);
+        // Pure green is 0x00FF_00.
+        assert_eq!(Colour::new(0, 0xFF, 0, 0).to_colorref(), 0x0000_FF00);
+        // Pure blue is 0xFF_00_00.
+        assert_eq!(Colour::new(0, 0, 0xFF, 0).to_colorref(), 0x00FF_0000);
+    }
+    let _ = Colour::new(0xFF, 0, 0, 0); // usato anche fuori Windows
 }
 
 // ---------- Cross-module: Accelerator + Modifier flags ----------
@@ -360,10 +369,7 @@ fn ole_drag_data_variants_are_constructible() {
     use ru_wx::OleDragData;
     use std::path::PathBuf;
 
-    let files = OleDragData::Files(vec![
-        PathBuf::from("a.txt"),
-        PathBuf::from("b.bin"),
-    ]);
+    let files = OleDragData::Files(vec![PathBuf::from("a.txt"), PathBuf::from("b.bin")]);
     let text = OleDragData::Text("hello".to_string());
     assert!(matches!(files, OleDragData::Files(ref p) if p.len() == 2));
     assert!(matches!(text, OleDragData::Text(ref s) if s == "hello"));
@@ -379,9 +385,15 @@ fn drag_continue_result_variants_are_constructible() {
     // and `Cancel` means "the user pressed Escape or the
     // source decided to abort".
     use ru_wx::DragContinueResult;
-    assert!(matches!(DragContinueResult::Continue, DragContinueResult::Continue));
+    assert!(matches!(
+        DragContinueResult::Continue,
+        DragContinueResult::Continue
+    ));
     assert!(matches!(DragContinueResult::Drop, DragContinueResult::Drop));
-    assert!(matches!(DragContinueResult::Cancel, DragContinueResult::Cancel));
+    assert!(matches!(
+        DragContinueResult::Cancel,
+        DragContinueResult::Cancel
+    ));
     // The three variants must be distinct.
     assert_ne!(DragContinueResult::Continue, DragContinueResult::Drop);
     assert_ne!(DragContinueResult::Drop, DragContinueResult::Cancel);
@@ -402,8 +414,7 @@ fn ole_drag_error_variants_and_display_contract() {
     let dup = OleDragError::AlreadyInProgress;
     let s = format!("{}", dup);
     assert!(
-        s.to_lowercase().contains("in progress")
-            || s.to_lowercase().contains("progress"),
+        s.to_lowercase().contains("in progress") || s.to_lowercase().contains("progress"),
         "got `{}`",
         s
     );
@@ -524,7 +535,10 @@ impl MockWindow {
     /// The signature that a future real implementation of
     /// `MockWindow::new` is expected to have.
     pub fn new(title: impl Into<String>, size: (i32, i32)) -> Self {
-        MockWindow { title: title.into(), size }
+        MockWindow {
+            title: title.into(),
+            size,
+        }
     }
 
     /// The signature that a future real implementation of

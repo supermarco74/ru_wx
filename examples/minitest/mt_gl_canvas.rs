@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `GLCanvas` — minimal OpenGL rendering surface.
 //!
 //! Demonstrates:
@@ -36,9 +39,10 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
+#[cfg(target_os = "windows")]
 use ru_wx::gl11::{
-    glBegin, glClear, glClearColor, glColor3f, glEnd, glLoadIdentity, glMatrixMode,
-    glRotatef, glVertex2f, glViewport, GL_COLOR_BUFFER_BIT, GL_MODELVIEW, GL_TRIANGLES,
+    glBegin, glClear, glClearColor, glColor3f, glEnd, glLoadIdentity, glMatrixMode, glRotatef,
+    glVertex2f, glViewport, GL_COLOR_BUFFER_BIT, GL_MODELVIEW, GL_TRIANGLES,
 };
 use ru_wx::{App, BoxSizer, Button, Frame, GLCanvas, StaticText, Timer};
 

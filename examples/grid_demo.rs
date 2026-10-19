@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: the advanced `Grid` widget — `wxGrid`-style table with
 //! images, function-based cells, multiple **column alignments**,
 //! **checkboxes**, **progress bars**, **status badges**, **multi-line
@@ -60,40 +63,20 @@
 
 #![windows_subsystem = "windows"]
 
+use ru_wx::{
+    App, BadgeKind, BarStyle, BoxSizer, Cell, Colour, ColumnAlign, FontDesc, Frame, Grid,
+    GridAppearance, GridCellStyle, GridDateFormat, GridIcons, Menu, MenuBar, NumberFormat,
+    PriorityKind, SortOrder, StaticText,
+};
+use std::cell::RefCell;
 use std::io::Write;
-use std::time::Duration;
-
-use ru_wx::{App, BadgeKind, BarStyle, BoxSizer, Cell, ColumnAlign, Font, FontDesc, Frame, Grid, GridDateFormat, ImageList, NumberFormat, PriorityKind, StaticText, Timer};
-
-#[cfg(target_os = "windows")]
-use ru_wx::icon::load_svg_bytes_as_hbitmap;
-
-// Embed Bootstrap Icons SVG files at compile time
-const STAR_SVG: &[u8] = include_bytes!("../assets/icons/star.svg");
-const INFO_SVG: &[u8] = include_bytes!("../assets/icons/info.svg");
-const FILE_NEW_SVG: &[u8] = include_bytes!("../assets/icons/file-new.svg");
-const FOLDER_OPEN_SVG: &[u8] = include_bytes!("../assets/icons/folder-open.svg");
-const EXIT_SVG: &[u8] = include_bytes!("../assets/icons/exit.svg");
+use std::rc::Rc;
 
 macro_rules! step {
     ($($arg:tt)*) => {{
         eprintln!("[grid-demo] {}", format_args!($($arg)*));
         let _ = std::io::stderr().flush();
     }};
-}
-
-/// Try to add an SVG image to the list, returning the assigned index
-/// (or `None` if SVG rendering failed). On non-Windows targets, this
-/// is a stub.
-#[cfg(target_os = "windows")]
-fn add_svg(images: &ImageList, svg: &[u8], w: u32, h: u32) -> Option<i32> {
-    let hb = load_svg_bytes_as_hbitmap(svg, w, h)?;
-    images.add_bitmap(hb)
-}
-
-#[cfg(not(target_os = "windows"))]
-fn add_svg(_images: &ImageList, _svg: &[u8], _w: u32, _h: u32) -> Option<i32> {
-    None
 }
 
 /// Trim a long URL down to its host (+ optional first path segment)
@@ -129,6 +112,14 @@ fn short_url_for_display(url: &str) -> String {
     out
 }
 
+fn icon_col_width(icon_size: i32) -> i32 {
+    match icon_size {
+        16 => 48,
+        24 => 64,
+        _ => 56,
+    }
+}
+
 fn main() {
     step!("start");
     let app = App::new();
@@ -146,38 +137,18 @@ fn main() {
     frame.set_size(1000, 720);
     step!("frame created, hwnd={:?}", frame.hwnd());
 
-    // ── Build the image list ─────────────────────────────────────────
-    // 5 icons, 16x16, 32-bit colour (alpha is preserved). Indices:
-    //   0 star        (featured / popular)
-    //   1 info        (digital / docs)
-    //   2 file-new    (new release)
-    //   3 folder-open (project)
-    //   4 exit        (discontinued)
-    let images = ImageList::new(16, 16);
-    let _ = add_svg(&images, STAR_SVG, 16, 16);
-    let _ = add_svg(&images, INFO_SVG, 16, 16);
-    let _ = add_svg(&images, FILE_NEW_SVG, 16, 16);
-    let _ = add_svg(&images, FOLDER_OPEN_SVG, 16, 16);
-    let _ = add_svg(&images, EXIT_SVG, 16, 16);
+    // ── Lucide Icons (ISC) — 24 stroke SVG glyphs at 20×20 for Win11 DPI ─
+    let icons = Rc::new(RefCell::new(GridIcons::lucide_modern_with_size(20i32)));
     step!(
-        "image list built: {}x{}, {} icons",
-        images.width(),
-        images.height(),
-        5
+        "icon set built: {}×{} px, {} icons (Lucide)",
+        icons.borrow().size(),
+        icons.borrow().size(),
+        icons.borrow().count()
     );
 
-    // ── Create the grid and attach the image list ─────────────────────
+    // ── Create the grid and attach icons ──────────────────────────────
     let grid = Grid::new(&frame);
-    grid.set_image_list(&images);
-    // Install a smaller-than-default font (Segoe UI 8pt) so every
-    // column header renders its full title even in the narrow
-    // columns. The default `SysListView32` face is 9pt; on a 96-DPI
-    // display that 1-pt reduction is the difference between a
-    // header truncated to a single character and one that fits
-    // the word "Description" inside a 95-px column.
-    let font = Font::new(FontDesc::new("Segoe UI", 8));
-    grid.set_font(&font, true);
-    step!("grid created + font set");
+    step!("grid created");
 
     // ── Enable checkboxes ───────────────────────────────────────────
     // Adds a state-image column at the far left of every row. The
@@ -185,7 +156,12 @@ fn main() {
     // flipped with `set_checked`. Pre-check rows 0 and 2 so the
     // checkbox styling is visible immediately.
     grid.set_checkboxes(true);
-    step!("checkboxes enabled");
+    // Native Windows 11 Explorer theme (flat header, system selection).
+    grid.apply_win11_theme(&frame);
+    grid.set_font_desc(FontDesc::new("Segoe UI", 8), true);
+    grid.enable_column_context_menu_with_frame(&frame);
+    grid.enable_interactive_features(&frame);
+    step!("checkboxes + appearance + header sort + tooltips enabled");
 
     // ── Columns ──────────────────────────────────────────────────────
     // The 13 columns total ~975 px which fits comfortably inside a
@@ -211,37 +187,222 @@ fn main() {
     //   • "Rate"   (50)  — 5 ★ + 5 ☆ = 10 chars, centred
     //   • "Prio"   (65)  — 3-block bar + " Critical" (8 chars)
     //   • "Wt"     (55)  — "1.2 kg" / "350 ml" / "500+" (max 7 chars)
-    grid.append_column_with_align("Type",     50, ColumnAlign::Left);
-    grid.append_column_with_align("Product",  125, ColumnAlign::Left);
-    grid.append_column_with_align("Category", 65,  ColumnAlign::Left);
+    grid.append_column_with_align("Type", 56, ColumnAlign::Left);
+    grid.append_column_with_align("Product", 125, ColumnAlign::Left);
+    grid.append_column_with_align("Category", 65, ColumnAlign::Left);
     grid.append_column_with_align("Price (\u{20AC})", 75, ColumnAlign::Right);
-    grid.append_column_with_align("Stock",    80,  ColumnAlign::Center);
-    grid.append_column_with_align("Status",   75,  ColumnAlign::Center);
-    grid.append_column_with_align("Disc%",    85,  ColumnAlign::Center);
-    grid.append_column_with_align("Sales",    55,  ColumnAlign::Right);
-    grid.append_column_with_align("Listed",   75,  ColumnAlign::Center);
-    grid.append_column_with_align("URL",      120, ColumnAlign::Left);
-    grid.append_column_with_align("Rate",     50,  ColumnAlign::Center);
-    grid.append_column_with_align("Prio",     65,  ColumnAlign::Left);
-    grid.append_column_with_align("Wt",       55,  ColumnAlign::Right);
+    grid.append_column_with_align("Stock", 80, ColumnAlign::Center);
+    grid.append_column_with_align("Status", 75, ColumnAlign::Center);
+    grid.append_column_with_align("Disc%", 85, ColumnAlign::Center);
+    grid.append_column_with_align("Sales", 55, ColumnAlign::Right);
+    grid.append_column_with_align("Listed", 75, ColumnAlign::Center);
+    grid.append_column_with_align("URL", 120, ColumnAlign::Left);
+    grid.append_column_with_align("Rate", 50, ColumnAlign::Center);
+    grid.append_column_with_align("Prio", 65, ColumnAlign::Left);
+    grid.append_column_with_align("Wt", 55, ColumnAlign::Right);
     step!("{} columns appended", grid.col_count());
 
     // ── Data model (static; the provider reads it by index) ───────────
     // (icon, name, category, price, stock, max_stock, is_popular, discount_pct, description, sales, listed_date, url, rating, max_rating, priority, weight_label)
-    let products: [(
-        i32, &str, &str, f32, u32, u32, bool, u32, &str,
-        f64, &str, &str, u32, u32, PriorityKind, &str,
-    ); 10] = [
-        (0, "Espresso Machine",   "Kitchen",     599.99, 12, 20, true,  15, "Premium\nbean-to-cup\nespresso maker",        4823.0,  "2024-03-15", "https://shop.example.com/espresso", 5, 5, PriorityKind::High,     "12 kg"),
-        (2, "Project Notebook",   "Stationery",   14.50,250,300, false,  0, "Hardcover\ndotted\n192 pages",               18120.0, "2023-09-01", "https://shop.example.com/notebook", 4, 5, PriorityKind::Low,      "350 g"),
-        (3, "Code Repository Pro","Software",     49.00,999,999, true,  20, "Git hosting\nwith CI/CD\npipelines",        23987.0, "2022-11-20", "https://code.example.com/pro",      5, 5, PriorityKind::Critical, "—"),
-        (1, "API Documentation",  "Digital",       0.00,  0,100, false,  0, "Free\nopen-source\ndocs portal",             98421.0, "2021-06-08", "https://docs.example.com",         4, 5, PriorityKind::Medium,   "0 B"),
-        (3, "Design System Kit",  "Software",     89.00, 43,100, true,  10, "500+\ncomponents\nFigma library",             1209.0, "2024-01-12", "https://figma.example.com/dsk",    5, 5, PriorityKind::High,     "1.2 GB"),
-        (2, "Mechanical Keyboard","Peripherals", 129.00, 18, 30, true,   5, "Hot-swap\nRGB\ntactile switches",              764.0, "2024-05-22", "https://shop.example.com/kbd",     4, 5, PriorityKind::Medium,   "980 g"),
-        (4, "Discontinued Item",  "Archive",      29.99,  0,  0, false,100, "Last-chance\nclearance\nwhile supplies last",    0.0, "2019-04-10", "https://archive.example.com/old",  1, 5, PriorityKind::None,     "n/a"),
-        (0, "Limited Edition Mug","Kitchen",      24.00, 60,100, true,  25, "Ceramic\n350ml\ndishwasher safe",               312.0, "2025-02-28", "https://shop.example.com/mug",     5, 5, PriorityKind::Low,      "350 ml"),
-        (3, "Cloud Backup Plan",  "Service",       9.99,  0,  0, false,  0, "1 TB\nencrypted\nauto-sync",                  5412.0, "2024-08-14", "https://cloud.example.com/plan",   3, 5, PriorityKind::Medium,   "1 TB"),
-        (2, "Conference Ticket",  "Events",      349.00, 80,100, true,   0, "3-day\nfull access\nworkshops included",         150.0, "2025-09-30", "https://events.example.com/2025", 5, 5, PriorityKind::Critical, "1 ea"),
+    type ProductRow<'a> = (
+        i32,
+        &'a str,
+        &'a str,
+        f32,
+        u32,
+        u32,
+        bool,
+        u32,
+        &'a str,
+        f64,
+        &'a str,
+        &'a str,
+        u32,
+        u32,
+        PriorityKind,
+        &'a str,
+    );
+    let products: [ProductRow<'static>; 10] = [
+        (
+            0,
+            "Espresso Machine",
+            "Kitchen",
+            599.99,
+            12,
+            20,
+            true,
+            15,
+            "Premium\nbean-to-cup\nespresso maker",
+            4823.0,
+            "2024-03-15",
+            "https://shop.example.com/espresso",
+            5,
+            5,
+            PriorityKind::High,
+            "12 kg",
+        ),
+        (
+            2,
+            "Project Notebook",
+            "Stationery",
+            14.50,
+            250,
+            300,
+            false,
+            0,
+            "Hardcover\ndotted\n192 pages",
+            18120.0,
+            "2023-09-01",
+            "https://shop.example.com/notebook",
+            4,
+            5,
+            PriorityKind::Low,
+            "350 g",
+        ),
+        (
+            3,
+            "Code Repository Pro",
+            "Software",
+            49.00,
+            999,
+            999,
+            true,
+            20,
+            "Git hosting\nwith CI/CD\npipelines",
+            23987.0,
+            "2022-11-20",
+            "https://code.example.com/pro",
+            5,
+            5,
+            PriorityKind::Critical,
+            "—",
+        ),
+        (
+            1,
+            "API Documentation",
+            "Digital",
+            0.00,
+            0,
+            100,
+            false,
+            0,
+            "Free\nopen-source\ndocs portal",
+            98421.0,
+            "2021-06-08",
+            "https://docs.example.com",
+            4,
+            5,
+            PriorityKind::Medium,
+            "0 B",
+        ),
+        (
+            3,
+            "Design System Kit",
+            "Software",
+            89.00,
+            43,
+            100,
+            true,
+            10,
+            "500+\ncomponents\nFigma library",
+            1209.0,
+            "2024-01-12",
+            "https://figma.example.com/dsk",
+            5,
+            5,
+            PriorityKind::High,
+            "1.2 GB",
+        ),
+        (
+            2,
+            "Mechanical Keyboard",
+            "Peripherals",
+            129.00,
+            18,
+            30,
+            true,
+            5,
+            "Hot-swap\nRGB\ntactile switches",
+            764.0,
+            "2024-05-22",
+            "https://shop.example.com/kbd",
+            4,
+            5,
+            PriorityKind::Medium,
+            "980 g",
+        ),
+        (
+            4,
+            "Discontinued Item",
+            "Archive",
+            29.99,
+            0,
+            0,
+            false,
+            100,
+            "Last-chance\nclearance\nwhile supplies last",
+            0.0,
+            "2019-04-10",
+            "https://archive.example.com/old",
+            1,
+            5,
+            PriorityKind::None,
+            "n/a",
+        ),
+        (
+            0,
+            "Limited Edition Mug",
+            "Kitchen",
+            24.00,
+            60,
+            100,
+            true,
+            25,
+            "Ceramic\n350ml\ndishwasher safe",
+            312.0,
+            "2025-02-28",
+            "https://shop.example.com/mug",
+            5,
+            5,
+            PriorityKind::Low,
+            "350 ml",
+        ),
+        (
+            3,
+            "Cloud Backup Plan",
+            "Service",
+            9.99,
+            0,
+            0,
+            false,
+            0,
+            "1 TB\nencrypted\nauto-sync",
+            5412.0,
+            "2024-08-14",
+            "https://cloud.example.com/plan",
+            3,
+            5,
+            PriorityKind::Medium,
+            "1 TB",
+        ),
+        (
+            2,
+            "Conference Ticket",
+            "Events",
+            349.00,
+            80,
+            100,
+            true,
+            0,
+            "3-day\nfull access\nworkshops included",
+            150.0,
+            "2025-09-30",
+            "https://events.example.com/2025",
+            5,
+            5,
+            PriorityKind::Critical,
+            "1 ea",
+        ),
     ];
 
     // ── Function cells: one closure drives every cell of the table ───
@@ -252,11 +413,13 @@ fn main() {
     // progress bar, multi-line, empty, badge, stars, priority,
     // link, number, datetime) without the caller having to push
     // cells one-by-one.
+    let icons_for_provider = icons.clone();
     grid.set_value_provider(move |row, col| {
         let p = &products[row % products.len()];
+        let icons = icons_for_provider.borrow();
         match col {
-            // Icon-only cell, references the product's icon index.
-            0 => Cell::ImageOnly(p.0),
+            // Icon + short category label (library heuristics).
+            0 => icons.cell_for_product(p.2, p.4, p.5, p.6, p.2),
 
             // Plain text.
             1 => Cell::Text(p.1.to_string()),
@@ -275,7 +438,10 @@ fn main() {
                     2 => NumberFormat::Fixed2,
                     _ => NumberFormat::Percent,
                 };
-                Cell::Number { value: p.3 as f64, format }
+                Cell::Number {
+                    value: p.3 as f64,
+                    format,
+                }
             }
 
             // Stock as a progress bar: shows fill ratio
@@ -425,10 +591,14 @@ fn main() {
             // alongside the structured `Cell` variants.
             12 => Cell::Text(p.15.to_string()),
 
+            // Dynamically added columns (context menu) show a label.
+            c if c >= 13 => Cell::Text(format!("Col {c} · r{row}")),
+
             _ => Cell::Empty,
         }
     });
 
+    grid.attach_icons_with_column_width(&icons.borrow(), 0, 56);
     grid.set_row_count(products.len());
     step!(
         "grid populated: {} rows × {} cols",
@@ -449,7 +619,7 @@ fn main() {
     // ── Status label (always visible at the bottom) ──────────────────
     let status = StaticText::new(
         &frame,
-        "Click a row to see its details. The selection event updates this label.",
+        "Click a row to see its details. Tasto destro sull’intestazione o sulla griglia: menu colonne.",
     );
     status.as_widget_ref().borrow_mut().set_size(0, 22);
 
@@ -472,7 +642,8 @@ fn main() {
     let g_for_sel = grid.clone();
     grid.on_selection_changed(&frame, move |sel| match sel {
         Some(row) => {
-            let p = &products[row % products.len()];
+            let logical = g_for_sel.logical_row(row);
+            let p = &products[logical % products.len()];
             let avail = if p.4 > 0 { "available" } else { "OUT OF STOCK" };
             let checked = if g_for_sel.is_checked(row) { "[x]" } else { "[ ]" };
             s_for_sel.set_label(&format!(
@@ -493,25 +664,218 @@ fn main() {
     });
     step!("selection callback registered");
 
-    // ── One-shot timer for the initial pre-check + force-refresh ──────
-    // `set_checked` and `force_refresh` MUST run while the message
-    // loop is processing messages; doing them before `app.run()`
-    // deadlocks the first `SendMessageW` because the ListView wants
-    // to dispatch a synchronous NM_CUSTOMDRAW / LVN_ITEMCHANGED to
-    // the parent. A 100-ms one-shot timer fires after the loop is
-    // up, runs the two calls, and lets the loop dispatch the
-    // resulting notifications normally.
+    // ── Deferred init (safe after message loop starts) ────────────────
+    // `set_checked` must not run before `app.run()` — synchronous
+    // `SendMessageW` notifications deadlock without a running loop.
+    // `call_after_message_loop` posts a one-shot message processed on
+    // the first loop iteration (no timer delay, no `force_refresh`).
     let g_for_init = grid.clone();
-    let init_timer = Timer::new(&frame);
-    init_timer.on_tick(move || {
+    grid.call_after_message_loop(&frame, move || {
+        for (row, p) in products.iter().enumerate() {
+            if p.6 {
+                g_for_init.set_row_style(
+                    row,
+                    GridCellStyle {
+                        foreground: Some(Colour::new(120, 53, 15, 255)),
+                        background: Some(Colour::new(255, 251, 235, 255)),
+                    },
+                );
+            }
+            if p.5 == 0 {
+                g_for_init.set_cell_style(
+                    row,
+                    5,
+                    GridCellStyle {
+                        foreground: Some(Colour::new(153, 27, 27, 255)),
+                        background: Some(Colour::new(254, 242, 242, 255)),
+                    },
+                );
+            } else if p.4 < p.5 / 4 {
+                g_for_init.set_cell_style(
+                    row,
+                    5,
+                    GridCellStyle {
+                        foreground: Some(Colour::new(146, 64, 14, 255)),
+                        background: Some(Colour::new(255, 247, 237, 255)),
+                    },
+                );
+            }
+        }
         g_for_init.set_checked(0, true);
         g_for_init.set_checked(2, true);
         g_for_init.set_checked(7, true);
-        g_for_init.force_refresh();
-        step!("3 rows pre-checked (via one-shot timer)");
+        g_for_init.request_repaint();
+        step!("colours + 3 rows pre-checked (deferred init)");
     });
-    init_timer.start_one_shot(Duration::from_millis(100));
-    step!("initial-paint one-shot timer armed (100 ms)");
+    step!("deferred init queued");
+
+    // ── Menu bar (test actions — logic lives in `Grid`) ─────────────
+    const COL_PRODUCT: usize = 1;
+    const COL_SALES: usize = 7;
+
+    let _highlight_style = GridCellStyle {
+        foreground: Some(Colour::new(30, 64, 175, 255)),
+        background: Some(Colour::new(219, 234, 254, 255)),
+    };
+
+    let mut grid_menu = Menu::new("&Griglia");
+    let g_menu = grid.clone();
+    grid_menu.append("Evidenzia riga selezionata", &frame, move || {
+        g_menu.highlight_selected_row(GridCellStyle::default());
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Rimuovi evidenziazione riga", &frame, move || {
+        if let Some(r) = g_menu.get_selected_row() {
+            g_menu.clear_row_style(r);
+        }
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Rimuovi tutte le evidenziazioni", &frame, move || {
+        g_menu.clear_all_row_styles();
+    });
+    grid_menu.append_separator();
+    let g_menu = grid.clone();
+    grid_menu.append("Ordina per Prodotto (A→Z)", &frame, move || {
+        g_menu.sort_by_column(COL_PRODUCT, SortOrder::Ascending);
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Ordina per Prodotto (Z→A)", &frame, move || {
+        g_menu.sort_by_column(COL_PRODUCT, SortOrder::Descending);
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Ordina per Vendite (↑)", &frame, move || {
+        g_menu.sort_by_column(COL_SALES, SortOrder::Ascending);
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Ordina per Vendite (↓)", &frame, move || {
+        g_menu.sort_by_column(COL_SALES, SortOrder::Descending);
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Ripristina ordine originale", &frame, move || {
+        g_menu.clear_sort();
+    });
+    grid_menu.append_separator();
+    let g_menu = grid.clone();
+    grid_menu.append("Aggiungi riga", &frame, move || {
+        let n = g_menu.row_count();
+        g_menu.set_row_count(n + 1);
+    });
+    let g_menu = grid.clone();
+    grid_menu.append("Elimina riga selezionata", &frame, move || {
+        g_menu.delete_selected_row();
+    });
+    grid_menu.append_separator();
+    let g_menu = grid.clone();
+    grid_menu.append("Aggiorna griglia", &frame, move || {
+        g_menu.refresh();
+    });
+
+    let mut look_menu = Menu::new("&Aspetto");
+    let g_look = grid.clone();
+    let frame_look = frame.clone();
+    look_menu.append("Tema Windows 11 (predefinito)", &frame, move || {
+        g_look.apply_win11_theme(&frame_look);
+    });
+    let g_look = grid.clone();
+    let frame_look = frame.clone();
+    look_menu.append("Tema moderno (blu)", &frame, move || {
+        g_look.set_appearance(GridAppearance::modern(), Some(&frame_look));
+    });
+    let g_look = grid.clone();
+    let frame_look = frame.clone();
+    look_menu.append("Tema caldo (ambra)", &frame, move || {
+        g_look.set_appearance(GridAppearance::warm(), Some(&frame_look));
+    });
+    let g_look = grid.clone();
+    let frame_look = frame.clone();
+    look_menu.append("Tema classico", &frame, move || {
+        g_look.set_appearance(GridAppearance::classic(), Some(&frame_look));
+    });
+    let g_look = grid.clone();
+    let frame_look = frame.clone();
+    look_menu.append("Tema scuro", &frame, move || {
+        g_look.set_appearance(GridAppearance::dark(), Some(&frame_look));
+    });
+    look_menu.append_separator();
+    let g_look = grid.clone();
+    let icons_look = icons.clone();
+    look_menu.append("Icone Lucide (predefinito)", &frame, move || {
+        let sz = icons_look.borrow().size();
+        *icons_look.borrow_mut() = GridIcons::lucide_modern_with_size(sz);
+        g_look.attach_icons_with_column_width(&icons_look.borrow(), 0, icon_col_width(sz));
+        g_look.refresh();
+    });
+    let g_look = grid.clone();
+    let icons_look = icons.clone();
+    look_menu.append("Icone Bootstrap (piene)", &frame, move || {
+        let sz = icons_look.borrow().size();
+        *icons_look.borrow_mut() = GridIcons::bootstrap_modern_size(sz);
+        g_look.attach_icons_with_column_width(&icons_look.borrow(), 0, icon_col_width(sz));
+        g_look.refresh();
+    });
+    look_menu.append_separator();
+    let g_look = grid.clone();
+    let icons_look = icons.clone();
+    look_menu.append("Icone 16 px", &frame, move || {
+        icons_look.borrow_mut().resize(16);
+        g_look.attach_icons_with_column_width(&icons_look.borrow(), 0, 48);
+        g_look.refresh();
+    });
+    let g_look = grid.clone();
+    let icons_look = icons.clone();
+    look_menu.append("Icone 20 px (predefinito)", &frame, move || {
+        icons_look.borrow_mut().resize(20);
+        g_look.attach_icons_with_column_width(&icons_look.borrow(), 0, 56);
+        g_look.refresh();
+    });
+    let g_look = grid.clone();
+    let icons_look = icons.clone();
+    look_menu.append("Icone 24 px", &frame, move || {
+        icons_look.borrow_mut().resize(24);
+        g_look.attach_icons_with_column_width(&icons_look.borrow(), 0, 64);
+        g_look.refresh();
+    });
+    look_menu.append_separator();
+    let g_look = grid.clone();
+    look_menu.append("Carattere più grande (+1 pt)", &frame, move || {
+        g_look.adjust_font_size(1);
+    });
+    let g_look = grid.clone();
+    look_menu.append("Carattere più piccolo (−1 pt)", &frame, move || {
+        g_look.adjust_font_size(-1);
+    });
+    let g_look = grid.clone();
+    look_menu.append("8 pt", &frame, move || {
+        g_look.set_font_desc(FontDesc::new("Segoe UI", 8), true);
+    });
+    let g_look = grid.clone();
+    look_menu.append("9 pt", &frame, move || {
+        g_look.set_font_desc(FontDesc::new("Segoe UI", 9), true);
+    });
+    let g_look = grid.clone();
+    look_menu.append("10 pt", &frame, move || {
+        g_look.set_font_desc(FontDesc::new("Segoe UI", 10), true);
+    });
+    let g_look = grid.clone();
+    look_menu.append("11 pt", &frame, move || {
+        g_look.set_font_desc(FontDesc::new("Segoe UI", 11), true);
+    });
+    let g_look = grid.clone();
+    look_menu.append("Consolas 9 pt (monospazio)", &frame, move || {
+        g_look.set_font_desc(FontDesc::new("Consolas", 9), true);
+    });
+    look_menu.append_separator();
+    let g_look = grid.clone();
+    let frame_pick = frame.clone();
+    look_menu.append("Scegli carattere…", &frame, move || {
+        g_look.pick_font(&frame_pick);
+    });
+
+    let mut menubar = MenuBar::new();
+    menubar.append(grid_menu);
+    menubar.append(look_menu);
+    frame.set_menu_bar(menubar);
+    step!("menu bar attached");
 
     // ── Run the event loop ───────────────────────────────────────────
     step!("about to run event loop");

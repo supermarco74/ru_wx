@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: a window with native Win32 widgets laid out by a BoxSizer.
 //!
 //! Demonstrates:

@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: minimal status bar visibility check.
 //!
 //! Creates a frame with a single 4-field status bar and a long

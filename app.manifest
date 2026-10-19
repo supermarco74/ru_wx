@@ -3,7 +3,7 @@
     <assemblyIdentity
         version="1.0.0.0"
         processorArchitecture="*"
-        name="ru_wx.example"
+        name="ru_wx"
         type="win32"
     />
     <description>ru_wx native Rust GUI application</description>

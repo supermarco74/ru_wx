@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `MediaCtrl` — MCI-based audio / video playback.
 //!
 //! Demonstrates:
@@ -117,7 +120,7 @@ fn main() {
         );
         if let Some(path) = dlg.show_modal() {
             let m = media_for_pick.borrow();
-            match m.load(&std::path::Path::new(&path)) {
+            match m.load(std::path::Path::new(&path)) {
                 Ok(()) => info_for_pick.set_label(&format!("Loaded: {path}")),
                 Err(e) => info_for_pick.set_label(&format!("MCI load error: {e}")),
             }

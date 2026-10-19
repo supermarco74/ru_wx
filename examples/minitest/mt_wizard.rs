@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `Wizard` — multi-page navigation dialog (`wxWizard`).
 //!
 //! Demonstrates:
@@ -18,9 +21,7 @@
 
 #![windows_subsystem = "windows"]
 
-use ru_wx::{
-    App, BoxSizer, Button, Frame, Panel, StaticText, StatusBar, Wizard, WizardResult,
-};
+use ru_wx::{App, BoxSizer, Button, Frame, Panel, StaticText, StatusBar, Wizard, WizardResult};
 
 fn main() {
     let app = App::new();

@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minitest: `PopupMenu` — context menu shown by clicking a button.
 //!
 //! Demonstrates:

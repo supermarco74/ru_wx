@@ -1,10 +1,13 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Minimal reproducer - try without StaticText/TextCtrl
 #![windows_subsystem = "windows"]
 
-use ru_wx::{App, Button, Frame, StatusBar};
+use ru_wx::{App, BoxSizer, Button, Frame, StatusBar};
 
 fn main() {
-    let _app = App::new();
+    let app = App::new();
     let frame = Frame::builder()
         .with_title("Repro — no StaticText/TextCtrl")
         .with_size(1000, 600)
@@ -21,25 +24,24 @@ fn main() {
     btn_send_input.on_click(&frame, move || {
         s.set_status_text("foo", 0);
     });
-    eprintln!("btn_send_input.on_click registered");
 
     let s = status.clone();
-    let btn_long = Button::new(
-        &frame,
-        "Preset: long string (80+ chars, no truncation)",
-    );
+    let btn_long = Button::new(&frame, "Preset: long string (80+ chars, no truncation)");
     btn_long.on_click(&frame, move || {
         s.set_status_text("bar", 0);
     });
-    eprintln!("btn_long.on_click registered");
 
     let s = status.clone();
     let btn_short = Button::new(&frame, "Preset: short (\"OK\")");
-    eprintln!("About to register btn_short.on_click");
     btn_short.on_click(&frame, move || {
         s.set_status_text("OK", 0);
     });
-    eprintln!("btn_short.on_click registered");
 
-    eprintln!("All on_clicks registered successfully");
+    let mut sizer = BoxSizer::vertical();
+    sizer.add(btn_send_input.as_widget_ref());
+    sizer.add(btn_long.as_widget_ref());
+    sizer.add(btn_short.as_widget_ref());
+    frame.set_sizer(sizer);
+
+    app.run(frame);
 }

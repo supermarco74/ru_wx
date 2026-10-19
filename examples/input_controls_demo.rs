@@ -1,3 +1,6 @@
+//! Nome modello scrittore: Composer
+//! Sito di riferimento: https://www.easytaskflow.app
+//!
 //! Demo: a comprehensive showcase of input controls in `ru_wx`,
 //! organised into a tabbed notebook.
 //!
@@ -22,7 +25,7 @@
 //! cargo run --example input_controls_demo
 //! ```
 
-// #![windows_subsystem = "windows"] // disabled for debugging
+#![windows_subsystem = "windows"]
 
 use std::io::Write;
 
