@@ -6,8 +6,9 @@
 //!
 //! * le mappe `thread_local!` tengono il collegamento handle nativo →
 //!   widget GTK, handle → genitore e handle frame → `Weak<FrameData>`;
-//! * `gtk4::init()` viene tentato pigramente e **mai** da un thread
-//!   diverso da quello che ha tentato per primo (gtk-rs panicerebbe);
+//! * `gtk4::init()` viene tentato pigramente e **solo dal thread
+//!   principale** del processo: GTK4 è main-thread-only e inizializzarlo
+//!   da un thread diverso fa crashare `g_type_create_instance`;
 //! * in ambiente headless (test CI senza display) `ensure_ready()`
 //!   restituisce `false` e ogni `create_*` degrada all'handle stub
 //!   in memoria, così `tests/stub_integration.rs` continua a passare.
@@ -23,8 +24,6 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
-use std::sync::{Mutex, OnceLock};
-use std::thread::ThreadId;
 
 use gdk4_x11::X11Surface;
 use gtk4::glib::Propagation;
@@ -47,37 +46,32 @@ use crate::window::menu::MenuItemKind;
 /// (stessa forma della controparte appkit).
 pub type MenuInstallRow = (u16, String, bool, MenuItemKind, bool, Option<Accelerator>);
 
-// ── Inizializzazione (mai da un secondo thread) ─────────────────────
+// ── Inizializzazione (solo dal thread principale) ──────────────────
 
-/// Thread che ha tentato per primo `gtk4::init()`.
-static GTK_THREAD: OnceLock<ThreadId> = OnceLock::new();
-
-/// Serializza le chiamate a `gtk4::init()`.
+/// `true` se il thread corrente è quello principale del processo.
 ///
-/// `OnceLock::set` non è un test-and-set: due thread che leggono
-/// `None` nello stesso istante possono entrambi proseguire e chiamare
-/// `gtk4::init()` in parallelo. `gtk_init_check` non è thread-safe e in
-/// CI headless il conflitto termina in SIGSEGV. Il `Mutex` rende
-/// esplicito che un solo thread alla volta può tentare l'init.
-static GTK_INIT_LOCK: Mutex<()> = Mutex::new(());
+/// GTK4 è main-thread-only: `gtk_init_check` va chiamata una volta
+/// sola e i widget vanno creati dal thread che l'ha inizializzata.
+/// Usarla da un thread diverso — come fanno i thread che `cargo test`
+/// crea per ogni caso — termina in SIGSEGV dentro
+/// `g_type_create_instance`. Su Linux il TID del thread principale
+/// coincide con il PID.
+fn is_main_thread() -> bool {
+    // SAFETY: `getpid` e `gettid` sono chiamate thread-safe e senza
+    // effetti collaterali.
+    unsafe { libc::syscall(libc::SYS_gettid) == libc::getpid() as libc::c_long }
+}
 
 /// Inizializza GTK4 se possibile.
 ///
 /// Restituisce `true` solo se il GTK è davvero inizializzato sul
-/// thread corrente. In ambiente headless `gtk_init_check` fallisce e
-/// la funzione restituisce `false` senza panicare.
+/// thread principale. In ambiente headless `gtk_init_check` fallisce e
+/// la funzione restituisce `false` senza panicare; da un thread non
+/// principale restituisce `false` senza tentare l'init, così i widget
+/// degradano agli stub in-memory invece di far crashare il processo.
 pub fn init() -> bool {
-    let _guard = GTK_INIT_LOCK.lock().unwrap_or_else(|err| err.into_inner());
-    let current = std::thread::current().id();
-    match GTK_THREAD.get() {
-        Some(first) if *first != current => {
-            // `gtk4::init()` panic se chiamato da un thread diverso da
-            // quello che ha inizializzato: in quel caso non facciamo nulla.
-            return gtk4::is_initialized_main_thread();
-        }
-        _ => {
-            let _ = GTK_THREAD.set(current);
-        }
+    if !is_main_thread() {
+        return false;
     }
     if gtk4::is_initialized_main_thread() {
         return true;

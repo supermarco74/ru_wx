@@ -69,6 +69,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     redundant `unsafe`, over-complex types).
 - `appkit_background.rs`: comparing the alpha channel against `255` instead of
   `u8::MAX` silently disabled the transparency shortcut.
+- GTK4 is main-thread-only, and `cargo test` runs every case on its own
+  thread. Initialising GTK from a test thread made the widget creation that
+  followed die with `SIGSEGV` inside `g_type_create_instance` (traced with
+  `Fixed::new` → `create_panel` → `Panel::new`). `gtk::init()` now returns
+  `false` unless it runs on the process main thread (TID == PID on Linux),
+  so the unit tests exercise the stub fallback instead of crashing.
 
 ### Known gaps
 - Linux: Dialog, TextDialog, FileDialog, DirDialog, ColourDialog, FontDialog,
