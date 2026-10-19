@@ -1245,7 +1245,7 @@ impl ListCtrl {
             if is_virtual {
                 return cached as usize;
             }
-            return crate::platform::gtk::listctrl_get_item_count(handle);
+            crate::platform::gtk::listctrl_get_item_count(handle)
         }
         #[cfg(target_os = "macos")]
         {

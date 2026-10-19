@@ -9,7 +9,8 @@ repository = "https://github.com/supermarco74/ru_wx"
 homepage = "https://ru_wx.easytaskflow.app/"
 documentation = "https://ru_wx.easytaskflow.app/"
 readme = "README.md"
-keywords = ["gui", "gui-cross-platform", "wxwidgets", "windows", "macos", "linux", "win32", "appkit", "gtk4", "native"]
+# crates.io accetta al massimo 5 keyword per crate.
+keywords = ["gui", "gui-cross-platform", "windows", "macos", "linux"]
 categories = ["gui", "gui::gtk", "os::windows-apis", "os::macos-apis"]
 rust-version = "1.87"
 exclude = [

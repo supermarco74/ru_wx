@@ -46,6 +46,18 @@ use crate::window::menu::MenuItemKind;
 /// (stessa forma della controparte appkit).
 pub type MenuInstallRow = (u16, String, bool, MenuItemKind, bool, Option<Accelerator>);
 
+// Alias dei registri `thread_local!` il cui tipo è troppo annidato per
+// restare leggibile inline: il resto dei registri qui sotto mantiene la
+// forma estesa.
+/// Handle frame → modello menu (per reinstallare su cambio shortcut).
+type FrameMenusMap = RefCell<HashMap<NativeHandle, Vec<(String, Vec<MenuInstallRow>)>>>;
+/// Timer id → callback registrato per il timer.
+type TimerCallbacksMap = RefCell<HashMap<u32, Rc<RefCell<Option<Box<dyn FnMut()>>>>>>;
+/// Handle nativo → handler invocato a ogni variazione della sash.
+type SashHandlersMap = RefCell<HashMap<NativeHandle, Rc<RefCell<dyn FnMut(i32)>>>>;
+/// Handle tab → handler di cambio pagina.
+type TabHandlersMap = RefCell<HashMap<NativeHandle, Box<dyn FnMut(usize)>>>;
+
 // ── Inizializzazione (solo dal thread principale) ──────────────────
 
 /// `true` se il thread corrente è quello principale del processo.
@@ -117,8 +129,7 @@ thread_local! {
     static FRAME_ACTION_GROUPS: RefCell<HashMap<NativeHandle, gio::SimpleActionGroup>> =
         RefCell::new(HashMap::new());
     /// Handle frame → modello menu (per reinstallare su cambio shortcut).
-    static FRAME_MENUS: RefCell<HashMap<NativeHandle, Vec<(String, Vec<MenuInstallRow>)>>> =
-        RefCell::new(HashMap::new());
+    static FRAME_MENUS: FrameMenusMap = RefCell::new(HashMap::new());
     /// Handle frame → tabella acceleratori.
     static FRAME_ACCELS: RefCell<HashMap<NativeHandle, Vec<(Accelerator, u16)>>> =
         RefCell::new(HashMap::new());
@@ -573,7 +584,7 @@ fn accelerator_activated(
         let matched = match accelerator.key {
             VirtualKey::Char(expected) => key
                 .to_unicode()
-                .map(|pressed| pressed.to_ascii_uppercase() == expected.to_ascii_uppercase())
+                .map(|pressed| pressed.eq_ignore_ascii_case(&expected))
                 .unwrap_or(false),
             other => match virtual_key_name(other) {
                 Some(name) => gdk::Key::from_name(name) == Some(key),
@@ -1887,7 +1898,7 @@ thread_local! {
         RefCell::new(HashMap::new());
     /// Seleziona programmatica in corso: sopprime la notifica di
     /// selezione sintetica così i callback non scattano due volte.
-    static GRID_SELECTING: Cell<bool> = Cell::new(false);
+    static GRID_SELECTING: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Crea un Grid (TreeView + ListStore, selezione multipla). Il cambio
@@ -2216,7 +2227,7 @@ fn find_iter_by_id(store: &gtk4::TreeStore, id: usize) -> Option<gtk4::TreeIter>
         loop {
             let val: i64 = store.get_value(&iter, 1).get().ok()?;
             if val as usize == id {
-                return Some(iter.clone());
+                return Some(iter);
             }
             if let Some(found) = walk(store, Some(&iter), id) {
                 return Some(found);
@@ -3154,15 +3165,14 @@ thread_local! {
     /// Callback registrati per timer id: condivisi per `Rc` con la
     /// sorgente attiva, così un `timer_set_fire` successivo aggiorna
     /// anche il timer già in esecuzione.
-    static TIMER_CALLBACKS: RefCell<HashMap<u32, Rc<RefCell<Option<Box<dyn FnMut()>>>>>> =
-        RefCell::new(HashMap::new());
+    static TIMER_CALLBACKS: TimerCallbacksMap = RefCell::new(HashMap::new());
     /// Sorgente GLib attiva per timer id, con la "generazione" che ha
     /// creato la voce: serve a non rimuovere una sorgente appena
     /// sostituita da un `timer_start` dentro il callback one-shot.
     static TIMER_SOURCES: RefCell<HashMap<u32, (u64, glib::SourceId)>> =
         RefCell::new(HashMap::new());
     /// Contatore delle generazioni dei timer (numerazione degli start).
-    static TIMER_GENERATION: Cell<u64> = Cell::new(0);
+    static TIMER_GENERATION: Cell<u64> = const { Cell::new(0) };
 }
 
 /// Registra il callback che il timer chiamerà a ogni scatto.
@@ -3252,8 +3262,7 @@ thread_local! {
     static SPLITTERS: RefCell<HashMap<NativeHandle, gtk4::Paned>> =
         RefCell::new(HashMap::new());
     /// Handle nativo → handler invocato a ogni variazione della sash.
-    static SASH_HANDLERS: RefCell<HashMap<NativeHandle, Rc<RefCell<dyn FnMut(i32)>>>> =
-        RefCell::new(HashMap::new());
+    static SASH_HANDLERS: SashHandlersMap = RefCell::new(HashMap::new());
     /// Handle nativo → `true` quando il segnale `position-notify`
     /// è già collegato all'handler.
     static SASH_CONNECTED: RefCell<HashMap<NativeHandle, bool>> =
@@ -4017,9 +4026,12 @@ thread_local! {
         RefCell::new(HashMap::new());
     static TAB_CHILDREN: RefCell<HashMap<NativeHandle, Vec<NativeHandle>>> =
         RefCell::new(HashMap::new());
-    static TAB_HANDLERS: RefCell<HashMap<NativeHandle, Box<dyn FnMut(usize)>>> =
-        RefCell::new(HashMap::new());
+    static TAB_HANDLERS: TabHandlersMap = RefCell::new(HashMap::new());
     /// Tab per cui il segnale `switch_page` è già collegato.
+    // Il `Vec` cresce quando la frame registra i tab: un initializer
+    // `const` eliminerebbe il distruttore all'uscita del thread e
+    // perderebbe il buffer a ogni thread di breve durata.
+    #[allow(clippy::missing_const_for_thread_local)]
     static TAB_WIRED: RefCell<Vec<NativeHandle>> = RefCell::new(Vec::new());
     /// Evita loop quando la selezione è impostata programmaticamente.
     static TAB_SYNCING: Cell<bool> = const { Cell::new(false) };
@@ -4202,6 +4214,9 @@ thread_local! {
     static PANE_ACTION: RefCell<HashMap<NativeHandle, (*mut AuiManager, Frame)>> =
         RefCell::new(HashMap::new());
     /// Striscie toolbar sotto il controllo dell'AUI.
+    // Come `TAB_WIRED`: il buffer deve essere liberato all'uscita del
+    // thread, quindi niente initializer `const`.
+    #[allow(clippy::missing_const_for_thread_local)]
     static AUI_MANAGED_TOOLBARS: RefCell<Vec<NativeHandle>> = RefCell::new(Vec::new());
 }
 
@@ -4265,7 +4280,7 @@ fn rebuild_caption_buttons(
         });
         PANE_BTN_COMMANDS.with(|map| {
             map.borrow_mut()
-                .insert(command, (frame_handle, pane_name.to_string(), kind.clone()));
+                .insert(command, (frame_handle, pane_name.to_string(), *kind));
         });
         let button = Button::with_label(button_glyph(kind, pinned));
         button.add_css_class("flat");
@@ -4274,12 +4289,15 @@ fn rebuild_caption_buttons(
         let frame = frame_handle;
         button.connect_clicked(move |_| dispatch_command(frame, command));
         state.caption.append(&button);
-        state.buttons.push((command, button, kind.clone()));
+        state.buttons.push((command, button, *kind));
     }
 }
 
 /// Crea (o aggiorna) la "host" di un pannello: striscia con titolo e
 /// bottoni + area contenuto con il figlio riparentato dentro.
+// I parametri rispecchiano 1:1 l'API C del dock pane wxWidgets/AUI: la firma
+// è parte dell'API interna di piattaforma e deve restare stabile.
+#[allow(clippy::too_many_arguments)]
 pub fn ensure_aui_pane_host(
     frame_handle: NativeHandle,
     parent_handle: NativeHandle,
@@ -4494,7 +4512,7 @@ pub fn pane_button_commands_for_frame(
         map.borrow()
             .iter()
             .filter(|(_, (frame, _, _))| *frame == frame_handle)
-            .map(|(command, (_, name, kind))| (*command, name.clone(), kind.clone()))
+            .map(|(command, (_, name, kind))| (*command, name.clone(), *kind))
             .collect()
     })
 }

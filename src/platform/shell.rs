@@ -345,7 +345,7 @@ pub fn volume_free_space(path: &Path) -> Option<(u64, u64)> {
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     unsafe {
-        use libc::{c_int, statvfs};
+        use libc::statvfs;
         let mut s: statvfs = std::mem::zeroed();
         let p = path.to_string_lossy();
         let cstr = std::ffi::CString::new(p.as_bytes()).ok()?;

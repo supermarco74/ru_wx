@@ -310,7 +310,7 @@ impl AnimationCtrl {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = self.inner.borrow_mut().playing = true;
+            self.inner.borrow_mut().playing = true;
         }
         #[cfg(target_os = "macos")]
         {

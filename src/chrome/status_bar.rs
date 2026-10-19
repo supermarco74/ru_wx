@@ -396,11 +396,11 @@ impl StatusBar {
     pub fn set_status_text(&self, text: &str, i: usize) {
         {
             let mut state = self.inner.borrow_mut();
-            if i < state.texts.len() {
-                state.texts[i] = text.to_string();
-            } else {
+            if i >= state.texts.len() {
+                drop(state);
                 return;
             }
+            state.texts[i] = text.to_string();
         }
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
