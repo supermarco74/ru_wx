@@ -241,7 +241,7 @@ pub fn update_hover_state() {
 
         let hit = hit_view?;
         let hit_ptr = &*hit as *const objc2_app_kit::NSView as usize;
-        for (_handle, btn) in btns.iter() {
+        for btn in btns.values() {
             let btn_ptr = &**btn as *const NSButton as usize;
             if btn_ptr == hit_ptr {
                 return Some(btn_ptr);
@@ -261,7 +261,7 @@ pub fn update_hover_state() {
     if hovered != 0 && !was_hovering {
         RIBBON_BUTTONS.with(|btn_map| {
             let btns = btn_map.borrow();
-            for (_h, b) in btns.iter() {
+            for b in btns.values() {
                 let p = &**b as *const NSButton as usize;
                 if p == hovered {
                     BTN_HOVER.with(|m| {
@@ -293,7 +293,7 @@ pub fn update_hover_state() {
             if ptr != hovered {
                 RIBBON_BUTTONS.with(|btn_map| {
                     let btns = btn_map.borrow();
-                    for (_h, b) in btns.iter() {
+                    for b in btns.values() {
                         let p = &**b as *const NSButton as usize;
                         if p == ptr {
                             BTN_HOVER.with(|m| {
