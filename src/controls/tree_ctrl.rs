@@ -653,6 +653,8 @@ impl TreeCtrl {
             let stub = self.inner.borrow().stub_handle;
             crate::platform::gtk::tree_set_item_text(stub, item.0, text);
         }
+        #[cfg(target_os = "macos")]
+        let _ = (item, text);
     }
 
     /// Tell the control whether `item` has children, **without**
@@ -741,6 +743,8 @@ impl TreeCtrl {
                 item.0,
             );
         }
+        #[cfg(target_os = "macos")]
+        let _ = item;
     }
 
     /// Imposta la dimensione del font (in punti tipografici) per le
@@ -853,7 +857,7 @@ impl TreeCtrl {
         {
             let handle = self.inner.borrow().stub_handle;
             let item_id = item.map(|i| i.0).unwrap_or(0);
-            return match relation {
+            match relation {
                 TVGN_ROOT => crate::platform::appkit::tree_get_root_item(handle).map(TreeItem),
                 TVGN_CHILD if item_id != 0 => {
                     crate::platform::appkit::tree_get_first_child(handle, item_id).map(TreeItem)
@@ -865,14 +869,14 @@ impl TreeCtrl {
                     crate::platform::appkit::tree_get_item_parent(handle, item_id).map(TreeItem)
                 }
                 _ => None,
-            };
+            }
         }
 
         #[cfg(target_os = "linux")]
         {
             let handle = self.inner.borrow().stub_handle;
             let item_id = item.map(|i| i.0).unwrap_or(0);
-            return match relation {
+            match relation {
                 TVGN_ROOT => crate::platform::gtk::tree_get_root_item(handle).map(TreeItem),
                 TVGN_CHILD if item_id != 0 => {
                     crate::platform::gtk::tree_get_first_child(handle, item_id).map(TreeItem)
@@ -887,7 +891,7 @@ impl TreeCtrl {
                     crate::platform::gtk::tree_get_item_parent(handle, item_id).map(TreeItem)
                 }
                 _ => None,
-            };
+            }
         }
 
         #[cfg(all(

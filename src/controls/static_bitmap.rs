@@ -210,7 +210,7 @@ impl StaticBitmap {
 
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         let _ = (parent_in, width, height);
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        #[cfg(target_os = "macos")]
         let _ = id;
 
         StaticBitmap {

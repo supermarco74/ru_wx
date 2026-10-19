@@ -376,6 +376,8 @@ impl Gauge {
         unsafe {
             SendMessageW(self.inner.borrow().hwnd, PBM_SETSTEP, step as usize, 0);
         }
+        #[cfg(not(target_os = "windows"))]
+        let _ = step;
     }
 
     /// Advance the position by the configured step size.
@@ -442,6 +444,8 @@ impl Gauge {
                 colour.to_colorref() as isize,
             );
         }
+        #[cfg(not(target_os = "windows"))]
+        let _ = colour;
     }
 
     /// The control's id.

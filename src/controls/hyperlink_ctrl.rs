@@ -77,7 +77,10 @@ impl HyperlinkCtrl {
         };
 
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-        let _ = (parent, &markup);
+        let _ = parent;
+
+        #[cfg(not(target_os = "windows"))]
+        let _ = &markup;
 
         #[cfg(target_os = "macos")]
         let parent_handle = crate::platform::window_handle(parent);
@@ -135,7 +138,7 @@ impl HyperlinkCtrl {
             let inner = self.inner.borrow();
             crate::platform::appkit::hyperlink_update(inner.stub_handle, &inner.label, &inner.url);
         }
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        #[cfg(not(target_os = "windows"))]
         let _ = markup;
     }
 

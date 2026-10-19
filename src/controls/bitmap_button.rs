@@ -194,7 +194,9 @@ impl BitmapButton {
         width: i32,
         height: i32,
     ) -> Self {
-        let id = next_control_id();
+        // L'id resta allocato su macOS per non alterare la sequenza
+        // degli id generati; resta solo non usato.
+        let _id = next_control_id();
 
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
@@ -211,7 +213,7 @@ impl BitmapButton {
                 width,
                 height,
                 parent,
-                id as usize as HMENU,
+                _id as usize as HMENU,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             );
@@ -230,9 +232,10 @@ impl BitmapButton {
         {
             let bytes = std::fs::read(svg_path).unwrap_or_default();
             let bmp = Bitmap::from_svg_bytes(&bytes, width as u32, height as u32);
-            return Self::new(parent_in, &bmp, width, height);
+            Self::new(parent_in, &bmp, width, height)
         }
 
+        #[cfg(not(target_os = "macos"))]
         BitmapButton {
             inner: Rc::new(RefCell::new(BitmapButtonInner {
                 #[cfg(target_os = "windows")]
@@ -241,7 +244,7 @@ impl BitmapButton {
                 stub_handle: 0,
                 #[cfg(target_os = "macos")]
                 parent_handle: 0,
-                id,
+                id: _id,
                 rect: Rect::new(0, 0, width as u32, height as u32),
                 enabled: true,
                 visible: true,
@@ -266,7 +269,9 @@ impl BitmapButton {
         width: i32,
         height: i32,
     ) -> Self {
-        let id = next_control_id();
+        // L'id resta allocato su macOS per non alterare la sequenza
+        // degli id generati; resta solo non usato.
+        let _id = next_control_id();
 
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
@@ -283,7 +288,7 @@ impl BitmapButton {
                 width,
                 height,
                 parent,
-                id as usize as HMENU,
+                _id as usize as HMENU,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             );
@@ -301,9 +306,10 @@ impl BitmapButton {
         #[cfg(target_os = "macos")]
         {
             let bmp = Bitmap::from_svg_bytes(svg_bytes, width as u32, height as u32);
-            return Self::new(parent_in, &bmp, width, height);
+            Self::new(parent_in, &bmp, width, height)
         }
 
+        #[cfg(not(target_os = "macos"))]
         BitmapButton {
             inner: Rc::new(RefCell::new(BitmapButtonInner {
                 #[cfg(target_os = "windows")]
@@ -312,7 +318,7 @@ impl BitmapButton {
                 stub_handle: 0,
                 #[cfg(target_os = "macos")]
                 parent_handle: 0,
-                id,
+                id: _id,
                 rect: Rect::new(0, 0, width as u32, height as u32),
                 enabled: true,
                 visible: true,

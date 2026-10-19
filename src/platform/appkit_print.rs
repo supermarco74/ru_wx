@@ -12,8 +12,7 @@ use objc2_app_kit::{
     NSPrintPanelOptions, NSPrintPanelResult, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSCopying, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize,
-    NSString,
+    MainThreadMarker, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSString,
 };
 
 use crate::core::geometry::Size;
@@ -71,11 +70,11 @@ fn set_print_dialog_values(
 ) {
     unsafe {
         let dict = print_info.dictionary();
-        let copies_key = ProtocolObject::from_ref(&*NSPrintCopies);
-        let first_key = ProtocolObject::from_ref(&*NSPrintFirstPage);
-        let last_key = ProtocolObject::from_ref(&*NSPrintLastPage);
-        let collate_key = ProtocolObject::from_ref(&*NSPrintMustCollate);
-        let all_pages_key = ProtocolObject::from_ref(&*NSPrintAllPages);
+        let copies_key = ProtocolObject::from_ref(NSPrintCopies);
+        let first_key = ProtocolObject::from_ref(NSPrintFirstPage);
+        let last_key = ProtocolObject::from_ref(NSPrintLastPage);
+        let collate_key = ProtocolObject::from_ref(NSPrintMustCollate);
+        let all_pages_key = ProtocolObject::from_ref(NSPrintAllPages);
         dict.setObject_forKey(&NSNumber::numberWithUnsignedInt(copies), copies_key);
         dict.setObject_forKey(&NSNumber::numberWithUnsignedInt(from_page), first_key);
         dict.setObject_forKey(&NSNumber::numberWithUnsignedInt(to_page), last_key);
@@ -88,22 +87,22 @@ fn read_print_dialog_values(print_info: &NSPrintInfo) -> (u32, u32, u32, bool) {
     unsafe {
         let dict = print_info.dictionary();
         let copies = dict
-            .objectForKey(&*NSPrintCopies)
+            .objectForKey(NSPrintCopies)
             .and_then(|o| o.downcast::<NSNumber>().ok())
             .map(|n| n.unsignedIntValue())
             .unwrap_or(1);
         let from_page = dict
-            .objectForKey(&*NSPrintFirstPage)
+            .objectForKey(NSPrintFirstPage)
             .and_then(|o| o.downcast::<NSNumber>().ok())
             .map(|n| n.unsignedIntValue())
             .unwrap_or(1);
         let to_page = dict
-            .objectForKey(&*NSPrintLastPage)
+            .objectForKey(NSPrintLastPage)
             .and_then(|o| o.downcast::<NSNumber>().ok())
             .map(|n| n.unsignedIntValue())
             .unwrap_or(1);
         let collate = dict
-            .objectForKey(&*NSPrintMustCollate)
+            .objectForKey(NSPrintMustCollate)
             .and_then(|o| o.downcast::<NSNumber>().ok())
             .map(|n| n.boolValue())
             .unwrap_or(false);

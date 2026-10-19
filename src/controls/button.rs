@@ -590,8 +590,8 @@ impl Button {
             (hwnd, hbitmap)
         };
 
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-        let _ = (parent_in, svg_path, icon_size);
+        #[cfg(not(target_os = "windows"))]
+        let _ = (svg_path, icon_size);
         #[cfg(target_os = "macos")]
         let (stub_handle, parent_handle) = macos_button(parent_in, "★", id, 100, 30);
         #[cfg(target_os = "linux")]
@@ -666,8 +666,8 @@ impl Button {
             (hwnd, hbitmap)
         };
 
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-        let _ = (parent_in, svg_bytes, icon_size);
+        #[cfg(not(target_os = "windows"))]
+        let _ = (svg_bytes, icon_size);
         #[cfg(target_os = "macos")]
         let (stub_handle, parent_handle) = macos_button(parent_in, "★", id, 100, 30);
         #[cfg(target_os = "linux")]

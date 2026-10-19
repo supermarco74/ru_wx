@@ -9,6 +9,10 @@ use std::collections::HashMap;
 
 use objc2::rc::Retained;
 use objc2::MainThreadOnly;
+// See the module comment: `NSOpenGLView`/`NSOpenGLContext` are deprecated by Apple in
+// favour of Metal, but this backend exists precisely to keep the OpenGL demos working,
+// so the deprecated classes are imported on purpose.
+#[allow(deprecated)]
 use objc2_app_kit::{NSOpenGLContext, NSOpenGLView};
 use objc2_foundation::MainThreadMarker;
 
@@ -17,11 +21,18 @@ use super::{
     NativeHandle, Rect,
 };
 
+// Apple deprecates `NSOpenGLView`/`NSOpenGLContext` in favour of Metal, but this
+// backend exists precisely to keep the portable `GLCanvas`/`gl11` demos running:
+// there is no drop-in Metal replacement, so the deprecated classes are used on
+// purpose here and each site below carries an explicit `#[allow(deprecated)]`.
 thread_local! {
+    // OpenGL canvas registry: keys are widget handles, values the AppKit views.
+    #[allow(deprecated)]
     static GL_VIEWS: RefCell<HashMap<NativeHandle, Retained<NSOpenGLView>>> =
         RefCell::new(HashMap::new());
 }
 
+#[allow(deprecated)]
 pub fn create_gl_canvas(parent: NativeHandle, initial_rect: Rect) -> NativeHandle {
     let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     let handle = alloc_widget_handle();
@@ -51,6 +62,7 @@ pub fn gl_canvas_set_current(handle: NativeHandle) -> bool {
     }
 }
 
+#[allow(deprecated)]
 pub fn gl_canvas_make_inactive(_handle: NativeHandle) -> bool {
     if NSOpenGLContext::currentContext().is_some() {
         NSOpenGLContext::clearCurrentContext();
@@ -73,6 +85,7 @@ pub fn gl_canvas_swap_buffers(handle: NativeHandle) -> bool {
     }
 }
 
+#[allow(deprecated)]
 pub fn gl_canvas_is_current(handle: NativeHandle) -> bool {
     let view = GL_VIEWS.with(|m| m.borrow().get(&handle).cloned());
     let Some(view) = view else {

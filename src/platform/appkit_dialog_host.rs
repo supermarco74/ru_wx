@@ -14,21 +14,20 @@ use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSPoint, NSRect, NSSi
 
 use super::{alloc_widget_handle, ns_window_for_frame_handle, store_container, NativeHandle};
 
+/// Parts of the progress sheet: message field, bar and optional cancel button.
+type ProgressParts = (
+    Retained<objc2_app_kit::NSTextField>,
+    Retained<NSProgressIndicator>,
+    Option<Retained<NSButton>>,
+);
+
 thread_local! {
     static DIALOG_WINDOWS: RefCell<HashMap<NativeHandle, Retained<NSWindow>>> =
         RefCell::new(HashMap::new());
     static PROGRESS_WINDOWS: RefCell<HashMap<NativeHandle, Retained<NSWindow>>> =
         RefCell::new(HashMap::new());
-    static PROGRESS_PARTS: RefCell<
-        HashMap<
-            NativeHandle,
-            (
-                Retained<objc2_app_kit::NSTextField>,
-                Retained<NSProgressIndicator>,
-                Option<Retained<NSButton>>,
-            ),
-        >,
-    > = RefCell::new(HashMap::new());
+    static PROGRESS_PARTS: RefCell<HashMap<NativeHandle, ProgressParts>> =
+        RefCell::new(HashMap::new());
     static PROGRESS_CANCELLED: RefCell<HashMap<NativeHandle, Cell<bool>>> =
         RefCell::new(HashMap::new());
 }
@@ -190,7 +189,7 @@ pub fn create_progress_window(
             NSRect::new(NSPoint::new(314.0, 12.0), NSSize::new(90.0, 28.0)),
         );
         btn.setTitle(&NSString::from_str("Cancel"));
-        btn.setBezelStyle(objc2_app_kit::NSBezelStyle::Rounded);
+        btn.setBezelStyle(objc2_app_kit::NSBezelStyle::Push);
         let target = ProgressCancelTarget::new(mtm, handle);
         unsafe {
             btn.setTarget(Some(&target));

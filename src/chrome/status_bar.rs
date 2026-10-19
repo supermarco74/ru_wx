@@ -142,7 +142,8 @@ impl StatusBar {
     /// (Windows chooses it).
     pub fn new(frame: &Frame, fields: usize) -> Self {
         let fields = fields.max(1);
-        let id = 0; // StatusBar does not need a real id (no command dispatch)
+        // StatusBar does not need a real id (no command dispatch)
+        let _id = 0;
         let sb = StatusBar {
             inner: Rc::new(RefCell::new(StatusBarInner {
                 #[cfg(target_os = "windows")]
@@ -201,7 +202,7 @@ impl StatusBar {
                     0,
                     0,
                     as_hwnd(parent),
-                    id as usize as HMENU,
+                    _id as usize as HMENU,
                     std::ptr::null_mut(),
                     std::ptr::null_mut(),
                 )
@@ -453,17 +454,20 @@ impl StatusBar {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::status_bar_get_field_text(
+                crate::platform::appkit::status_bar_get_field_text(
                     self.inner.borrow().stub_handle,
                     i,
-                );
+                )
             }
-            self.inner
-                .borrow()
-                .texts
-                .get(i)
-                .cloned()
-                .unwrap_or_default()
+            #[cfg(not(target_os = "macos"))]
+            {
+                self.inner
+                    .borrow()
+                    .texts
+                    .get(i)
+                    .cloned()
+                    .unwrap_or_default()
+            }
         }
     }
 

@@ -59,6 +59,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The Linux backend links against GTK4 via the gtk4-sys / gdk4-sys
+      # crates, whose build scripts locate the C libraries with
+      # pkg-config. The GitHub runner ships the GTK4 runtime but not the
+      # development headers, so the build fails with
+      # "Package glib-2.0 was not found in the pkg-config search path"
+      # unless these are installed first.
+      - name: Install GTK4 development libraries (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev \
+            libglib2.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libx11-dev \
+            pkg-config
+
       - name: Install Rust toolchain (${{ matrix.rust }})
         uses: dtolnay/rust-toolchain@stable
         with:

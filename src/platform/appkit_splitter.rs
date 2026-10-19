@@ -5,8 +5,8 @@ use std::collections::HashMap;
 
 use objc2::rc::Retained;
 use objc2::MainThreadOnly;
-use objc2_app_kit::{NSSplitView, NSView};
-use objc2_foundation::{MainThreadMarker, NSRect, NSSize, NSString};
+use objc2_app_kit::NSSplitView;
+use objc2_foundation::{MainThreadMarker, NSSize};
 
 use super::{
     alloc_widget_handle, parent_view_for, record_parent, ru_rect_to_ns, store_container,

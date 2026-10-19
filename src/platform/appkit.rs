@@ -18,17 +18,14 @@ use objc2_app_kit::{
     NSBitmapImageRep, NSBorderType, NSButton, NSComboBox, NSControl, NSControlStateValueOff,
     NSControlStateValueOn, NSControlTextEditingDelegate, NSEvent, NSFont, NSFontManager, NSImage,
     NSImageScaling, NSImageView, NSMenu, NSMenuItem, NSPopUpButton, NSProgressIndicator, NSScreen,
-    NSScrollView, NSSecureTextField, NSSlider, NSStepper, NSTabView, NSTabViewBorderType,
-    NSTabViewDelegate, NSTabViewItem, NSTabViewType, NSTableCellView, NSTableColumn,
-    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewGridLineStyle, NSTableViewSelectionHighlightStyle, NSTableViewStyle,
-    NSTextAlignment, NSTextDelegate, NSTextField, NSTextFieldBezelStyle, NSTextFieldDelegate,
-    NSTextView, NSTextViewDelegate, NSView, NSWindow, NSWindowDelegate, NSWindowStyleMask,
+    NSScrollView, NSSecureTextField, NSSlider, NSStepper, NSTabView, NSTabViewDelegate,
+    NSTabViewItem, NSTabViewType, NSTextAlignment, NSTextDelegate, NSTextField,
+    NSTextFieldBezelStyle, NSTextFieldDelegate, NSTextView, NSTextViewDelegate, NSView, NSWindow,
+    NSWindowDelegate, NSWindowStyleMask,
 };
 use objc2_app_kit::{
     NSCalibratedRGBColorSpace, NSCellImagePosition, NSColor, NSControlSize, NSMutableParagraphStyle,
 };
-use objc2_foundation::NSIndexSet;
 use objc2_foundation::{
     MainThreadMarker, NSCopying, NSDate, NSDefaultRunLoopMode, NSNotification, NSObject,
     NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSString, NSTimer,
@@ -43,6 +40,31 @@ use crate::window::frame::FrameData;
 use crate::window::menu::MenuItemKind;
 
 // ── Main-thread view registry (AppKit is main-thread only) ──────────
+
+/// Alias for the deeply nested registry value types used by the
+/// `thread_local!` tables below, keeping the declarations readable.
+type TabSelectionHandler = Box<dyn FnMut(usize)>;
+type PopupSelectionHandler = Box<dyn FnMut()>;
+type SpinParts = (
+    Retained<NSTextField>,
+    Retained<NSStepper>,
+    Retained<SpinStepperTarget>,
+);
+type ListCtrlColumns = RefCell<Vec<(String, i32)>>;
+type ListCtrlRows = RefCell<Vec<(Vec<String>, Option<i32>)>>;
+type ListCtrlSelected = RefCell<Vec<usize>>;
+type ListCtrlVirtualFetch = Box<dyn FnMut(usize, usize) -> String>;
+type ListCtrlCellStyles = RefCell<HashMap<(usize, usize), GridStyleData>>;
+type GridColumns = RefCell<Vec<(String, i32, i32)>>;
+type GridRows = RefCell<Vec<(Vec<String>, Vec<Option<i32>>)>>;
+type GridSelected = RefCell<Vec<usize>>;
+type GridCellStyles = RefCell<HashMap<(usize, usize), GridStyleData>>;
+type GridRowStyles = RefCell<HashMap<usize, GridStyleData>>;
+type GridAlternating = RefCell<Option<(Rgba, Rgba)>>;
+type GridSortState = RefCell<(Option<usize>, Option<bool>)>;
+type GridHighlightClick = (Option<usize>, Option<usize>);
+type GridTooltipProvider = Box<dyn Fn(usize, usize) -> Option<String>>;
+type GridCellKinds = RefCell<Vec<Vec<Option<GridProgressCell>>>>;
 
 thread_local! {
     static VIEWS: RefCell<HashMap<NativeHandle, Retained<NSView>>> = RefCell::new(HashMap::new());
@@ -91,25 +113,19 @@ thread_local! {
         RefCell::new(HashMap::new());
     static TAB_DELEGATES: RefCell<HashMap<NativeHandle, Retained<TabViewDelegate>>> =
         RefCell::new(HashMap::new());
-    static TAB_SELECTION_HANDLERS: RefCell<HashMap<NativeHandle, Box<dyn FnMut(usize)>>> =
+    static TAB_SELECTION_HANDLERS: RefCell<HashMap<NativeHandle, TabSelectionHandler>> =
         RefCell::new(HashMap::new());
-    static POPUP_SELECTION_HANDLERS: RefCell<HashMap<NativeHandle, Box<dyn FnMut()>>> =
+    static POPUP_SELECTION_HANDLERS: RefCell<HashMap<NativeHandle, PopupSelectionHandler>> =
         RefCell::new(HashMap::new());
-    static MENU_TARGETS: RefCell<Vec<Retained<ButtonTarget>>> = RefCell::new(Vec::new());
-    static SLIDER_PROGRAMMATIC: Cell<u32> = Cell::new(0);
-    static SPIN_PARTS: RefCell<
-        HashMap<
-            NativeHandle,
-            (Retained<NSTextField>, Retained<NSStepper>, Retained<SpinStepperTarget>),
-        >,
-    > = RefCell::new(HashMap::new());
-    static LISTCTRL_COLUMNS: RefCell<
-        HashMap<NativeHandle, RefCell<Vec<(String, i32)>>>,
-    > = RefCell::new(HashMap::new());
-    static LISTCTRL_ROWS: RefCell<
-        HashMap<NativeHandle, RefCell<Vec<(Vec<String>, Option<i32>)>>>,
-    > = RefCell::new(HashMap::new());
-    static LISTCTRL_SELECTED: RefCell<HashMap<NativeHandle, RefCell<Vec<usize>>>> =
+    static MENU_TARGETS: RefCell<Vec<Retained<ButtonTarget>>> =
+        const { RefCell::new(Vec::new()) };
+    static SLIDER_PROGRAMMATIC: Cell<u32> = const { Cell::new(0) };
+    static SPIN_PARTS: RefCell<HashMap<NativeHandle, SpinParts>> = RefCell::new(HashMap::new());
+    static LISTCTRL_COLUMNS: RefCell<HashMap<NativeHandle, ListCtrlColumns>> =
+        RefCell::new(HashMap::new());
+    static LISTCTRL_ROWS: RefCell<HashMap<NativeHandle, ListCtrlRows>> =
+        RefCell::new(HashMap::new());
+    static LISTCTRL_SELECTED: RefCell<HashMap<NativeHandle, ListCtrlSelected>> =
         RefCell::new(HashMap::new());
     static LISTCTRL_VIEWS: RefCell<HashMap<NativeHandle, Retained<ListCtrlView>>> =
         RefCell::new(HashMap::new());
@@ -120,12 +136,13 @@ thread_local! {
     static SCROLLED_RESIZE: RefCell<HashMap<NativeHandle, Box<dyn FnMut()>>> =
         RefCell::new(HashMap::new());
     static SCROLLED_RESIZE_PENDING: RefCell<HashSet<NativeHandle>> = RefCell::new(HashSet::new());
-    static SCROLLED_RESIZE_SCHEDULED: Cell<bool> = Cell::new(false);
-    static IN_DEFERRED_DRAIN: Cell<bool> = Cell::new(false);
+    static SCROLLED_RESIZE_SCHEDULED: Cell<bool> = const { Cell::new(false) };
+    static IN_DEFERRED_DRAIN: Cell<bool> = const { Cell::new(false) };
     static TIMER_INSTANCES: RefCell<HashMap<u32, Retained<NSTimer>>> =
         RefCell::new(HashMap::new());
     static TIMER_FIRE: RefCell<HashMap<u32, Box<dyn FnMut()>>> = RefCell::new(HashMap::new());
-    static TIMER_TARGETS: RefCell<Vec<Retained<TimerTarget>>> = RefCell::new(Vec::new());
+    static TIMER_TARGETS: RefCell<Vec<Retained<TimerTarget>>> =
+        const { RefCell::new(Vec::new()) };
     static IMAGE_LISTS: RefCell<HashMap<NativeHandle, ImageListStorage>> =
         RefCell::new(HashMap::new());
     static MENU_ITEM_ICONS: RefCell<HashMap<u16, Retained<NSImage>>> =
@@ -136,9 +153,8 @@ thread_local! {
         RefCell::new(HashMap::new());
     static LISTCTRL_VIRTUAL_COUNT: RefCell<HashMap<NativeHandle, u32>> =
         RefCell::new(HashMap::new());
-    static LISTCTRL_VIRTUAL_FETCH: RefCell<
-        HashMap<NativeHandle, Box<dyn FnMut(usize, usize) -> String>>,
-    > = RefCell::new(HashMap::new());
+    static LISTCTRL_VIRTUAL_FETCH: RefCell<HashMap<NativeHandle, ListCtrlVirtualFetch>> =
+        RefCell::new(HashMap::new());
     static LISTCTRL_EXT_STYLE: RefCell<HashMap<NativeHandle, u32>> =
         RefCell::new(HashMap::new());
     static LISTCTRL_ROW_REORDER_ENABLED: RefCell<HashMap<NativeHandle, bool>> =
@@ -150,9 +166,8 @@ thread_local! {
         RefCell::new(HashMap::new());
     static LISTCTRL_LAST_HIT: RefCell<HashMap<NativeHandle, (usize, usize)>> =
         RefCell::new(HashMap::new());
-    static LISTCTRL_CELL_STYLES: RefCell<
-        HashMap<NativeHandle, RefCell<HashMap<(usize, usize), GridStyleData>>>,
-    > = RefCell::new(HashMap::new());
+    static LISTCTRL_CELL_STYLES: RefCell<HashMap<NativeHandle, ListCtrlCellStyles>> =
+        RefCell::new(HashMap::new());
     static LISTCTRL_DEFER_REDRAWS: RefCell<HashSet<NativeHandle>> = RefCell::new(HashSet::new());
     /// Colonna checkbox (selezione multipla) abilitata per ciascun ListCtrl.
     static LISTCTRL_CHECKBOXES_ENABLED: RefCell<HashMap<NativeHandle, bool>> =
@@ -165,8 +180,8 @@ thread_local! {
     /// `ITEM_CHANGED`); per `ITEM_DBLCLK` porta l'indice attivato, così
     /// il frame può invocare gli handler di attivazione riga.
     static LISTCTRL_DEFER_NOTIFIES: RefCell<Vec<(NativeHandle, u16, u32, isize)>> =
-        RefCell::new(Vec::new());
-    static LISTCTRL_DEFER_TIMER_ARMED: Cell<bool> = Cell::new(false);
+        const { RefCell::new(Vec::new()) };
+    static LISTCTRL_DEFER_TIMER_ARMED: Cell<bool> = const { Cell::new(false) };
     static TAB_IMAGE_LISTS: RefCell<HashMap<NativeHandle, NativeHandle>> =
         RefCell::new(HashMap::new());
     static TAB_PAGE_IMAGE_INDICES: RefCell<HashMap<NativeHandle, Vec<i32>>> =
@@ -191,13 +206,10 @@ thread_local! {
         RefCell::new(HashMap::new());
     static TREE_NOTIFY: RefCell<HashMap<NativeHandle, (NativeHandle, u16)>> =
         RefCell::new(HashMap::new());
-    static GRID_COLUMNS: RefCell<
-        HashMap<NativeHandle, RefCell<Vec<(String, i32, i32)>>>,
-    > = RefCell::new(HashMap::new());
-    static GRID_ROWS: RefCell<
-        HashMap<NativeHandle, RefCell<Vec<(Vec<String>, Vec<Option<i32>>)>>>,
-    > = RefCell::new(HashMap::new());
-    static GRID_SELECTED: RefCell<HashMap<NativeHandle, RefCell<Vec<usize>>>> =
+    static GRID_COLUMNS: RefCell<HashMap<NativeHandle, GridColumns>> =
+        RefCell::new(HashMap::new());
+    static GRID_ROWS: RefCell<HashMap<NativeHandle, GridRows>> = RefCell::new(HashMap::new());
+    static GRID_SELECTED: RefCell<HashMap<NativeHandle, GridSelected>> =
         RefCell::new(HashMap::new());
     static GRID_IMAGE_LISTS: RefCell<HashMap<NativeHandle, NativeHandle>> =
         RefCell::new(HashMap::new());
@@ -206,18 +218,15 @@ thread_local! {
         RefCell::new(HashMap::new());
     static GRID_APPEARANCE: RefCell<HashMap<NativeHandle, RefCell<GridAppearanceData>>> =
         RefCell::new(HashMap::new());
-    static GRID_CELL_STYLES: RefCell<
-        HashMap<NativeHandle, RefCell<HashMap<(usize, usize), GridStyleData>>>,
-    > = RefCell::new(HashMap::new());
-    static GRID_ROW_STYLES: RefCell<
-        HashMap<NativeHandle, RefCell<HashMap<usize, GridStyleData>>>,
-    > = RefCell::new(HashMap::new());
-    static GRID_ALTERNATING: RefCell<
-        HashMap<NativeHandle, RefCell<Option<(Rgba, Rgba)>>>,
-    > = RefCell::new(HashMap::new());
+    static GRID_CELL_STYLES: RefCell<HashMap<NativeHandle, GridCellStyles>> =
+        RefCell::new(HashMap::new());
+    static GRID_ROW_STYLES: RefCell<HashMap<NativeHandle, GridRowStyles>> =
+        RefCell::new(HashMap::new());
+    static GRID_ALTERNATING: RefCell<HashMap<NativeHandle, GridAlternating>> =
+        RefCell::new(HashMap::new());
     static GRID_FONT: RefCell<HashMap<NativeHandle, RefCell<(String, f64)>>> =
         RefCell::new(HashMap::new());
-    static GRID_SORT: RefCell<HashMap<NativeHandle, RefCell<(Option<usize>, Option<bool>)>>> =
+    static GRID_SORT: RefCell<HashMap<NativeHandle, GridSortState>> =
         RefCell::new(HashMap::new());
     static GRID_HEADER_SORT_CLICK: RefCell<HashMap<NativeHandle, (usize, bool)>> =
         RefCell::new(HashMap::new());
@@ -228,7 +237,7 @@ thread_local! {
         RefCell::new(HashMap::new());
     static GRID_ROW_COL_HIGHLIGHT: RefCell<HashMap<NativeHandle, bool>> =
         RefCell::new(HashMap::new());
-    static GRID_HIGHLIGHT_CLICK: RefCell<HashMap<NativeHandle, (Option<usize>, Option<usize>)>> =
+    static GRID_HIGHLIGHT_CLICK: RefCell<HashMap<NativeHandle, GridHighlightClick>> =
         RefCell::new(HashMap::new());
     static GRID_ACTIVATE_CELL: RefCell<HashMap<NativeHandle, (usize, usize)>> =
         RefCell::new(HashMap::new());
@@ -247,12 +256,10 @@ thread_local! {
     static GRID_LABEL_TIPS: RefCell<HashMap<NativeHandle, bool>> = RefCell::new(HashMap::new());
     static GRID_AUTOSIZE_COLUMNS: RefCell<HashMap<NativeHandle, bool>> =
         RefCell::new(HashMap::new());
-    static GRID_TOOLTIP_PROVIDERS: RefCell<
-        HashMap<NativeHandle, Box<dyn Fn(usize, usize) -> Option<String>>>,
-    > = RefCell::new(HashMap::new());
-    static GRID_CELL_KINDS: RefCell<
-        HashMap<NativeHandle, RefCell<Vec<Vec<Option<GridProgressCell>>>>>,
-    > = RefCell::new(HashMap::new());
+    static GRID_TOOLTIP_PROVIDERS: RefCell<HashMap<NativeHandle, GridTooltipProvider>> =
+        RefCell::new(HashMap::new());
+    static GRID_CELL_KINDS: RefCell<HashMap<NativeHandle, GridCellKinds>> =
+        RefCell::new(HashMap::new());
     static GRID_HIDDEN_COLS: RefCell<HashMap<NativeHandle, RefCell<Vec<bool>>>> =
         RefCell::new(HashMap::new());
     static GRID_ROW_LABELS: RefCell<HashMap<NativeHandle, (bool, i32)>> =
@@ -279,7 +286,8 @@ thread_local! {
         RefCell::new(HashMap::new());
     static GRID_ROW_REORDERED: RefCell<HashMap<NativeHandle, (usize, usize)>> =
         RefCell::new(HashMap::new());
-    static DEFERRED_MAIN: RefCell<Vec<Box<dyn FnMut()>>> = RefCell::new(Vec::new());
+    static DEFERRED_MAIN: RefCell<Vec<Box<dyn FnMut()>>> =
+        RefCell::new(const { Vec::new() });
 }
 
 struct ImageListStorage {
@@ -291,7 +299,7 @@ struct ImageListStorage {
 type Rgba = (u8, u8, u8, u8);
 
 #[derive(Clone, Copy)]
-struct GridStyleData {
+pub(super) struct GridStyleData {
     foreground: Option<Rgba>,
     background: Option<Rgba>,
 }
@@ -665,7 +673,7 @@ impl WindowDelegate {
 // ── Button target ───────────────────────────────────────────────────
 
 #[derive(Default)]
-struct ButtonTargetIvars {
+pub(super) struct ButtonTargetIvars {
     frame_handle: Cell<NativeHandle>,
     command_id: Cell<u16>,
 }
@@ -674,25 +682,24 @@ define_class!(
     #[unsafe(super = NSObject)]
     #[thread_kind = MainThreadOnly]
     #[ivars = ButtonTargetIvars]
-    struct ButtonTarget;
+    pub(super) struct ButtonTarget;
 
     unsafe impl NSObjectProtocol for ButtonTarget {}
 
     impl ButtonTarget {
         #[unsafe(method(ruWxButtonClicked:))]
         fn button_clicked(&self, sender: Option<&AnyObject>) {
-            if SLIDER_PROGRAMMATIC.with(|c| c.get() > 0) {
-                if sender
+            if SLIDER_PROGRAMMATIC.with(|c| c.get() > 0)
+                && sender
                     .and_then(|s| s.downcast_ref::<NSSlider>())
                     .is_some()
                 {
                     return;
                 }
-            }
             // Debug: log button click with coordinates
             if let Some(btn) = sender.and_then(|s| s.downcast_ref::<NSButton>()) {
                 let frame = btn.frame();
-                let title = unsafe { btn.title() };
+                let title = btn.title();
                 eprintln!("[CLICK] Button clicked: title='{}', frame=({:.1},{:.1},{:.1},{:.1})",
                     title, frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
             }
@@ -726,7 +733,7 @@ pub(super) fn button_target_new(
 
 thread_local! {
     static TEXT_FIELD_DELEGATES: RefCell<Vec<Retained<TextFieldChangeTarget>>> =
-        RefCell::new(Vec::new());
+        const { RefCell::new(Vec::new()) };
 }
 
 #[derive(Default)]
@@ -792,7 +799,7 @@ pub fn text_field_enable_change_notify(field_handle: NativeHandle, command_id: u
 
 thread_local! {
     static TEXT_VIEW_DELEGATES: RefCell<Vec<Retained<TextViewChangeTarget>>> =
-        RefCell::new(Vec::new());
+        const { RefCell::new(Vec::new()) };
     static MULTILINE_TEXT_CTRL: RefCell<HashSet<NativeHandle>> =
         RefCell::new(HashSet::new());
     static RICH_TEXT_CTRL: RefCell<HashSet<NativeHandle>> =
@@ -858,9 +865,7 @@ fn text_view_enable_change_notify(scroll_handle: NativeHandle, command_id: u16) 
     };
     let frame_handle = resolve_frame_handle(parent);
     let target = TextViewChangeTarget::new(mtm, frame_handle, command_id);
-    unsafe {
-        text_view.setDelegate(Some(ProtocolObject::from_ref(&*target)));
-    }
+    text_view.setDelegate(Some(ProtocolObject::from_ref(&*target)));
     TEXT_VIEW_DELEGATES.with(|delegates| delegates.borrow_mut().push(target));
 }
 
@@ -993,7 +998,7 @@ pub fn timer_start(timer_id: u32, interval_ms: u32, repeat: bool) {
     let timer = unsafe {
         NSTimer::scheduledTimerWithTimeInterval_target_selector_userInfo_repeats(
             interval_ms as f64 / 1000.0,
-            &*target,
+            &target,
             sel!(ruWxTimerFired:),
             None,
             repeat,
@@ -1316,7 +1321,7 @@ fn bgra_premul_to_rgba(bgra: &[u8], width: usize, height: usize) -> Vec<u8> {
 }
 
 pub(in crate::platform) fn nsimage_from_bgra(
-    mtm: MainThreadMarker,
+    _mtm: MainThreadMarker,
     bgra: &[u8],
     width: i32,
     height: i32,
@@ -1351,13 +1356,13 @@ pub(in crate::platform) fn nsimage_from_bgra(
 
 /// Create NSImage from raw RGBA pixel data (width × height × 4 bytes).
 pub(in crate::platform) fn nsimage_from_rgba(
-    mtm: MainThreadMarker,
+    _mtm: MainThreadMarker,
     rgba: &[u8],
     width: i32,
     height: i32,
 ) -> Retained<NSImage> {
     let w = width as usize;
-    let h = height as usize;
+    let _h = height as usize;
     let mut rgba_copy = rgba.to_vec();
     let mut planes: [*mut u8; 1] = [rgba_copy.as_mut_ptr()];
     let rep = unsafe {
@@ -1432,7 +1437,7 @@ fn toolbar_icon_side(bar_h: f64, img_w: f64, img_h: f64) -> f64 {
     img_w.max(img_h).min(cap)
 }
 
-fn image_list_push_image(handle: NativeHandle, mut image: Retained<NSImage>) -> Option<i32> {
+fn image_list_push_image(handle: NativeHandle, image: Retained<NSImage>) -> Option<i32> {
     IMAGE_LISTS.with(|map| {
         let mut map = map.borrow_mut();
         let storage = map.get_mut(&handle)?;
@@ -1548,6 +1553,9 @@ pub fn button_set_image(view_handle: NativeHandle, image: &NSImage, image_only: 
 }
 
 /// Icon-only transport/toolbar button: flat bezel and a pre-sized bitmap.
+// `NSBezelStyleShadowlessSquare` (raw value 6) has no non-deprecated equivalent in
+// objc2-app-kit 0.3; the bezel style is required to keep the flat icon-only look.
+#[allow(deprecated)]
 pub fn button_set_bitmap_icon(view_handle: NativeHandle, bitmap_handle: NativeHandle, side: u32) {
     VIEWS.with(|map| {
         if let Some(view) = map.borrow().get(&view_handle) {
@@ -1603,6 +1611,9 @@ pub fn button_set_svg_image(
     }
 }
 
+// The RGBA components mirror the platform-independent `Colour` API; grouping
+// them in a struct would change the exported signature.
+#[allow(clippy::too_many_arguments)]
 pub fn button_set_colour_image(
     view_handle: NativeHandle,
     r: u8,
@@ -3276,7 +3287,7 @@ fn wait_for_next_event() {
     if let Some(event) = app.nextEventMatchingMask_untilDate_inMode_dequeue(
         objc2_app_kit::NSEventMask::Any,
         Some(&until),
-        unsafe { &NSDefaultRunLoopMode },
+        unsafe { NSDefaultRunLoopMode },
         true,
     ) {
         app.sendEvent(&event);
@@ -3290,7 +3301,7 @@ pub fn pump_pending_events() {
     while let Some(event) = app.nextEventMatchingMask_untilDate_inMode_dequeue(
         objc2_app_kit::NSEventMask::Any,
         None,
-        unsafe { &NSDefaultRunLoopMode },
+        unsafe { NSDefaultRunLoopMode },
         true,
     ) {
         app.sendEvent(&event);
@@ -3465,7 +3476,7 @@ pub fn rich_text_set_text_colour(handle: NativeHandle, colour: crate::core::geom
     unsafe {
         if let Some(storage) = text.textStorage() {
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSForegroundColorAttributeName,
+                objc2_app_kit::NSForegroundColorAttributeName,
                 &ns,
                 range,
             );
@@ -3493,7 +3504,7 @@ pub fn rich_text_set_background_colour(
     unsafe {
         if let Some(storage) = text.textStorage() {
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSBackgroundColorAttributeName,
+                objc2_app_kit::NSBackgroundColorAttributeName,
                 &ns,
                 range,
             );
@@ -3515,15 +3526,15 @@ pub fn rich_text_set_underline(handle: NativeHandle, underline: bool) {
         };
         if underline {
             let val = objc2_foundation::NSNumber::numberWithInteger(
-                objc2_app_kit::NSUnderlineStyle::Single.0 as isize,
+                objc2_app_kit::NSUnderlineStyle::Single.0,
             );
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSUnderlineStyleAttributeName,
+                objc2_app_kit::NSUnderlineStyleAttributeName,
                 &val,
                 range,
             );
         } else {
-            storage.removeAttribute_range(&objc2_app_kit::NSUnderlineStyleAttributeName, range);
+            storage.removeAttribute_range(objc2_app_kit::NSUnderlineStyleAttributeName, range);
         }
     }
 }
@@ -3540,7 +3551,7 @@ pub fn rich_text_set_font_size(handle: NativeHandle, size: f64) {
     }
     unsafe {
         if let Some(storage) = text.textStorage() {
-            storage.addAttribute_value_range(&objc2_app_kit::NSFontAttributeName, &font, range);
+            storage.addAttribute_value_range(objc2_app_kit::NSFontAttributeName, &font, range);
         }
     }
 }
@@ -3564,22 +3575,22 @@ pub fn rich_text_set_strikethrough(handle: NativeHandle, strike: bool) {
         };
         if strike {
             let val = objc2_foundation::NSNumber::numberWithInteger(
-                objc2_app_kit::NSUnderlineStyle::Single.0 as isize,
+                objc2_app_kit::NSUnderlineStyle::Single.0,
             );
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSStrikethroughStyleAttributeName,
+                objc2_app_kit::NSStrikethroughStyleAttributeName,
                 &val,
                 range,
             );
         } else {
-            storage.removeAttribute_range(&objc2_app_kit::NSStrikethroughStyleAttributeName, range);
+            storage.removeAttribute_range(objc2_app_kit::NSStrikethroughStyleAttributeName, range);
         }
     }
 }
 
 /// `align`: 0 = left, 1 = center, 2 = right, 3 = justified.
 pub fn rich_text_set_alignment(handle: NativeHandle, align: u8) {
-    let Some(mtm) = MainThreadMarker::new() else {
+    let Some(_mtm) = MainThreadMarker::new() else {
         return;
     };
     let Some(text) = rich_text_view(handle) else {
@@ -3602,7 +3613,7 @@ pub fn rich_text_set_alignment(handle: NativeHandle, align: u8) {
     unsafe {
         if let Some(storage) = text.textStorage() {
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSParagraphStyleAttributeName,
+                objc2_app_kit::NSParagraphStyleAttributeName,
                 &mut_style,
                 apply_range,
             );
@@ -3621,7 +3632,7 @@ pub fn rich_text_set_link(handle: NativeHandle, url: &str) {
     unsafe {
         if let Some(storage) = text.textStorage() {
             storage.addAttribute_value_range(
-                &objc2_app_kit::NSLinkAttributeName,
+                objc2_app_kit::NSLinkAttributeName,
                 &NSString::from_str(url),
                 range,
             );
@@ -3809,7 +3820,7 @@ pub(super) fn grid_appearance(handle: NativeHandle) -> GridAppearanceData {
 }
 
 pub(super) fn grid_body_font(
-    mtm: MainThreadMarker,
+    _mtm: MainThreadMarker,
     handle: NativeHandle,
 ) -> Retained<objc2_app_kit::NSFont> {
     let (name, size) = GRID_FONT.with(|map| {
@@ -4928,7 +4939,7 @@ impl FrameHost {
         unsafe { window.setReleasedWhenClosed(false) };
         window.setTitle(&NSString::from_str(&self.title));
 
-        let content = window
+        let _content = window
             .contentView()
             .expect("NSWindow must have a content view");
 
@@ -4960,14 +4971,10 @@ impl FrameHost {
             window.makeKeyAndOrderFront(None);
             // Keep the window itself as first responder so editable text fields
             // (e.g. the address bar) don't start with all text selected.
-            unsafe {
-                window.makeFirstResponder(None);
-            }
+            window.makeFirstResponder(None);
             app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
             #[allow(deprecated)]
-            unsafe {
-                app.activateIgnoringOtherApps(true);
-            }
+            app.activateIgnoringOtherApps(true);
             self.visible = true;
         }
     }
@@ -5053,9 +5060,12 @@ pub fn init_application() {
 // recapito avviene cosi' sul thread UI, dove vivono gli handler
 // (che sono `!Send`).
 
+/// Raw window-procedure handler: receives `(wparam, lparam)`.
+type RawHandler = Box<dyn FnMut(isize, isize)>;
+
 thread_local! {
     /// Handler registrati per handle della frame e codice messaggio.
-    static RAW_HANDLERS: RefCell<HashMap<NativeHandle, HashMap<u32, Vec<Box<dyn FnMut(isize, isize)>>>>> =
+    static RAW_HANDLERS: RefCell<HashMap<NativeHandle, HashMap<u32, Vec<RawHandler>>>> =
         RefCell::new(HashMap::new());
 }
 
@@ -5181,7 +5191,7 @@ pub fn run_on_next_event(f: impl FnOnce() + 'static) {
     let slot = RefCell::new(Some(f));
     DEFERRED_MAIN.with(|q| {
         q.borrow_mut().push(Box::new(move || {
-            if let Some(mut callback) = slot.borrow_mut().take() {
+            if let Some(callback) = slot.borrow_mut().take() {
                 callback();
             }
         }));
@@ -5332,7 +5342,7 @@ pub fn create_button(
         )
     };
     button.setFrame(ru_rect_to_ns(content_h, &initial_rect));
-    button.setBezelStyle(NSBezelStyle::Rounded);
+    button.setBezelStyle(NSBezelStyle::Push);
     content.addSubview(&button);
     store_ns_view(handle, button.into_super().into_super());
     record_parent(handle, parent);
@@ -5525,7 +5535,7 @@ pub fn popup_append_item(view_handle: NativeHandle, item: &str) {
         if let Some(view) = view {
             if popup_is_combo(view_handle) {
                 if let Some(combo) = view.downcast_ref::<NSComboBox>() {
-                    unsafe { combo.addItemWithObjectValue(&*title) };
+                    unsafe { combo.addItemWithObjectValue(&title) };
                 }
             } else if let Some(popup) = view.downcast_ref::<NSPopUpButton>() {
                 popup.addItemWithTitle(&title);
@@ -5542,7 +5552,7 @@ pub fn popup_insert_item(view_handle: NativeHandle, index: usize, item: &str) {
         if let Some(view) = view {
             if popup_is_combo(view_handle) {
                 if let Some(combo) = view.downcast_ref::<NSComboBox>() {
-                    unsafe { combo.insertItemWithObjectValue_atIndex(&*title, idx) };
+                    unsafe { combo.insertItemWithObjectValue_atIndex(&title, idx) };
                 }
             } else if let Some(popup) = view.downcast_ref::<NSPopUpButton>() {
                 popup.insertItemWithTitle_atIndex(&title, idx);
@@ -6374,7 +6384,6 @@ pub fn set_view_enabled(view_handle: NativeHandle, enabled: bool) {
         if let Some((field, stepper, _)) = map.borrow().get(&view_handle) {
             field.setEnabled(enabled);
             stepper.setEnabled(enabled);
-            return;
         }
     });
     VIEWS.with(|map| {
@@ -6509,9 +6518,7 @@ pub fn create_tab(parent: NativeHandle, initial_rect: Rect) -> NativeHandle {
     // chiamato da `TabInner::set_position` / `set_size`.
     tab.setAutoresizingMask(objc2_app_kit::NSAutoresizingMaskOptions::ViewNotSizable);
     let delegate = TabViewDelegate::new(mtm, handle);
-    unsafe {
-        tab.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-    }
+    tab.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
 
     content.addSubview(&tab);
     TAB_VIEWS.with(|map| map.borrow_mut().insert(handle, tab.clone()));
@@ -6529,7 +6536,7 @@ pub fn set_tab_selection_handler(tab_handle: NativeHandle, handler: Box<dyn FnMu
 }
 
 pub fn tab_add_page(tab_handle: NativeHandle, title: &str, panel_handle: NativeHandle) -> i32 {
-    let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
+    let _mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     let item = NSTabViewItem::new();
     item.setLabel(&NSString::from_str(title));
 
@@ -7494,16 +7501,19 @@ pub fn toolbar_set_prefer_native(toolbar_handle: NativeHandle, prefer: bool) {
 pub fn toolbar_realize(toolbar_handle: NativeHandle) {
     #[cfg(target_os = "macos")]
     {
-        if appkit_toolbar_native::should_use_native(toolbar_handle) {
-            if appkit_toolbar_native::toolbar_realize_native(toolbar_handle) {
-                return;
-            }
+        if appkit_toolbar_native::should_use_native(toolbar_handle)
+            && appkit_toolbar_native::toolbar_realize_native(toolbar_handle)
+        {
+            return;
         }
         appkit_toolbar_native::toolbar_detach_native(toolbar_handle);
     }
     toolbar_realize_legacy(toolbar_handle);
 }
 
+// `NSBezelStyleShadowlessSquare` (raw value 6) has no non-deprecated equivalent in
+// objc2-app-kit 0.3; it is required for the borderless toolbar item look.
+#[allow(deprecated)]
 fn toolbar_realize_legacy(toolbar_handle: NativeHandle) {
     let mtm = match MainThreadMarker::new() {
         Some(m) => m,
@@ -7514,7 +7524,7 @@ fn toolbar_realize_legacy(toolbar_handle: NativeHandle) {
         let Some(tb) = map_ref.get(&toolbar_handle) else {
             return;
         };
-        let mut storage = tb.borrow_mut();
+        let storage = tb.borrow_mut();
         while let Some(sub) = storage.strip.subviews().firstObject() {
             sub.removeFromSuperview();
         }
@@ -7607,7 +7617,7 @@ fn toolbar_realize_legacy(toolbar_handle: NativeHandle) {
 pub fn toolbar_is_native(toolbar_handle: NativeHandle) -> bool {
     #[cfg(target_os = "macos")]
     {
-        return appkit_toolbar_native::toolbar_is_native(toolbar_handle);
+        appkit_toolbar_native::toolbar_is_native(toolbar_handle)
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -7844,10 +7854,8 @@ pub fn toolbar_toggle_float(toolbar_handle: NativeHandle, x: i32, y: i32) -> boo
     // (window close can synchronously fire resize on the parent frame).
     let undock_popup = TOOLBARS.with(|map| {
         let map_borrow = map.borrow();
-        let Some(tb) = map_borrow.get(&toolbar_handle) else {
-            return None;
-        };
-        let mut storage = tb.borrow_mut();
+        let tb = map_borrow.get(&toolbar_handle)?;
+        let storage = tb.borrow_mut();
         if storage.floating_window.get() == 0 {
             return None;
         }
@@ -8511,7 +8519,6 @@ pub fn tree_expand(tree_handle: NativeHandle, item: isize) {
     }
     if appkit_tree_outline::tree_is_native_outline(tree_handle) {
         appkit_tree_outline::tree_expand_item(tree_handle, item as usize);
-        return;
     }
 }
 

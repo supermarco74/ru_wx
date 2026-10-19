@@ -1800,11 +1800,11 @@ impl Dc for ScreenDC {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     #[cfg(target_os = "windows")]
     fn background_mode_round_trip() {
+        use super::*;
+
         // The numeric values are stable Win32 constants.
         assert_eq!(bk_mode_to_win32(BackgroundMode::Transparent), 1);
         assert_eq!(bk_mode_to_win32(BackgroundMode::Opaque), 2);
@@ -1813,6 +1813,8 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn wide_null_terminates() {
+        use super::*;
+
         let w = to_wide_null("hi");
         assert_eq!(w, vec![b'h' as u16, b'i' as u16, 0]);
     }
@@ -1820,6 +1822,8 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn memorydc_smoke_test() {
+        use super::*;
+
         // Smoke test: the constructor does not crash and
         // yields a `MemoryDC` value whose `is_null` /
         // `handle` accessors are consistent. We do not

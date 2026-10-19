@@ -13,7 +13,6 @@ use crate::adv::animation::Animation;
 use crate::controls::bitmap_button::BitmapButton;
 use crate::core::widget::{WidgetRef, Window};
 use crate::dc::bitmap::Bitmap;
-use crate::dc::image::Image;
 use crate::window::frame::Frame;
 use crate::Timer;
 
@@ -180,7 +179,7 @@ fn hbitmap_to_image(
     hbmp: windows_sys::Win32::Graphics::Gdi::HBITMAP,
     w: u32,
     h: u32,
-) -> Option<Image> {
+) -> Option<crate::dc::image::Image> {
     use windows_sys::Win32::Graphics::Gdi::{
         GetDC, GetDIBits, ReleaseDC, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
     };
@@ -229,6 +228,6 @@ fn hbitmap_to_image(
             rgba.push(chunk[0]);
             rgba.push(chunk[3]);
         }
-        Some(Image::from_rgba8(w, h, rgba))
+        Some(crate::dc::image::Image::from_rgba8(w, h, rgba))
     }
 }

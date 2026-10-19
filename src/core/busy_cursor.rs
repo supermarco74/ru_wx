@@ -11,7 +11,7 @@ use std::cell::Cell;
 
 #[cfg(target_os = "macos")]
 thread_local! {
-    static BUSY_DEPTH: Cell<u32> = Cell::new(0);
+    static BUSY_DEPTH: Cell<u32> = const { Cell::new(0) };
 }
 
 /// Shows the wait cursor while in scope (`wxBusyCursor`).

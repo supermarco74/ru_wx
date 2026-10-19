@@ -2439,6 +2439,8 @@ fn main() {
     let ui_font: Rc<RefCell<Option<Font>>> = Rc::new(RefCell::new(None));
     let stop_flag = stop_after_each.clone();
     let status_flag = status.clone();
+    // The native HMENU is only consumed by the Windows menu-bar setup below.
+    #[cfg(target_os = "windows")]
     let opts_hmenu = opts_menu.hmenu();
     let stop_after_id_cell = Rc::new(Cell::new(0u16));
     let stop_after_id_for_cb = stop_after_id_cell.clone();
@@ -2927,6 +2929,7 @@ fn main() {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(clippy::too_many_arguments)] // self-test harness: one argument per control under test
 fn run_music_self_test(
     frame: &Frame,
     append: Rc<dyn Fn(PathBuf)>,

@@ -4,18 +4,17 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, Bool, ProtocolObject};
+use objc2::runtime::{Bool, ProtocolObject};
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
 use objc2_app_kit::NSDraggingInfo;
 use objc2_app_kit::{
-    NSButton, NSControl, NSControlSize, NSControlStateValueOff, NSControlStateValueOn,
-    NSControlTextEditingDelegate, NSDragOperation, NSEvent, NSEventModifierFlags, NSImageScaling,
-    NSImageView, NSLevelIndicator, NSLevelIndicatorStyle, NSPasteboard, NSPasteboardTypeString,
-    NSProgressIndicator, NSProgressIndicatorStyle, NSScrollView, NSTableCellView, NSTableColumn,
-    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewDropOperation, NSTableViewGridLineStyle, NSTableViewSelectionHighlightStyle,
-    NSTableViewStyle, NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
-    NSViewBoundsDidChangeNotification,
+    NSControlSize, NSControlTextEditingDelegate, NSDragOperation, NSEvent, NSEventModifierFlags,
+    NSImageScaling, NSImageView, NSLevelIndicator, NSLevelIndicatorStyle, NSPasteboard,
+    NSPasteboardTypeString, NSProgressIndicator, NSProgressIndicatorStyle, NSScrollView,
+    NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSTableViewDropOperation, NSTableViewGridLineStyle,
+    NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSTextAlignment, NSTextField,
+    NSUserInterfaceItemIdentification, NSView, NSViewBoundsDidChangeNotification,
 };
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSIndexSet, NSInteger, NSMutableIndexSet, NSNotFound,
@@ -26,32 +25,32 @@ use objc2_foundation::{
 use super::{
     alloc_widget_handle, dispatch_notify, grid_append_column_kind_slots, grid_body_font,
     grid_cell_editing_enabled, grid_cell_progress_kind, grid_clone_root_view, grid_col_count,
-    grid_col_from_sort_key, grid_col_sort_key, grid_frozen_col_count, grid_frozen_row_count,
-    grid_get_focused_cell, grid_header_title, grid_image_list_icon_width, grid_init_cell_kinds,
-    grid_is_column_hidden, grid_link_clicks_enabled, grid_queue_edit_start, grid_queue_link_click,
-    grid_queue_paste_at, grid_record_cell_edited, grid_record_row_reordered,
-    grid_replace_root_view, grid_resolve_cell_tooltip, grid_resolve_style,
-    grid_row_col_highlight_enabled, grid_row_count, grid_row_drag_enabled, grid_row_height,
-    grid_row_label_width, grid_row_labels_enabled, grid_set_field_alignment, grid_set_focused_cell,
-    image_list_image_at, ns_color_from_rgba, parent_view_for, record_parent, resolve_frame_handle,
-    ru_rect_to_ns, store_ns_view, GridAppearanceData, GridNativeKind, GridProgressCell,
-    NativeHandle, Rect, GRID_ACTIVATE_CELL, GRID_ALTERNATING, GRID_APPEARANCE, GRID_CELL_STYLES,
-    GRID_CHECKBOXES, GRID_COLUMNS, GRID_COLUMN_RESIZED, GRID_CONTEXT_MENU, GRID_FONT,
-    GRID_HEADER_SORT_CLICK, GRID_HIGHLIGHT_CLICK, GRID_HIGHLIGHT_COL, GRID_HIGHLIGHT_ROW,
-    GRID_IMAGE_LISTS, GRID_MIN_COLUMN_WIDTH, GRID_ROWS, GRID_ROW_CHECKED, GRID_ROW_COL_HIGHLIGHT,
-    GRID_ROW_STYLES, GRID_SELECTED, GRID_SHOW_LINES, GRID_SORT, GRID_SORT_SYNCING,
-    LISTCTRL_NOTIFY_ITEM_CHANGED,
+    grid_col_sort_key, grid_frozen_col_count, grid_frozen_row_count, grid_get_focused_cell,
+    grid_header_title, grid_image_list_icon_width, grid_init_cell_kinds, grid_is_column_hidden,
+    grid_link_clicks_enabled, grid_queue_edit_start, grid_queue_link_click, grid_queue_paste_at,
+    grid_record_cell_edited, grid_record_row_reordered, grid_resolve_cell_tooltip,
+    grid_resolve_style, grid_row_col_highlight_enabled, grid_row_count, grid_row_drag_enabled,
+    grid_row_height, grid_row_label_width, grid_row_labels_enabled, grid_set_field_alignment,
+    grid_set_focused_cell, image_list_image_at, ns_color_from_rgba, parent_view_for, record_parent,
+    resolve_frame_handle, ru_rect_to_ns, store_ns_view, GridAppearanceData, GridNativeKind,
+    GridProgressCell, NativeHandle, Rect, GRID_ACTIVATE_CELL, GRID_ALTERNATING, GRID_APPEARANCE,
+    GRID_CELL_STYLES, GRID_CHECKBOXES, GRID_COLUMNS, GRID_COLUMN_RESIZED, GRID_CONTEXT_MENU,
+    GRID_FONT, GRID_HIGHLIGHT_CLICK, GRID_HIGHLIGHT_COL, GRID_HIGHLIGHT_ROW, GRID_IMAGE_LISTS,
+    GRID_MIN_COLUMN_WIDTH, GRID_ROWS, GRID_ROW_CHECKED, GRID_ROW_COL_HIGHLIGHT, GRID_ROW_STYLES,
+    GRID_SELECTED, GRID_SHOW_LINES, GRID_SORT, GRID_SORT_SYNCING, LISTCTRL_NOTIFY_ITEM_CHANGED,
 };
-use objc2_app_kit::{NSBorderType, NSButtonType, NSScrollView as AppKitScrollView};
+use objc2_app_kit::{NSBorderType, NSScrollView as AppKitScrollView};
+
+/// Inline editor parts for a grid cell: field plus its row/column position.
+type GridInlineEditor = (Retained<NSTextField>, usize, usize);
 
 thread_local! {
     static GRID_TABLES: RefCell<HashMap<NativeHandle, Retained<GridTableView>>> =
         RefCell::new(HashMap::new());
     static GRID_DELEGATES: RefCell<HashMap<NativeHandle, Retained<GridTableController>>> =
         RefCell::new(HashMap::new());
-    static GRID_INLINE_EDITORS: RefCell<
-        HashMap<NativeHandle, (Retained<NSTextField>, usize, usize)>,
-    > = RefCell::new(HashMap::new());
+    static GRID_INLINE_EDITORS: RefCell<HashMap<NativeHandle, GridInlineEditor>> =
+        RefCell::new(HashMap::new());
     static GRID_INLINE_FRAME: RefCell<HashMap<NativeHandle, (NativeHandle, u16)>> =
         RefCell::new(HashMap::new());
     static GRID_MAIN_SCROLLS: RefCell<HashMap<NativeHandle, Retained<NSScrollView>>> =
@@ -102,7 +101,7 @@ fn grid_is_row_reference_table_column(handle: NativeHandle, table_col: NSInteger
 }
 
 fn grid_data_col_for_table_index(
-    handle: NativeHandle,
+    _handle: NativeHandle,
     table: &NSTableView,
     table_col: NSInteger,
 ) -> Option<usize> {
@@ -166,7 +165,7 @@ fn grid_table_column_on_table(
 ) -> Option<Retained<NSTableColumn>> {
     let table_col_idx = grid_table_leading_cols(grid_handle) + data_col;
     let cols = table.tableColumns();
-    if table_col_idx >= cols.count() as usize {
+    if table_col_idx >= cols.count() {
         return None;
     }
     Some(cols.objectAtIndex(table_col_idx as NSUInteger))
@@ -239,7 +238,7 @@ fn grid_table_column_at(
         let table = map.borrow().get(&grid_handle)?.clone();
         let table_col_idx = grid_table_leading_cols(grid_handle) + data_col;
         let cols = table.tableColumns();
-        if table_col_idx >= cols.count() as usize {
+        if table_col_idx >= cols.count() {
             return None;
         }
         Some(cols.objectAtIndex(table_col_idx as NSUInteger))
@@ -728,7 +727,7 @@ fn index_set_to_rows(indexes: Retained<NSIndexSet>) -> Vec<usize> {
     let mut idx = indexes.firstIndex();
     let not_found = NSNotFound as NSUInteger;
     while idx != not_found {
-        rows.push(idx as usize);
+        rows.push(idx);
         let next = indexes.indexGreaterThanIndex(idx);
         if next == not_found {
             break;
@@ -789,9 +788,7 @@ fn grid_reuse_or_new_cell(
         }
     }
     let cell = build(mtm);
-    unsafe {
-        cell.setIdentifier(Some(&id));
-    }
+    cell.setIdentifier(Some(&id));
     cell
 }
 
@@ -820,6 +817,9 @@ fn grid_find_progress_label(cell: &NSTableCellView) -> Option<Retained<NSTextFie
     None
 }
 
+// Cell builders mirror the parameters of the grid cell kinds they implement;
+// bundling them would obscure the per-kind differences.
+#[allow(clippy::too_many_arguments)]
 fn grid_build_progress_cell_view(
     mtm: MainThreadMarker,
     table: &NSTableView,
@@ -860,42 +860,41 @@ fn grid_build_progress_cell_view(
     let gauge_h = 14.0;
     let gauge_y = ((row_h - gauge_h) / 2.0).max(2.0);
 
-    unsafe {
-        cell.setClipsToBounds(true);
-        if let Some(gauge) = grid_find_progress_gauge(&cell) {
-            gauge.setMinValue(0.0);
-            gauge.setMaxValue(info.max.max(1) as f64);
-            let value = (info.value as f64).min(gauge.maxValue());
-            gauge.setDoubleValue(value);
-            gauge.setHidden(false);
-            gauge.setFrame(NSRect::new(
-                NSPoint::new(3.0, gauge_y),
-                NSSize::new(gauge_w, gauge_h),
-            ));
-        }
-        if let Some(label) = grid_find_progress_label(&cell) {
-            label.setStringValue(&NSString::from_str(&label_text));
-            label.setDrawsBackground(true);
-            label.setBackgroundColor(Some(&ns_color_from_rgba(bg)));
-            label.setTextColor(Some(&ns_color_from_rgba(fg)));
-            label.setFont(Some(&grid_body_font(mtm, handle)));
-            label.setAlignment(NSTextAlignment::Right);
-            label.setHidden(label_text.is_empty());
-            label.setFrame(NSRect::new(
-                NSPoint::new(3.0 + gauge_w + 2.0, 0.0),
-                NSSize::new(label_w.max(0.0), row_h),
-            ));
-        }
-        let tooltip = grid_resolve_cell_tooltip(handle, row, data_col, &label_text, gauge_w);
-        if let Some(tip) = tooltip {
-            cell.setToolTip(Some(&NSString::from_str(&tip)));
-        } else {
-            cell.setToolTip(None);
-        }
+    cell.setClipsToBounds(true);
+    if let Some(gauge) = grid_find_progress_gauge(&cell) {
+        gauge.setMinValue(0.0);
+        gauge.setMaxValue(info.max.max(1) as f64);
+        let value = (info.value as f64).min(gauge.maxValue());
+        gauge.setDoubleValue(value);
+        gauge.setHidden(false);
+        gauge.setFrame(NSRect::new(
+            NSPoint::new(3.0, gauge_y),
+            NSSize::new(gauge_w, gauge_h),
+        ));
+    }
+    if let Some(label) = grid_find_progress_label(&cell) {
+        label.setStringValue(&NSString::from_str(&label_text));
+        label.setDrawsBackground(true);
+        label.setBackgroundColor(Some(&ns_color_from_rgba(bg)));
+        label.setTextColor(Some(&ns_color_from_rgba(fg)));
+        label.setFont(Some(&grid_body_font(mtm, handle)));
+        label.setAlignment(NSTextAlignment::Right);
+        label.setHidden(label_text.is_empty());
+        label.setFrame(NSRect::new(
+            NSPoint::new(3.0 + gauge_w + 2.0, 0.0),
+            NSSize::new(label_w.max(0.0), row_h),
+        ));
+    }
+    let tooltip = grid_resolve_cell_tooltip(handle, row, data_col, &label_text, gauge_w);
+    if let Some(tip) = tooltip {
+        cell.setToolTip(Some(&NSString::from_str(&tip)));
+    } else {
+        cell.setToolTip(None);
     }
     cell
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grid_build_row_label_cell_view(
     mtm: MainThreadMarker,
     table: &NSTableView,
@@ -938,6 +937,7 @@ fn grid_build_row_label_cell_view(
     cell
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grid_build_priority_cell_view(
     mtm: MainThreadMarker,
     table: &NSTableView,
@@ -974,34 +974,32 @@ fn grid_build_priority_cell_view(
     let row_h = row_h.max(grid_row_height(handle));
     let label_w = grid_measure_text_width(mtm, handle, label).min(col_width * 0.55) + 6.0;
     let indicator_w = (col_width - label_w - 6.0).max(36.0);
-    unsafe {
-        cell.setClipsToBounds(true);
-        if let Some(indicator) = cell
-            .subviews()
-            .iter()
-            .find_map(|sub| sub.downcast::<NSLevelIndicator>().ok())
-        {
-            indicator.setIntegerValue(level as isize);
-            indicator.setFrame(NSRect::new(
-                NSPoint::new(2.0, ((row_h - 16.0) / 2.0).max(2.0)),
-                NSSize::new(indicator_w, 16.0),
-            ));
-        }
-        if let Some(text_field) = cell
-            .subviews()
-            .iter()
-            .find_map(|sub| sub.downcast::<NSTextField>().ok())
-        {
-            text_field.setStringValue(&NSString::from_str(label));
-            text_field.setTextColor(Some(&ns_color_from_rgba(fg)));
-            text_field.setDrawsBackground(true);
-            text_field.setBackgroundColor(Some(&ns_color_from_rgba(bg)));
-            text_field.setFont(Some(&grid_body_font(mtm, handle)));
-            text_field.setFrame(NSRect::new(
-                NSPoint::new(indicator_w + 4.0, 0.0),
-                NSSize::new((col_width - indicator_w - 6.0).max(0.0), row_h),
-            ));
-        }
+    cell.setClipsToBounds(true);
+    if let Some(indicator) = cell
+        .subviews()
+        .iter()
+        .find_map(|sub| sub.downcast::<NSLevelIndicator>().ok())
+    {
+        indicator.setIntegerValue(level as isize);
+        indicator.setFrame(NSRect::new(
+            NSPoint::new(2.0, ((row_h - 16.0) / 2.0).max(2.0)),
+            NSSize::new(indicator_w, 16.0),
+        ));
+    }
+    if let Some(text_field) = cell
+        .subviews()
+        .iter()
+        .find_map(|sub| sub.downcast::<NSTextField>().ok())
+    {
+        text_field.setStringValue(&NSString::from_str(label));
+        text_field.setTextColor(Some(&ns_color_from_rgba(fg)));
+        text_field.setDrawsBackground(true);
+        text_field.setBackgroundColor(Some(&ns_color_from_rgba(bg)));
+        text_field.setFont(Some(&grid_body_font(mtm, handle)));
+        text_field.setFrame(NSRect::new(
+            NSPoint::new(indicator_w + 4.0, 0.0),
+            NSSize::new((col_width - indicator_w - 6.0).max(0.0), row_h),
+        ));
     }
     cell
 }
@@ -1039,6 +1037,7 @@ fn grid_move_focused_cell(
     dispatch_notify(frame_handle, command_id, GRID_NOTIFY_FOCUS_CHANGED);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grid_build_data_cell_view(
     mtm: MainThreadMarker,
     table: &NSTableView,
@@ -1145,6 +1144,7 @@ fn grid_build_data_cell_view(
     cell
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grid_build_checkbox_cell_view(
     mtm: MainThreadMarker,
     table: &NSTableView,
@@ -1772,9 +1772,7 @@ define_class!(
             } else {
                 0
             };
-            let (menu_row, menu_col) = if in_header {
-                (usize::MAX, data_col)
-            } else if row < 0 {
+            let (menu_row, menu_col) = if in_header || row < 0 {
                 (usize::MAX, data_col)
             } else {
                 (row as usize, data_col)
@@ -2067,8 +2065,7 @@ pub fn grid_set_column_order(grid_handle: NativeHandle, order: &[usize]) -> bool
         let Some(table) = map.borrow().get(&grid_handle).cloned() else {
             return false;
         };
-        for target_pos in 0..order.len() {
-            let want = order[target_pos];
+        for (target_pos, &want) in order.iter().enumerate() {
             let Some(from_pos) = current.iter().position(|&c| c == want) else {
                 return false;
             };
@@ -2109,8 +2106,7 @@ pub fn grid_begin_inline_edit(grid_handle: NativeHandle) -> bool {
     };
     let view_row = grid_display_row_to_view_row(grid_handle, &table, row);
     let table_col_idx = grid_table_leading_cols(grid_handle) + data_col;
-    let rect =
-        unsafe { table.frameOfCellAtColumn_row(table_col_idx as NSInteger, view_row as NSInteger) };
+    let rect = table.frameOfCellAtColumn_row(table_col_idx as NSInteger, view_row as NSInteger);
     let initial = grid_cell_display_text(grid_handle, row, data_col);
     let field = NSTextField::initWithFrame(NSTextField::alloc(mtm), rect);
     field.setStringValue(&NSString::from_str(&initial));
@@ -2179,7 +2175,7 @@ fn grid_frozen_columns_width(grid_handle: NativeHandle, count: usize) -> f64 {
     }
     GRID_COLUMNS.with(|m| {
         if let Some(cols) = m.borrow().get(&grid_handle) {
-            for (i, (_, width, _)) in cols.borrow().iter().enumerate().take(count) {
+            for (_i, (_, width, _)) in cols.borrow().iter().enumerate().take(count) {
                 w += if *width > 0 { *width as f64 } else { 80.0 };
             }
         }

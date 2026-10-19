@@ -35,9 +35,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::adv::animation::{Animation, AnimationFrame};
+use crate::adv::animation::Animation;
+#[cfg(target_os = "windows")]
+use crate::adv::animation::AnimationFrame;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
+#[cfg(target_os = "windows")]
 use crate::dc::bitmap::Bitmap;
 
 use crate::platform::next_control_id;
@@ -136,7 +139,9 @@ impl AnimationCtrl {
         #[cfg(target_os = "windows")]
         register_animation_ctrl_class();
 
-        let id = next_control_id();
+        // Il control id resta allocato anche su macOS per non alterare
+        // la sequenza degli id generati; resta solo non usato.
+        let _id = next_control_id();
 
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
@@ -153,7 +158,7 @@ impl AnimationCtrl {
                 width as i32,
                 height as i32,
                 parent_hwnd,
-                id as usize as HMENU,
+                _id as usize as HMENU,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             )
@@ -340,7 +345,7 @@ impl AnimationCtrl {
         if !self.inner.borrow().playing {
             return;
         }
-        let (next_delay, frame_count) = {
+        let (next_delay, _frame_count) = {
             let mut inner = self.inner.borrow_mut();
             let frame_count = inner
                 .animation
@@ -390,7 +395,7 @@ impl AnimationCtrl {
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = self.inner.borrow_mut().playing = false;
+            self.inner.borrow_mut().playing = false;
         }
         #[cfg(target_os = "macos")]
         {

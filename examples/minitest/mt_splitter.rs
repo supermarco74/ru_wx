@@ -25,9 +25,12 @@
 use std::rc::Rc;
 
 use ru_wx::{
-    App, BoxSizer, Button, Font, FontDesc, Frame, ListBox, Panel, SashEvent, SplitterWindow,
-    StaticText, StatusBar,
+    App, BoxSizer, Button, Font, FontDesc, Frame, ListBox, Panel, SplitterWindow, StaticText,
+    StatusBar,
 };
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+use ru_wx::SashEvent;
 
 const TOPICS: [(&str, &str); 5] = [
     ("Sizers", "BoxSizer stacks widgets vertically or horizontally; nested rows are added with add_sizer / add_sizer_with_proportion."),

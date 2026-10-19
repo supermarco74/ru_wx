@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[cfg(not(target_os = "macos"))]
 use crate::controls::static_text::StaticText;
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};

@@ -69,7 +69,10 @@ impl CommandLinkButton {
         };
 
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-        let _ = (parent, &label);
+        let _ = parent;
+
+        #[cfg(target_os = "macos")]
+        let _ = &label;
 
         #[cfg(target_os = "macos")]
         let parent_handle = crate::platform::window_handle(parent);

@@ -45,7 +45,7 @@ use crate::dnd::drop_target::{self, DroppedFiles};
 #[cfg(target_os = "windows")]
 use crate::dnd::ole_dnd::{self, OleDropError, OleDropPosition, OleDropTarget, OleDroppedData};
 #[cfg(target_os = "macos")]
-use crate::dnd::ole_dnd::{OleDropError, OleDropPosition, OleDroppedData};
+use crate::dnd::ole_dnd::{OleDropPosition, OleDroppedData};
 use crate::window::menu::MenuBar;
 
 #[cfg(target_os = "windows")]
@@ -1969,6 +1969,12 @@ impl Frame {
             self.inner.borrow_mut().stub.rect.height = h;
             #[cfg(target_os = "linux")]
             crate::platform::gtk::set_frame_size(self.hwnd(), w, h);
+        }
+        #[cfg(target_os = "macos")]
+        {
+            // Il backend AppKit non espone ancora un setter per la
+            // dimensione della finestra: i valori restano ignorati.
+            let _ = (w, h);
         }
     }
 

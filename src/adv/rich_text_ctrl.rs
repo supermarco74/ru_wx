@@ -478,7 +478,7 @@ impl Widget for RichTextCtrlInner {
         }
         #[cfg(target_os = "macos")]
         {
-            self.stub_handle as isize
+            self.stub_handle
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {

@@ -1,8 +1,7 @@
 //! macOS top-level window chrome — minimize, zoom, full screen, icon, DPI helpers.
 
-use objc2::rc::Retained;
-use objc2_app_kit::{NSAppearanceCustomization, NSImage, NSScreen, NSWindow, NSWindowStyleMask};
-use objc2_foundation::{MainThreadMarker, NSPoint, NSSize, NSString};
+use objc2_app_kit::{NSAppearanceCustomization, NSImage, NSScreen, NSWindowStyleMask};
+use objc2_foundation::{MainThreadMarker, NSPoint, NSSize};
 
 use crate::core::dpi::{Dpi, SYSTEM_DPI};
 use crate::core::geometry::Rect;
@@ -48,7 +47,7 @@ pub fn mac_enumerate_displays() -> Vec<crate::core::display::Display> {
     let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     let screens = NSScreen::screens(mtm);
     let count = screens.count();
-    let mut out = Vec::with_capacity(count as usize);
+    let mut out = Vec::with_capacity(count);
     for i in 0..count {
         let screen = screens.objectAtIndex(i);
         let frame = screen.frame();
@@ -88,7 +87,7 @@ pub fn mac_frame_get_title(handle: NativeHandle) -> String {
 }
 
 pub fn mac_frame_set_icon(handle: NativeHandle, image: Option<&NSImage>) {
-    let Some(window) = ns_window_for_frame_handle(handle) else {
+    let Some(_window) = ns_window_for_frame_handle(handle) else {
         return;
     };
     // Set the dock tile icon.
@@ -155,9 +154,7 @@ pub fn mac_frame_show_full_screen(handle: NativeHandle, full_screen: bool) {
     if let Some(window) = ns_window_for_frame_handle(handle) {
         let mask = window.styleMask();
         let is_fs = mask.contains(NSWindowStyleMask::FullScreen);
-        if full_screen && !is_fs {
-            window.toggleFullScreen(None);
-        } else if !full_screen && is_fs {
+        if full_screen != is_fs {
             window.toggleFullScreen(None);
         }
     }

@@ -4,7 +4,6 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
-use objc2::runtime::{Bool, ProtocolObject};
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
     NSColor, NSControl, NSFont, NSSegmentStyle, NSSegmentSwitchTracking, NSSegmentedControl,
@@ -19,19 +18,26 @@ use super::{
     NativeHandle, Rect,
 };
 
+/// Views composing one ribbon strip: wrapper, gradients, segmented control, title.
+type RibbonStripViews = (
+    Retained<NSView>,
+    Vec<Retained<NSView>>,
+    Retained<NSSegmentedControl>,
+    Retained<NSTextField>,
+);
+
+/// Tab-selection callback for a ribbon strip.
+type RibbonStripHandler = Box<dyn FnMut(usize)>;
+
 thread_local! {
     /// Maps strip handle → (wrapper_view, gradient_views, segmented_control, title_label)
-    static RIBBON_STRIPS: RefCell<HashMap<NativeHandle, (
-        Retained<NSView>,
-        Vec<Retained<NSView>>,
-        Retained<NSSegmentedControl>,
-        Retained<NSTextField>,
-    )>> = RefCell::new(HashMap::new());
+    static RIBBON_STRIPS: RefCell<HashMap<NativeHandle, RibbonStripViews>> =
+        RefCell::new(HashMap::new());
 
     static RIBBON_STRIP_LABELS: RefCell<HashMap<NativeHandle, RefCell<Vec<String>>>> =
         RefCell::new(HashMap::new());
 
-    static RIBBON_STRIP_HANDLERS: RefCell<HashMap<NativeHandle, Box<dyn FnMut(usize)>>> =
+    static RIBBON_STRIP_HANDLERS: RefCell<HashMap<NativeHandle, RibbonStripHandler>> =
         RefCell::new(HashMap::new());
 }
 

@@ -36,7 +36,9 @@
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::AtomicU32;
+#[cfg(target_os = "windows")]
+use std::sync::atomic::Ordering;
 
 #[cfg(target_os = "windows")]
 use crate::core::widget::Window;

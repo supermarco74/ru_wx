@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, ProtocolObject};
-use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
+use objc2::{define_class, msg_send, MainThreadOnly};
 use objc2_app_kit::{
     NSBackingStoreType, NSColor, NSView, NSWindow, NSWindowDelegate, NSWindowStyleMask,
 };
@@ -15,7 +15,7 @@ use objc2_foundation::{
 
 use super::{
     alloc_widget_handle, init_application, install_frame_content_host, ns_window_for_frame_handle,
-    record_parent, store_container, NativeHandle, Rect,
+    record_parent, store_container, NativeHandle,
 };
 
 thread_local! {
@@ -224,7 +224,7 @@ pub fn mdi_child_create(
 ) -> NativeHandle {
     let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     let handle = alloc_widget_handle();
-    let client_handle = alloc_widget_handle();
+    let _client_handle = alloc_widget_handle();
     let parent_win = ns_window_for_frame_handle(parent_handle);
     let Some(parent_win) = parent_win else {
         return handle;

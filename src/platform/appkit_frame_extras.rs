@@ -2,10 +2,8 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use objc2::rc::Retained;
-use objc2::runtime::{Bool, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
     NSBackingStoreType, NSColor, NSImageScaling, NSImageView, NSTextField, NSView, NSWindow,
@@ -191,7 +189,7 @@ pub fn splash_set_auto_close(handle: NativeHandle, milliseconds: u32) {
     let timer = unsafe {
         NSTimer::scheduledTimerWithTimeInterval_target_selector_userInfo_repeats(
             interval,
-            &*target,
+            &target,
             objc2::sel!(splashTimerFired:),
             None,
             false,

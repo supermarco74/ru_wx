@@ -168,6 +168,8 @@ impl PropertySheetDialog {
     /// The dialog itself is shown as a top-level window (it does
     /// not appear in the taskbar as a child of `parent`).
     pub fn new(parent: &Frame, title: &str, width: u32, height: u32) -> Self {
+        #[cfg(not(target_os = "windows"))]
+        let _ = parent;
         let frame = Frame::builder()
             .with_title(title)
             .with_size(width, height)

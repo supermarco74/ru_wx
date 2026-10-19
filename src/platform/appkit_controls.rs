@@ -11,13 +11,12 @@ use objc2_app_kit::{
     NSDatePickerStyle, NSSearchField, NSStepper, NSTextField, NSTitlePosition, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSDate, NSDateFormatter, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    MainThreadMarker, NSDateFormatter, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
 };
 
 use super::{
-    alloc_widget_handle, button_set_bitmap_icon, button_target_new, dispatch_command,
-    parent_view_for, record_parent, resolve_frame_handle, ru_rect_to_ns, store_ns_view,
-    NativeHandle, Rect,
+    alloc_widget_handle, button_target_new, dispatch_command, parent_view_for, record_parent,
+    resolve_frame_handle, ru_rect_to_ns, store_ns_view, NativeHandle, Rect,
 };
 
 thread_local! {
@@ -180,7 +179,7 @@ pub fn create_toggle_button(
         )
     };
     button.setButtonType(NSButtonType::PushOnPushOff);
-    button.setBezelStyle(NSBezelStyle::Rounded);
+    button.setBezelStyle(NSBezelStyle::Push);
     button.setFrame(ru_rect_to_ns(content_h, &initial_rect));
     content.addSubview(&button);
     store_ns_view(handle, button.into_super().into_super());
@@ -526,18 +525,17 @@ pub fn create_command_link_button(
     handle
 }
 
+/// Parts of the spin (double) control: field, stepper, target and decimal places.
+type SpinDoubleParts = (
+    Retained<NSTextField>,
+    Retained<NSStepper>,
+    Retained<SpinDoubleTarget>,
+    u32,
+);
+
 thread_local! {
-    static SPIN_DOUBLE_PARTS: std::cell::RefCell<
-        HashMap<
-            NativeHandle,
-            (
-                Retained<NSTextField>,
-                Retained<NSStepper>,
-                Retained<SpinDoubleTarget>,
-                u32,
-            ),
-        >,
-    > = std::cell::RefCell::new(HashMap::new());
+    static SPIN_DOUBLE_PARTS: std::cell::RefCell<HashMap<NativeHandle, SpinDoubleParts>> =
+        std::cell::RefCell::new(HashMap::new());
 }
 
 #[derive(Default)]
@@ -616,6 +614,9 @@ fn format_spin_double(value: f64, digits: u32) -> String {
     format!("{value:.prec$}", prec = digits as usize)
 }
 
+// `min/max/increment/digits` map 1:1 onto the platform-independent
+// `SpinCtrlDouble` creation parameters exposed by the crate.
+#[allow(clippy::too_many_arguments)]
 pub fn create_spin_ctrl_double(
     parent: NativeHandle,
     command_id: u16,

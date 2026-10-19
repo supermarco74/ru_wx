@@ -25,10 +25,10 @@ fn link_attributed_title(label: &str) -> Retained<NSMutableAttributedString> {
     let range = NSRange::new(0, text.len());
     let attr = NSMutableAttributedString::initWithString(NSMutableAttributedString::alloc(), &text);
     let color = NSColor::linkColor();
-    let underline = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0 as isize);
+    let underline = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
     unsafe {
-        attr.addAttribute_value_range(&NSForegroundColorAttributeName, &color, range);
-        attr.addAttribute_value_range(&NSUnderlineStyleAttributeName, &underline, range);
+        attr.addAttribute_value_range(NSForegroundColorAttributeName, &color, range);
+        attr.addAttribute_value_range(NSUnderlineStyleAttributeName, &underline, range);
     }
     attr
 }
@@ -43,7 +43,7 @@ fn button_for(handle: NativeHandle) -> Option<Retained<NSButton>> {
 fn apply_link_appearance(button: &NSButton, label: &str) {
     let title = link_attributed_title(label);
     button.setAttributedTitle(&title);
-    button.setBezelStyle(NSBezelStyle::Inline);
+    button.setBezelStyle(NSBezelStyle::Badge);
     button.setBordered(false);
     button.setContentTintColor(Some(&NSColor::linkColor()));
 }

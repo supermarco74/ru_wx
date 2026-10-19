@@ -1,0 +1,66 @@
+# cargo-deny configuration.
+#
+# Without this file `cargo deny check` falls back to a default config
+# whose license allow-list is empty, so every single dependency is
+# rejected. The list below covers the licenses actually present in the
+# dependency tree (MIT / Apache-2.0 for the vast majority, plus the few
+# exceptions listed under the individual comments).
+
+[graph]
+all-features = false
+no-default-features = false
+
+[licenses]
+# The crate itself is dual licensed; see LICENSE.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "Zlib",
+    "Unlicense",
+    "Unicode-3.0",
+    "LGPL-2.1-or-later",
+    # MPL-2.0 is file-level copyleft and comes from resvg/usvg, which
+    # are only used by the build script to rasterise SVG assets. The
+    # published binary is not affected by the file-level copyleft.
+    "MPL-2.0",
+    # The crate itself is GPL-3.0-or-later (see LICENSE). cargo-deny
+    # also validates the license of the local crate, so it has to be
+    # part of the allow-list.
+    "GPL-3.0-or-later",
+]
+confidence-threshold = 0.93
+
+[licenses.private]
+# Nothing may be published without an explicit license.
+ignore = true
+
+[bans]
+# Multiple versions of the same crate are tolerated: they come from
+# transitive dependencies that have not yet aligned on a single major
+# version (for example zune-core 0.5 and 0.8).
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
+[advisories]
+version = 2
+yanked = "warn"
+# Both advisories are inherited from resvg -> usvg -> fontdb, which
+# pulls in the font parsing stack. No fixed version is available
+# upstream yet, and neither crate is reachable from untrusted input
+# at runtime: they are build-time dependencies used to rasterise the
+# bundled SVG assets.
+ignore = [
+    "RUSTSEC-2026-0206", # rustybuzz: unmaintained, via resvg
+    "RUSTSEC-2026-0192", # ttf-parser: unmaintained, via fontdb
+]

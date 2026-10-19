@@ -457,7 +457,8 @@ fn install_float_close_handler(
 }
 
 thread_local! {
-    static FLOAT_PANE_DELEGATES: RefCell<Vec<Retained<FloatPaneDelegate>>> = RefCell::new(Vec::new());
+    static FLOAT_PANE_DELEGATES: RefCell<Vec<Retained<FloatPaneDelegate>>> =
+        const { RefCell::new(const { Vec::new() }) };
 }
 
 #[derive(Default)]
@@ -623,6 +624,9 @@ fn layout_caption_controls(state: &PaneHostState, cap: f64, span: f64, horizonta
     }
 }
 
+// `NSBezelStyleShadowlessSquare` (raw value 6) has no non-deprecated equivalent in
+// objc2-app-kit 0.3; it is required for the borderless pane-caption button look.
+#[allow(deprecated)]
 fn rebuild_caption_buttons(
     mtm: MainThreadMarker,
     state: &mut PaneHostState,
@@ -670,6 +674,9 @@ fn rebuild_caption_buttons(
 }
 
 /// Ensure a pane host exists and wraps `child_handle`. Returns the host handle.
+// The AUI pane parameters mirror the cross-platform pane descriptor; the
+// signature is part of the internal platform API and must stay stable.
+#[allow(clippy::too_many_arguments)]
 pub fn ensure_aui_pane_host(
     frame_handle: NativeHandle,
     parent_handle: NativeHandle,
@@ -696,6 +703,7 @@ pub fn ensure_aui_pane_host(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn ensure_pane_host(
     frame_handle: NativeHandle,
     parent_handle: NativeHandle,
@@ -765,12 +773,10 @@ pub fn ensure_pane_host(
     caption_view.apply_art(art);
     caption_view.set_drag_policy(frame_handle, pane_name, floatable, pinned);
 
-    let title = unsafe {
-        NSTextField::initWithFrame(
-            NSTextField::alloc(mtm),
-            NSRect::new(NSPoint::new(4.0, 2.0), NSSize::new(80.0, 16.0)),
-        )
-    };
+    let title = NSTextField::initWithFrame(
+        NSTextField::alloc(mtm),
+        NSRect::new(NSPoint::new(4.0, 2.0), NSSize::new(80.0, 16.0)),
+    );
     title.setEditable(false);
     title.setBezeled(false);
     title.setDrawsBackground(false);
@@ -1111,10 +1117,13 @@ define_class!(
 
         #[unsafe(method(resetCursorRects))]
         fn reset_cursor_rects(&self) {
+            // `+[NSCursor resizeLeftRightCursor]`/`resizeUpDownCursor` are deprecated by
+            // Apple; `columnResizeCursor`/`rowResizeCursor` are the exact non-deprecated
+            // replacements (same cursor, both directions).
             let cursor = if self.ivars().vertical.get() {
-                unsafe { objc2_app_kit::NSCursor::resizeLeftRightCursor() }
+                objc2_app_kit::NSCursor::columnResizeCursor()
             } else {
-                unsafe { objc2_app_kit::NSCursor::resizeUpDownCursor() }
+                objc2_app_kit::NSCursor::rowResizeCursor()
             };
             unsafe {
                 let _: () = msg_send![self, addCursorRect: self.bounds(), cursor: &*cursor];

@@ -226,12 +226,18 @@ impl SpinCtrlDouble {
 
     /// Set the current value. Clamped to `[min, max]`.
     pub fn set_value(&self, value: f64) {
+        #[cfg(target_os = "windows")]
         let v = {
             let mut inner = self.inner.borrow_mut();
             let v = value.max(inner.min).min(inner.max);
             inner.value = v;
             v
         };
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut inner = self.inner.borrow_mut();
+            inner.value = value.max(inner.min).min(inner.max);
+        }
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
         unsafe {

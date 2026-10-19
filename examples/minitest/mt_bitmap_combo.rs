@@ -42,9 +42,15 @@ fn main() {
     ];
     for path in &icon_files {
         if let Some(hbmp) = icon::load_svg_as_hbitmap(std::path::Path::new(path), 16, 16) {
-            // `load_svg_as_hbitmap` returns an `HBITMAP` (`*mut c_void`).
-            // `ImageList::add_bitmap` accepts a `NativeHandle` (`isize`).
-            icons.add_bitmap(hbmp as isize);
+            // On Windows `load_svg_as_hbitmap` yields an `HBITMAP`
+            // (`*mut c_void`); elsewhere the stub already yields a
+            // `NativeHandle`. `ImageList::add_bitmap` always wants the
+            // `NativeHandle` (`isize`) form.
+            #[cfg(target_os = "windows")]
+            let handle = hbmp as isize;
+            #[cfg(not(target_os = "windows"))]
+            let handle = hbmp;
+            icons.add_bitmap(handle);
         }
     }
 

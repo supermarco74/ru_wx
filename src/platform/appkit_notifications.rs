@@ -13,7 +13,7 @@ use std::sync::{mpsc, Once};
 use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, ProtocolObject};
-use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
+use objc2::{define_class, msg_send, MainThreadOnly};
 use objc2_foundation::{MainThreadMarker, NSBundle, NSError, NSObject, NSObjectProtocol, NSString};
 use objc2_user_notifications::{
     UNAuthorizationOptions, UNMutableNotificationContent, UNNotification,
@@ -23,7 +23,7 @@ use objc2_user_notifications::{
 
 thread_local! {
     static NOTIFICATION_DELEGATE: RefCell<Option<Retained<NotificationDelegate>>> =
-        RefCell::new(None);
+        const { RefCell::new(const { None }) };
     static BALLOON_CLICK: RefCell<Option<Box<dyn FnMut()>>> = RefCell::new(None);
 }
 

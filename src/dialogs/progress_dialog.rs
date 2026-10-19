@@ -43,6 +43,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[cfg(target_os = "windows")]
 use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
 use crate::platform::win32::to_wide;
@@ -350,22 +351,20 @@ impl ProgressDialog {
     /// unchanged. Returns `true` if the user has clicked Cancel since
     /// the last call.
     pub fn update_value(&mut self, value: i32) -> bool {
-        let clamped = {
+        {
             let mut inner = self.inner.borrow_mut();
             let range = inner.range;
             let v = value.max(0).min(range);
             inner.value = v;
-            v
-        };
+        }
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments.
         unsafe {
-            SendMessageW(
-                self.inner.borrow().hwnd_gauge,
-                PBM_SETPOS,
-                clamped as usize,
-                0,
-            );
+            let (hwnd_gauge, value) = {
+                let inner = self.inner.borrow();
+                (inner.hwnd_gauge, inner.value as usize)
+            };
+            SendMessageW(hwnd_gauge, PBM_SETPOS, value, 0);
         }
         self.pump();
         self.is_cancelled()

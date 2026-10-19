@@ -28,7 +28,7 @@ use objc2_app_kit::NSImage;
 #[cfg(target_os = "macos")]
 use objc2_foundation::MainThreadMarker;
 #[cfg(target_os = "macos")]
-use std::sync::Once as MacOnce;
+use std::cell::{Cell, RefCell};
 
 use crate::platform::NativeHandle;
 
@@ -78,27 +78,37 @@ fn default_small() -> NativeHandle {
 }
 
 #[cfg(target_os = "macos")]
+thread_local! {
+    /// Cached default icon. `default_image` requires a
+    /// `MainThreadMarker`, so the cache only ever lives on the main
+    /// thread and a thread-local avoids the `static mut` reference.
+    static IMAGE: RefCell<Option<Retained<NSImage>>> = const { RefCell::new(None) };
+    static IMAGE_READY: Cell<bool> = const { Cell::new(false) };
+}
+
+#[cfg(target_os = "macos")]
 fn default_image(mtm: MainThreadMarker) -> Retained<NSImage> {
-    static mut IMAGE: Option<Retained<NSImage>> = None;
-    static ONCE: MacOnce = MacOnce::new();
-    unsafe {
-        ONCE.call_once(|| {
-            if let Some(bgra) = crate::dc::icon::svg_bytes_to_bgra(ICON_SVG, ICON_PX, ICON_PX) {
-                IMAGE = Some(crate::platform::appkit::nsimage_from_bgra(
-                    mtm,
-                    &bgra,
-                    ICON_PX as i32,
-                    ICON_PX as i32,
-                ));
-            }
-        });
-        IMAGE.clone().unwrap_or_else(|| {
-            NSImage::initWithSize(
-                NSImage::alloc(),
-                objc2_foundation::NSSize::new(ICON_PX as f64, ICON_PX as f64),
-            )
-        })
-    }
+    IMAGE_READY.with(|ready| {
+        if !ready.get() {
+            let image =
+                crate::dc::icon::svg_bytes_to_bgra(ICON_SVG, ICON_PX, ICON_PX).map(|bgra| {
+                    crate::platform::appkit::nsimage_from_bgra(
+                        mtm,
+                        &bgra,
+                        ICON_PX as i32,
+                        ICON_PX as i32,
+                    )
+                });
+            IMAGE.with(|slot| *slot.borrow_mut() = image);
+            ready.set(true);
+        }
+    });
+    IMAGE.with(|slot| slot.borrow().clone()).unwrap_or_else(|| {
+        NSImage::initWithSize(
+            NSImage::alloc(),
+            objc2_foundation::NSSize::new(ICON_PX as f64, ICON_PX as f64),
+        )
+    })
 }
 
 /// `HICON` pair for [`WNDCLASSEXW`](windows_sys::Win32::UI::WindowsAndMessaging::WNDCLASSEXW)

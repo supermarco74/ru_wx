@@ -112,7 +112,9 @@ impl SpinCtrl {
     /// initial value is clamped to `[min, max]`.
     pub fn new<W: Window>(parent_in: &W, min: i32, max: i32, initial: i32) -> Self {
         let edit_id = next_control_id();
-        let updown_id = next_control_id();
+        // L'id resta allocato anche fuori da Windows per non alterare
+        // la sequenza degli id generati; resta solo non usato.
+        let _updown_id = next_control_id();
         let initial = initial.max(min).min(max);
 
         #[cfg(target_os = "windows")]
@@ -158,7 +160,7 @@ impl SpinCtrl {
                 100,
                 24,
                 parent,
-                updown_id as usize as HMENU,
+                _updown_id as usize as HMENU,
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
             );
@@ -209,7 +211,7 @@ impl SpinCtrl {
                 #[cfg(target_os = "windows")]
                 edit_hwnd,
                 #[cfg(target_os = "windows")]
-                updown_id,
+                updown_id: _updown_id,
                 #[cfg(target_os = "windows")]
                 notify_frame: None,
                 #[cfg(all(
@@ -367,6 +369,7 @@ impl SpinCtrl {
     /// Register a callback fired when the value changes.
     pub fn on_value_change<F: FnMut() + 'static>(&self, frame: &Frame, callback: F) {
         let edit_id = self.inner.borrow().id;
+        #[cfg(target_os = "windows")]
         let inner = self.inner.clone();
         #[cfg(target_os = "windows")]
         {

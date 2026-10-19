@@ -33,11 +33,14 @@
 //! }
 //! ```
 
+#[cfg(target_os = "windows")]
 use std::cell::RefCell;
+#[cfg(target_os = "windows")]
 use std::rc::Rc;
 
 use crate::window::frame::Frame;
 
+#[cfg(target_os = "windows")]
 use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
 use crate::platform::win32::to_wide;
@@ -375,12 +378,12 @@ impl TextEntryDialog {
         }
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::run_text_entry_alert(
+            crate::platform::appkit::run_text_entry_alert(
                 &self.caption,
                 &self.message,
                 &self.default,
                 false,
-            );
+            )
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
@@ -532,12 +535,7 @@ impl PasswordEntryDialog {
         }
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::run_text_entry_alert(
-                &self.caption,
-                &self.message,
-                "",
-                true,
-            );
+            crate::platform::appkit::run_text_entry_alert(&self.caption, &self.message, "", true)
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {

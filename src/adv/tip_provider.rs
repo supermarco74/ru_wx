@@ -391,7 +391,7 @@ unsafe extern "system" fn tip_provider_wnd_proc(
 
 // ── macOS ───────────────────────────────────────────────────────────────
 
-/// Flag di sessione del loop modale mac (una finestra tip alla volta).
+// Flag di sessione del loop modale mac (una finestra tip alla volta).
 #[cfg(target_os = "macos")]
 thread_local! {
     static TIP_NEXT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -477,7 +477,7 @@ fn run_tip_macos<W: Window>(
         NSRect::new(NSPoint::new(248.0, 16.0), NSSize::new(96.0, 28.0)),
     );
     next_btn.setTitle(&NSString::from_str("Next tip"));
-    next_btn.setBezelStyle(NSBezelStyle::Rounded);
+    next_btn.setBezelStyle(NSBezelStyle::Push);
     next_btn.setKeyEquivalent(&NSString::from_str("\r"));
     let next_target = TipActionTarget::new(mtm, 0);
     // SAFETY: target/action classici di NSButton.
@@ -492,7 +492,7 @@ fn run_tip_macos<W: Window>(
         NSRect::new(NSPoint::new(352.0, 16.0), NSSize::new(92.0, 28.0)),
     );
     close_btn.setTitle(&NSString::from_str("Close"));
-    close_btn.setBezelStyle(NSBezelStyle::Rounded);
+    close_btn.setBezelStyle(NSBezelStyle::Push);
     close_btn.setKeyEquivalent(&NSString::from_str("\u{1b}"));
     let close_target = TipActionTarget::new(mtm, 1);
     // SAFETY: target/action classici di NSButton.

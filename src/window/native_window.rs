@@ -92,7 +92,7 @@ impl Widget for NativeWindowInner {
         }
         #[cfg(target_os = "macos")]
         {
-            self.view_handle as isize
+            self.view_handle
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {

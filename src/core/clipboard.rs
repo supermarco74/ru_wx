@@ -115,7 +115,7 @@ impl Clipboard {
     #[cfg(target_os = "macos")]
     pub fn get_text() -> Option<String> {
         use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
-        use objc2_foundation::{MainThreadMarker, NSString};
+        use objc2_foundation::MainThreadMarker;
 
         let _ = MainThreadMarker::new()?;
         let pasteboard = NSPasteboard::generalPasteboard();

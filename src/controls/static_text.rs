@@ -13,8 +13,9 @@ use std::rc::Rc;
 use crate::core::font::Font;
 use crate::core::geometry::{Colour, Rect};
 use crate::core::widget::{Widget, WidgetRef, Window};
-
+#[cfg(target_os = "windows")]
 use crate::platform::next_control_id;
+
 #[cfg(target_os = "windows")]
 use crate::platform::win32::{read_window_text, to_wide};
 #[cfg(target_os = "windows")]

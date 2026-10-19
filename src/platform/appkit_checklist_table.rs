@@ -45,7 +45,7 @@ fn index_set_to_rows(indexes: Retained<NSIndexSet>) -> Vec<usize> {
     let mut idx = indexes.firstIndex();
     let not_found = NSNotFound as NSUInteger;
     while idx != not_found {
-        rows.push(idx as usize);
+        rows.push(idx);
         let next = indexes.indexGreaterThanIndex(idx);
         if next == not_found {
             break;
@@ -68,9 +68,7 @@ fn checklist_reuse_or_new_cell(
         }
     }
     let cell = build(mtm);
-    unsafe {
-        cell.setIdentifier(Some(&id));
-    }
+    cell.setIdentifier(Some(&id));
     cell
 }
 
@@ -233,7 +231,7 @@ define_class!(
                 ));
                 label.setFont(Some(&objc2_app_kit::NSFont::systemFontOfSize(font_size)));
                 label.setDrawsBackground(true);
-                let bg = if row_usize % 2 == 0 {
+                let bg = if row_usize.is_multiple_of(2) {
                     theme.background
                 } else {
                     theme.alt_background

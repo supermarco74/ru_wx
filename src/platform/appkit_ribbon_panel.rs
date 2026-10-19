@@ -45,8 +45,12 @@ const LABEL_R: f64 = 64.0 / 255.0;
 const LABEL_G: f64 = 64.0 / 255.0;
 const LABEL_B: f64 = 64.0 / 255.0;
 
+/// Panel container plus its caption label.
+type RibbonPanelParts = (Retained<NSBox>, Retained<NSTextField>);
+
 thread_local! {
-    static RIBBON_PANELS: RefCell<HashMap<NativeHandle, (Retained<NSBox>, Retained<NSTextField>)>> = RefCell::new(HashMap::new());
+    static RIBBON_PANELS: RefCell<HashMap<NativeHandle, RibbonPanelParts>> =
+        RefCell::new(HashMap::new());
 }
 
 pub fn create_ribbon_panel(parent: NativeHandle, label: &str, initial_rect: Rect) -> NativeHandle {
@@ -125,10 +129,12 @@ pub fn ribbon_panel_set_frame(_parent: NativeHandle, handle: NativeHandle, rect:
 // ── Ribbon Buttons ───────────────────────────────────────────────────────────
 
 thread_local! { static RIBBON_BUTTONS: RefCell<HashMap<NativeHandle, Retained<NSButton>>> = RefCell::new(HashMap::new()); }
-thread_local! { static BTN_HOVER: RefCell<HashMap<usize, (Option<Retained<NSImage>>, Option<Retained<NSImage>>)>> = RefCell::new(HashMap::new()); }
+/// Normal and hover images cached per ribbon button id.
+type RibbonHoverImages = (Option<Retained<NSImage>>, Option<Retained<NSImage>>);
+thread_local! { static BTN_HOVER: RefCell<HashMap<usize, RibbonHoverImages>> = RefCell::new(HashMap::new()); }
 thread_local! { static BTN_HOVERING: RefCell<HashSet<usize>> = RefCell::new(HashSet::new()); }
 thread_local! { static RIBBON_DROPDOWNS: RefCell<HashMap<NativeHandle, Retained<NSPopUpButton>>> = RefCell::new(HashMap::new()); }
-thread_local! { static HOVER_TIMER_ID: Cell<u32> = Cell::new(0); }
+thread_local! { static HOVER_TIMER_ID: Cell<u32> = const { Cell::new(0) }; }
 
 #[allow(deprecated)]
 pub fn create_ribbon_button(

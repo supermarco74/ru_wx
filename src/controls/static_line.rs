@@ -111,6 +111,9 @@ impl StaticLine {
         let _ = (parent_in, default_w, default_h);
 
         #[cfg(target_os = "macos")]
+        let _ = id;
+
+        #[cfg(target_os = "macos")]
         let parent_handle = crate::platform::window_handle(parent_in);
         #[cfg(target_os = "macos")]
         let stub_handle = crate::platform::appkit::create_static_line(

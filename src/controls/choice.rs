@@ -282,13 +282,16 @@ impl Choice {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::popup_get_count(self.inner.borrow().stub_handle);
+                crate::platform::appkit::popup_get_count(self.inner.borrow().stub_handle)
             }
             #[cfg(target_os = "linux")]
             {
-                return crate::platform::gtk::choice_get_count(self.inner.borrow().stub_handle);
+                crate::platform::gtk::choice_get_count(self.inner.borrow().stub_handle)
             }
-            0
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                0
+            }
         }
     }
 
@@ -309,15 +312,16 @@ impl Choice {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::popup_get_selection(
-                    self.inner.borrow().stub_handle,
-                );
+                crate::platform::appkit::popup_get_selection(self.inner.borrow().stub_handle)
             }
             #[cfg(target_os = "linux")]
             {
-                return crate::platform::gtk::choice_get_selection(self.inner.borrow().stub_handle);
+                crate::platform::gtk::choice_get_selection(self.inner.borrow().stub_handle)
             }
-            None
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                None
+            }
         }
     }
 
@@ -368,19 +372,16 @@ impl Choice {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::popup_get_string(
-                    self.inner.borrow().stub_handle,
-                    index,
-                );
+                crate::platform::appkit::popup_get_string(self.inner.borrow().stub_handle, index)
             }
             #[cfg(target_os = "linux")]
             {
-                return crate::platform::gtk::choice_get_string(
-                    self.inner.borrow().stub_handle,
-                    index,
-                );
+                crate::platform::gtk::choice_get_string(self.inner.borrow().stub_handle, index)
             }
-            None
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                None
+            }
         }
     }
 

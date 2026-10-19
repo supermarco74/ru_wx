@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, Bool, ProtocolObject};
+use objc2::runtime::{Bool, ProtocolObject};
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
 use objc2_app_kit::NSDraggingInfo;
 use objc2_app_kit::{
@@ -64,7 +64,7 @@ fn index_set_to_rows(indexes: Retained<NSIndexSet>) -> Vec<usize> {
     let mut idx = indexes.firstIndex();
     let not_found = NSNotFound as NSUInteger;
     while idx != not_found {
-        rows.push(idx as usize);
+        rows.push(idx);
         let next = indexes.indexGreaterThanIndex(idx);
         if next == not_found {
             break;
@@ -88,9 +88,7 @@ fn list_reuse_or_new_cell(
         }
     }
     let cell = build(mtm);
-    unsafe {
-        cell.setIdentifier(Some(&id));
-    }
+    cell.setIdentifier(Some(&id));
     cell
 }
 
@@ -636,9 +634,7 @@ pub fn listctrl_set_header_sort_indicator(
         } else {
             None
         };
-        unsafe {
-            table.setIndicatorImage_inTableColumn(image.as_deref(), &column);
-        }
+        table.setIndicatorImage_inTableColumn(image.as_deref(), &column);
     }
 }
 
@@ -748,7 +744,7 @@ pub fn listctrl_set_font_size_native(list_handle: NativeHandle, point_size: f64)
     let Some(table) = list_table_view(list_handle) else {
         return;
     };
-    let pt = point_size.max(8.0).min(28.0);
+    let pt = point_size.clamp(8.0, 28.0);
     let font = objc2_app_kit::NSFont::systemFontOfSize(pt);
     table.setFont(Some(&font));
     // L'altezza riga deve crescere se il font è più grande,

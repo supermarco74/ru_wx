@@ -13,7 +13,9 @@ use crate::core::accelerator::Accelerator;
 use crate::core::geometry::Colour;
 use crate::window::frame::Frame;
 
-use crate::platform::{next_menu_id, to_wide};
+use crate::platform::next_menu_id;
+#[cfg(target_os = "windows")]
+use crate::platform::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CheckMenuItem, CreateMenu, CreatePopupMenu, DestroyMenu, GetCursorPos,

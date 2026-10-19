@@ -11,10 +11,7 @@ use crate::platform::win32::to_wide;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 #[cfg(target_os = "macos")]
-use objc2_app_kit::{
-    NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle,
-    NSAlertThirdButtonReturn,
-};
+use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSAlertSecondButtonReturn, NSAlertStyle};
 #[cfg(target_os = "macos")]
 use objc2_foundation::{MainThreadMarker, NSString};
 

@@ -324,7 +324,7 @@ pub fn drive_free_space(_letter: char) -> Option<(u64, u64)> {
 pub fn volume_free_space(path: &Path) -> Option<(u64, u64)> {
     #[cfg(target_os = "macos")]
     unsafe {
-        use libc::{c_int, statvfs};
+        use libc::statvfs;
         let mut s: statvfs = std::mem::zeroed();
         let p = path.to_string_lossy();
         let cstr = std::ffi::CString::new(p.as_bytes()).ok()?;
@@ -1030,7 +1030,7 @@ fn scan_dir_size(
             out.bytes += md.len();
         }
         *counter += 1;
-        if *counter % 1000 == 0 && !on_progress(out, &child) {
+        if counter.is_multiple_of(1000) && !on_progress(out, &child) {
             return false;
         }
     }

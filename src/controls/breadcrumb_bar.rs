@@ -42,7 +42,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::core::geometry::Rect;
-use crate::core::tokens::{CONTROL_HEIGHT, SPACING_M, SPACING_S, SPACING_XS};
+use crate::core::tokens::CONTROL_HEIGHT;
+#[cfg(target_os = "windows")]
+use crate::core::tokens::{SPACING_M, SPACING_S, SPACING_XS};
 use crate::core::widget::{Widget, WidgetRef, Window};
 use crate::window::frame::Frame;
 

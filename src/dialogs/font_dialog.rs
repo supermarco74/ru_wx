@@ -22,7 +22,7 @@ use objc2::rc::Retained;
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
-    NSApplication, NSButton, NSFont, NSFontManager, NSFontPanel, NSFontTraitMask, NSModalResponse,
+    NSApplication, NSButton, NSFont, NSFontManager, NSFontPanel, NSFontTraitMask,
     NSModalResponseCancel, NSModalResponseOK, NSView,
 };
 #[cfg(target_os = "macos")]
@@ -69,6 +69,8 @@ impl FontDialog {
     /// Create a new font dialog associated with the given frame,
     /// pre-populated with the system default font (Segoe UI 9pt).
     pub fn new(frame: &Frame) -> Self {
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
         FontDialog {
             #[cfg(target_os = "windows")]
             parent_hwnd: frame.hwnd() as HWND,
@@ -81,6 +83,8 @@ impl FontDialog {
 
     /// Create a new font dialog with the given initial font.
     pub fn with_initial(frame: &Frame, initial: FontDesc) -> Self {
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
         FontDialog {
             #[cfg(target_os = "windows")]
             parent_hwnd: frame.hwnd() as HWND,

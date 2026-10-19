@@ -107,6 +107,9 @@ impl StaticBox {
         let _ = (parent_in, label, width, height);
 
         #[cfg(target_os = "macos")]
+        let _ = id;
+
+        #[cfg(target_os = "macos")]
         let parent_handle = crate::platform::window_handle(parent_in);
         #[cfg(target_os = "macos")]
         let stub_handle = crate::platform::appkit::create_group_box(

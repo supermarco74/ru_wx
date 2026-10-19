@@ -114,6 +114,8 @@ impl ColorDialogBuilder {
 impl ColorDialog {
     /// Create a new colour dialog associated with the given frame.
     pub fn new(frame: &Frame) -> Self {
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
         ColorDialog {
             #[cfg(target_os = "windows")]
             parent_hwnd: crate::platform::window_handle_as_hwnd(frame),

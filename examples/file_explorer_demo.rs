@@ -1548,6 +1548,8 @@ mod drive_type {
     pub const DRIVE_FIXED: u32 = 3;
     pub const DRIVE_REMOTE: u32 = 4;
     pub const DRIVE_CDROM: u32 = 5;
+    // Only the Windows path maps this one to a label.
+    #[cfg(target_os = "windows")]
     pub const DRIVE_RAMDISK: u32 = 6;
 }
 

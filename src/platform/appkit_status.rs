@@ -4,8 +4,8 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 
 use objc2::rc::Retained;
-use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
-use objc2_app_kit::{NSImage, NSMenu, NSStatusBar, NSStatusItem, NSVariableStatusItemLength};
+use objc2::{sel, DefinedClass, MainThreadOnly};
+use objc2_app_kit::{NSMenu, NSStatusBar, NSStatusItem, NSVariableStatusItemLength};
 use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSString};
 
 use super::{mac_bitmap_image_at, NativeHandle};
@@ -60,10 +60,14 @@ pub fn status_item_create(tooltip: &str, bitmap_handle: NativeHandle) -> NativeH
     let handle = super::alloc_widget_handle();
     let bar = NSStatusBar::systemStatusBar();
     let item = bar.statusItemWithLength(NSVariableStatusItemLength);
-    item.setToolTip(Some(&NSString::from_str(tooltip)));
-    if let Some(image) = mac_bitmap_image_at(bitmap_handle) {
-        image.setTemplate(true);
-        item.setImage(Some(&image));
+    // `-[NSStatusItem setToolTip:]`/`setImage:` are deprecated by Apple: both must be
+    // applied to the status item's button instead.
+    if let Some(button) = item.button(mtm) {
+        button.setToolTip(Some(&NSString::from_str(tooltip)));
+        if let Some(image) = mac_bitmap_image_at(bitmap_handle) {
+            image.setTemplate(true);
+            button.setImage(Some(&image));
+        }
     }
     STATUS_ITEMS.with(|m| m.borrow_mut().insert(handle, item));
     handle
@@ -78,20 +82,30 @@ pub fn status_item_set_menu(handle: NativeHandle, menu: &NSMenu) {
 }
 
 pub fn status_item_set_image(handle: NativeHandle, bitmap_handle: NativeHandle) {
+    let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     STATUS_ITEMS.with(|m| {
         if let Some(item) = m.borrow().get(&handle) {
-            if let Some(image) = mac_bitmap_image_at(bitmap_handle) {
-                image.setTemplate(true);
-                item.setImage(Some(&image));
+            // `-[NSStatusItem setImage:]` is deprecated by Apple: the image must be
+            // set on the status item's button instead.
+            if let Some(button) = item.button(mtm) {
+                if let Some(image) = mac_bitmap_image_at(bitmap_handle) {
+                    image.setTemplate(true);
+                    button.setImage(Some(&image));
+                }
             }
         }
     });
 }
 
 pub fn status_item_set_tooltip(handle: NativeHandle, tooltip: &str) {
+    let mtm = MainThreadMarker::new().expect("AppKit requires the main thread");
     STATUS_ITEMS.with(|m| {
         if let Some(item) = m.borrow().get(&handle) {
-            item.setToolTip(Some(&NSString::from_str(tooltip)));
+            // `-[NSStatusItem setToolTip:]` is deprecated by Apple: the tooltip must be
+            // set on the status item's button instead.
+            if let Some(button) = item.button(mtm) {
+                button.setToolTip(Some(&NSString::from_str(tooltip)));
+            }
         }
     });
 }

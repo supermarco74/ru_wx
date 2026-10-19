@@ -34,13 +34,15 @@
 //! and reposition their own children by hand.
 
 use std::cell::RefCell;
+#[cfg(target_os = "windows")]
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::core::geometry::Rect;
 use crate::core::widget::{Widget, WidgetRef, Window};
-
+#[cfg(target_os = "windows")]
 use crate::platform::next_control_id;
+
 #[cfg(target_os = "windows")]
 use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]

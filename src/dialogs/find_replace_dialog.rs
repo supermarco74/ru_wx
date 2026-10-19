@@ -55,7 +55,7 @@ use crate::core::geometry::Rect;
 use crate::platform::{
     appkit::{
         create_button, create_dialog_window, create_static_text, create_text_field, dialog_close,
-        dialog_content_view, dialog_present, get_text_field_value, set_text_field_value,
+        dialog_present, get_text_field_value, set_text_field_value,
     },
     next_control_id, window_handle, NativeHandle,
 };
@@ -435,7 +435,7 @@ impl FindReplaceDialog {
         }
         #[cfg(target_os = "macos")]
         {
-            let mut inner = self.inner.borrow_mut();
+            let inner = self.inner.borrow_mut();
             if inner.closed {
                 return false;
             }

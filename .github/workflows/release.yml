@@ -47,6 +47,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # `cargo package` recompiles the crate from the tarball, and the
+      # Linux backend needs the GTK4 development headers (glib, pango,
+      # cairo, X11) to be present. Without them the build script of
+      # glib-sys fails with "Package glib-2.0 was not found in the
+      # pkg-config search path" and the publish is aborted.
+      - name: Install GTK4 development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev \
+            libglib2.0-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libx11-dev \
+            pkg-config
+
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
 

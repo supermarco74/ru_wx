@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{define_class, msg_send, ClassType, DefinedClass, MainThreadOnly};
+use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
     NSApplication, NSDragOperation, NSDraggingContext, NSDraggingSource, NSImage, NSPasteboard,
     NSPasteboardWriting, NSView,
@@ -19,8 +19,10 @@ use crate::dnd::ole_dnd::{OleDragData, OleDragError, OleDragSourceCallbacks, Ole
 use super::{menu_icon_from_colour, NativeHandle, FRAME_CONTENT, VIEWS};
 
 thread_local! {
-    static DRAG_SOURCES: RefCell<Vec<Retained<DragSourceDelegate>>> = RefCell::new(Vec::new());
-    static DRAG_CALLBACKS: RefCell<Option<OleDragSourceCallbacks>> = RefCell::new(None);
+    static DRAG_SOURCES: RefCell<Vec<Retained<DragSourceDelegate>>> =
+        const { RefCell::new(const { Vec::new() }) };
+    static DRAG_CALLBACKS: RefCell<Option<OleDragSourceCallbacks>> =
+        const { RefCell::new(const { None }) };
 }
 
 struct DragSourceDelegateIvars {
@@ -150,11 +152,17 @@ fn write_files_to_pasteboard(pboard: &NSPasteboard, paths: &[PathBuf]) -> bool {
     pboard.writeObjects(&array)
 }
 
-fn drag_image(mtm: MainThreadMarker) -> Retained<NSImage> {
+fn drag_image(_mtm: MainThreadMarker) -> Retained<NSImage> {
     menu_icon_from_colour(96, 128, 208, 255, 32)
 }
 
 /// Begin a synchronous AppKit drag from the view identified by `view_handle`.
+// `-[NSView dragImage:at:offset:event:pasteboard:source:slideBack:]` is deprecated in
+// favour of `-beginDraggingSessionWithItems:event:source:`, but the replacement needs
+// `NSDraggingItem`/`NSFilePromiseProvider` support (feature not enabled in Cargo.toml)
+// and would change how the pasteboard payload is built; the synchronous drag protocol
+// implemented here relies on the pre-filled `pboard`, so the deprecated call is kept.
+#[allow(deprecated)]
 pub fn mac_do_drag_drop(
     view_handle: NativeHandle,
     data: &OleDragData,

@@ -406,10 +406,12 @@ impl Slider {
 
     /// Register a callback fired when the slider value changes
     /// (thumb drag, arrow keys, page up/down, or `set_value`).
-    pub fn on_value_change<F: FnMut() + 'static>(&self, frame: &Frame, mut callback: F) {
+    pub fn on_value_change<F: FnMut() + 'static>(&self, frame: &Frame, callback: F) {
+        #[cfg(target_os = "windows")]
         let inner = self.inner.clone();
         #[cfg(target_os = "windows")]
         {
+            let mut callback = callback;
             let hwnd = self.inner.borrow().hwnd;
             self.inner.borrow_mut().scroll_frame = Some(frame.clone());
             let wrapper = move |_code: u16, _pos: i32| {

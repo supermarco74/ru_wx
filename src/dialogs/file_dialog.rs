@@ -47,6 +47,8 @@ pub struct FileDialog {
 impl FileDialog {
     /// Create a new file dialog associated with the given frame.
     pub fn new(frame: &Frame, style: FileDialogStyle) -> Self {
+        #[cfg(not(target_os = "windows"))]
+        let _ = frame;
         FileDialog {
             #[cfg(target_os = "windows")]
             parent_hwnd: crate::platform::window_handle_as_hwnd(frame),

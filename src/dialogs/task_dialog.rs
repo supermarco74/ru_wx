@@ -180,14 +180,18 @@ impl Default for TaskDialog {
 impl TaskDialog {
     /// Imposta la finestra genitore (di norma il frame): il suo HWND finirà
     /// in `hwndParent` della `TASKDIALOGCONFIG`.
-    pub fn with_parent<W: Window>(mut self, parent: &W) -> Self {
+    pub fn with_parent<W: Window>(self, parent: &W) -> Self {
         #[cfg(target_os = "windows")]
         {
-            self.parent = crate::platform::window_handle_as_hwnd(parent) as isize;
+            let mut this = self;
+            this.parent = crate::platform::window_handle_as_hwnd(parent) as isize;
+            this
         }
         #[cfg(not(target_os = "windows"))]
-        let _ = parent;
-        self
+        {
+            let _ = parent;
+            self
+        }
     }
 
     /// Testo della barra del titolo.

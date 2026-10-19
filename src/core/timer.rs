@@ -337,8 +337,7 @@ impl Timer {
         crate::platform::appkit::timer_set_fire(
             timer_id,
             Box::new(move || {
-                let mut cb = state.borrow_mut().on_tick.take();
-                if let Some(mut c) = cb {
+                if let Some(mut c) = state.borrow_mut().on_tick.take() {
                     c();
                     state.borrow_mut().on_tick = Some(c);
                 }

@@ -164,7 +164,7 @@ impl Bitmap {
                     };
                 }
             }
-            return Self::new(width, height);
+            Self::new(width, height)
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         Self::new(width, height)
@@ -256,15 +256,13 @@ impl Drop for Bitmap {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    #[cfg(target_os = "windows")]
-    use crate::platform::NativeHandleExt;
-
     /// Su macOS lo store bitmap richiede AppKit attivo sul main
     /// thread: sotto `cargo test` l'handle resta nullo.
     #[cfg(not(target_os = "macos"))]
     #[test]
     fn new_blank_records_dimensions() {
+        use super::*;
+
         let bmp = Bitmap::new(32, 24);
         assert_eq!(bmp.width, 32);
         assert_eq!(bmp.height, 24);
@@ -274,6 +272,9 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn new_blank_has_nonnull_handle() {
+        use super::*;
+        use crate::platform::NativeHandleExt;
+
         let bmp = Bitmap::new(16, 16);
         assert!(!bmp.handle().is_null());
     }
@@ -281,6 +282,9 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn destroy_nullifies_handle() {
+        use super::*;
+        use crate::platform::NativeHandleExt;
+
         let mut bmp = Bitmap::new(8, 8);
         assert!(!bmp.is_null());
         bmp.destroy();
@@ -291,6 +295,9 @@ mod tests {
     #[cfg(target_os = "windows")]
     #[test]
     fn from_hbitmap_records_dimensions_and_is_non_null() {
+        use super::*;
+        use windows_sys::Win32::Graphics::Gdi::HBITMAP;
+
         let src = Bitmap::new(10, 10);
         let raw = src.handle();
         // SAFETY: `raw` was created by `CreateDIBSection`

@@ -123,6 +123,7 @@ impl RadioBox {
         let id = next_control_id();
         let row_height = 22;
         let box_padding_top = 18;
+        #[cfg(target_os = "windows")]
         let box_padding_x = 10;
         let box_padding_bottom = 8;
         let box_width = 200;
@@ -643,9 +644,6 @@ impl Widget for RadioBoxInner {
 
 #[cfg(all(test, any(target_os = "windows", target_os = "macos")))]
 mod tests {
-    use super::*;
-    use crate::window::panel::Panel;
-
     /// Il guscio va marcato `radio` (§6): è il nodo che `/find?role=radio`
     /// trova come gruppo e da cui `read_state` legge `checked_index`.
     /// Su macOS richiede il main thread AppKit (widget nativi reali),
@@ -653,6 +651,9 @@ mod tests {
     #[cfg(not(target_os = "macos"))]
     #[test]
     fn radio_box_registra_ruolo_selezione_e_selettore() {
+        use super::*;
+        use crate::window::panel::Panel;
+
         let frame = Frame::builder()
             .with_title("radio-box-test")
             .with_size(320, 240)

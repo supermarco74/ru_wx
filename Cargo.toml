@@ -11,7 +11,7 @@ documentation = "https://ru_wx.easytaskflow.app/"
 readme = "README.md"
 keywords = ["gui", "gui-cross-platform", "wxwidgets", "windows", "macos", "linux", "win32", "appkit", "gtk4", "native"]
 categories = ["gui", "gui::gtk", "os::windows-apis", "os::macos-apis"]
-rust-version = "1.70"
+rust-version = "1.87"
 exclude = [
     "/dist/",
     "/release/",

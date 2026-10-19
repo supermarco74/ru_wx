@@ -269,7 +269,7 @@ impl DirDialog {
 
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::run_dir_panel(&self.title, &self.initial_dir);
+            crate::platform::appkit::run_dir_panel(&self.title, &self.initial_dir)
         }
 
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]

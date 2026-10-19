@@ -80,7 +80,7 @@ struct RibbonTabStripInner {
 #[cfg(target_os = "macos")]
 impl Widget for RibbonTabStripInner {
     fn native_handle(&self) -> isize {
-        self.handle as isize
+        self.handle
     }
 
     fn set_position(&mut self, x: i32, y: i32) {
@@ -292,17 +292,21 @@ impl RibbonBar {
 
         let mut groups: Vec<PanelGroup> = Vec::new();
 
+        #[cfg(not(target_os = "macos"))]
         let tool_cb = self.tool_callback.clone();
+        #[cfg(not(target_os = "macos"))]
         let frame_ref = self.frame.clone();
 
         for panel_data in page.panels() {
             // Create buttons for this group.
+            #[cfg(not(target_os = "macos"))]
             let mut buttons: Vec<Button> = Vec::new();
             #[cfg(target_os = "macos")]
             let mut macos_btn_count: usize = 0;
 
             for bar in panel_data.bars() {
                 for btn in bar.buttons() {
+                    #[cfg(not(target_os = "macos"))]
                     let cb = tool_cb.clone();
 
                     #[cfg(target_os = "macos")]
@@ -524,7 +528,7 @@ impl RibbonBar {
                     let btn_count = group.btn_count;
                     // Auto-size buttons: divide available group width by button count
                     let btn_w = if btn_count > 0 {
-                        (((group_w - GROUP_INSET * 2) as i32 - (btn_count as i32 - 1) * BUTTON_GAP)
+                        ((group_w - GROUP_INSET * 2 - (btn_count as i32 - 1) * BUTTON_GAP)
                             / btn_count as i32)
                             .max(40) as u32
                     } else {

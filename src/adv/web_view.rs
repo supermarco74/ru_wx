@@ -108,7 +108,6 @@ impl WebView {
         #[cfg(target_os = "macos")]
         {
             self.html.load_url(url);
-            return;
         }
 
         #[cfg(target_os = "windows")]

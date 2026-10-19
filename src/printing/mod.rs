@@ -106,12 +106,12 @@ impl PrintDialog {
         }
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::mac_show_print_dialog(
+            crate::platform::appkit::mac_show_print_dialog(
                 &mut self.copies,
                 &mut self.from_page,
                 &mut self.to_page,
                 &mut self.collate,
-            );
+            )
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
@@ -144,10 +144,7 @@ impl PageSetupDialog {
     pub fn show_modal(&mut self) -> bool {
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::mac_show_page_setup(
-                &mut self.paper_size,
-                &mut self.margin_mm,
-            );
+            crate::platform::appkit::mac_show_page_setup(&mut self.paper_size, &mut self.margin_mm)
         }
         #[cfg(not(target_os = "macos"))]
         {
@@ -184,7 +181,7 @@ impl PrintPreview {
     pub fn show_native_preview(&self) -> bool {
         #[cfg(target_os = "macos")]
         {
-            return crate::platform::appkit::mac_show_print_preview(&self.printout);
+            crate::platform::appkit::mac_show_print_preview(&self.printout)
         }
         #[cfg(not(target_os = "macos"))]
         {

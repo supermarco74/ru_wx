@@ -80,6 +80,10 @@ fn scroller_for(handle: NativeHandle) -> Option<Retained<NSScroller>> {
     })
 }
 
+// `NSScrollerPart::DecrementLine`/`IncrementLine` are deprecated by Apple ("scroller
+// arrows are not used anymore") but the raw values 4/5 can still be delivered by older
+// systems, so both arms are kept to preserve the existing behaviour.
+#[allow(deprecated)]
 fn part_to_scroll_code(
     part: NSScrollerPart,
     min: i32,
@@ -164,9 +168,10 @@ impl ScrollBarTarget {
         });
         apply_scroller_values(scroller, read_state(handle));
         dispatch_scroll(frame_handle, handle, code, pos);
-        if matches!(part, NSScrollerPart::Knob) && NSEvent::pressedMouseButtons() & 1 == 0 {
-            dispatch_scroll(frame_handle, handle, SB_ENDSCROLL, pos);
-        } else if !matches!(part, NSScrollerPart::Knob) {
+        // Both branches dispatched `SB_ENDSCROLL`; the union of the two original conditions
+        // `(is_knob && button_up) || !is_knob` simplifies to `!is_knob || button_up`.
+        let is_knob = matches!(part, NSScrollerPart::Knob);
+        if !is_knob || NSEvent::pressedMouseButtons() & 1 == 0 {
             dispatch_scroll(frame_handle, handle, SB_ENDSCROLL, pos);
         }
     }

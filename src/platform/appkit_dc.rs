@@ -4,13 +4,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use objc2_core_foundation::{CGFloat, CGPoint, CGRect, CGSize};
-use objc2_core_graphics::{
-    CGBitmapContextCreate, CGColorSpaceCreateDeviceRGB, CGContext, CGContextAddLineToPoint,
-    CGContextDrawImage, CGContextFillEllipseInRect, CGContextFillRect, CGContextMoveToPoint,
-    CGContextScaleCTM, CGContextSetLineWidth, CGContextSetRGBFillColor, CGContextSetRGBStrokeColor,
-    CGContextSetShouldAntialias, CGContextStrokeEllipseInRect, CGContextStrokePath,
-    CGContextStrokeRect, CGContextTranslateCTM, CGImage,
-};
+use objc2_core_graphics::{CGBitmapContextCreate, CGColorSpace, CGContext};
 use objc2_foundation::NSString;
 
 use crate::core::geometry::{Colour, Rect};
@@ -64,7 +58,7 @@ fn create_context(
             buf.resize(needed, 0);
         }
     }
-    let space = CGColorSpaceCreateDeviceRGB()?;
+    let space = CGColorSpace::new_device_rgb()?;
     let ptr = bgra.borrow_mut().as_mut_ptr() as *mut core::ffi::c_void;
     // SAFETY: `bgra` outlives the context; buffer is 32-bpp premultiplied BGRA.
     let ctx = unsafe {
@@ -79,11 +73,9 @@ fn create_context(
         )
     }?;
     // Match Win32 top-left origin.
-    unsafe {
-        CGContextTranslateCTM(Some(&ctx), 0.0, height as CGFloat);
-        CGContextScaleCTM(Some(&ctx), 1.0, -1.0);
-        CGContextSetShouldAntialias(Some(&ctx), true);
-    }
+    CGContext::translate_ctm(Some(&ctx), 0.0, height as CGFloat);
+    CGContext::scale_ctm(Some(&ctx), 1.0, -1.0);
+    CGContext::set_should_antialias(Some(&ctx), true);
     Some(ctx)
 }
 
@@ -171,17 +163,13 @@ impl MacCgDc {
 
     fn apply_stroke_colour(&self) {
         let (r, g, b, a) = colour_components(self.stroke_colour);
-        unsafe {
-            CGContextSetRGBStrokeColor(Some(&self.ctx), r, g, b, a);
-            CGContextSetLineWidth(Some(&self.ctx), self.stroke_width as CGFloat);
-        }
+        CGContext::set_rgb_stroke_color(Some(&self.ctx), r, g, b, a);
+        CGContext::set_line_width(Some(&self.ctx), self.stroke_width as CGFloat);
     }
 
     fn apply_fill_colour(&self) {
         let (r, g, b, a) = colour_components(self.fill_colour);
-        unsafe {
-            CGContextSetRGBFillColor(Some(&self.ctx), r, g, b, a);
-        }
+        CGContext::set_rgb_fill_color(Some(&self.ctx), r, g, b, a);
     }
 
     pub fn draw_line(&mut self, x1: i32, y1: i32, x2: i32, y2: i32) {
@@ -189,11 +177,9 @@ impl MacCgDc {
             return;
         }
         self.apply_stroke_colour();
-        unsafe {
-            CGContextMoveToPoint(Some(&self.ctx), x1 as CGFloat, y1 as CGFloat);
-            CGContextAddLineToPoint(Some(&self.ctx), x2 as CGFloat, y2 as CGFloat);
-            CGContextStrokePath(Some(&self.ctx));
-        }
+        CGContext::move_to_point(Some(&self.ctx), x1 as CGFloat, y1 as CGFloat);
+        CGContext::add_line_to_point(Some(&self.ctx), x2 as CGFloat, y2 as CGFloat);
+        CGContext::stroke_path(Some(&self.ctx));
     }
 
     pub fn draw_rect(&mut self, x: i32, y: i32, w: i32, h: i32) {
@@ -203,15 +189,11 @@ impl MacCgDc {
         );
         if self.fill_enabled {
             self.apply_fill_colour();
-            unsafe {
-                CGContextFillRect(Some(&self.ctx), rect);
-            }
+            CGContext::fill_rect(Some(&self.ctx), rect);
         }
         if self.stroke_enabled {
             self.apply_stroke_colour();
-            unsafe {
-                CGContextStrokeRect(Some(&self.ctx), rect);
-            }
+            CGContext::stroke_rect(Some(&self.ctx), rect);
         }
     }
 
@@ -221,10 +203,8 @@ impl MacCgDc {
             CGPoint::new(x as CGFloat, y as CGFloat),
             CGSize::new(w as CGFloat, h as CGFloat),
         );
-        unsafe {
-            CGContextSetRGBFillColor(Some(&self.ctx), r, g, b, a);
-            CGContextFillRect(Some(&self.ctx), rect);
-        }
+        CGContext::set_rgb_fill_color(Some(&self.ctx), r, g, b, a);
+        CGContext::fill_rect(Some(&self.ctx), rect);
     }
 
     pub fn draw_ellipse(&mut self, x: i32, y: i32, w: i32, h: i32) {
@@ -234,15 +214,11 @@ impl MacCgDc {
         );
         if self.fill_enabled {
             self.apply_fill_colour();
-            unsafe {
-                CGContextFillEllipseInRect(Some(&self.ctx), rect);
-            }
+            CGContext::fill_ellipse_in_rect(Some(&self.ctx), rect);
         }
         if self.stroke_enabled {
             self.apply_stroke_colour();
-            unsafe {
-                CGContextStrokeEllipseInRect(Some(&self.ctx), rect);
-            }
+            CGContext::stroke_ellipse_in_rect(Some(&self.ctx), rect);
         }
     }
 
@@ -294,9 +270,7 @@ impl MacCgDc {
             CGPoint::new(x as CGFloat, y as CGFloat),
             CGSize::new(bmp.width as CGFloat, bmp.height as CGFloat),
         );
-        unsafe {
-            CGContextDrawImage(Some(&self.ctx), rect, Some(&cg));
-        }
+        CGContext::draw_image(Some(&self.ctx), rect, Some(&cg));
     }
 
     pub fn text_extent(&self, text: &str) -> (i32, i32) {

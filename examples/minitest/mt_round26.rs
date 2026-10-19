@@ -6,10 +6,13 @@
 use ru_wx::{
     App, BoxSizer, BufferedInputStream, DisplayChangedEvent, FileInputStream, FilterInputStream,
     FloatingPointValidator, Frame, GenericValidator, InfoBar, InfoBarMessageType, IntegerValidator,
-    NativeWindow, PopupWindowEvent, PopupWindowEventKind, Rect, RibbonBar, ScrollLineEvent,
-    StaticText, StatusBar, Timer, TimerEvent, UiScrollAxis, Validator, WxInputStream, WxModule,
-    WxObject, ZlibInputStream,
+    PopupWindowEvent, PopupWindowEventKind, Rect, RibbonBar, ScrollLineEvent, StaticText,
+    StatusBar, Timer, TimerEvent, UiScrollAxis, Validator, WxInputStream, WxModule, WxObject,
+    ZlibInputStream,
 };
+
+#[cfg(not(target_os = "macos"))]
+use ru_wx::NativeWindow;
 
 fn main() {
     let app = App::new();

@@ -564,6 +564,8 @@ impl Widget for PropertyGridData {
         unsafe {
             EnableWindow(self.hwnd, if enabled { 1 } else { 0 });
         }
+        #[cfg(not(target_os = "windows"))]
+        let _ = enabled;
     }
 }
 

@@ -1445,14 +1445,15 @@ impl ListCtrl {
     /// Clear the selection from all items. Iterates from 0 to
     /// `get_item_count()` and clears the selection state on every row.
     pub fn clear_selection(&self) {
-        let count = self.get_item_count();
-        for i in 0..count {
-            #[cfg(target_os = "windows")]
-            self.set_item_state(i, 0, LVIS_SELECTED | LVIS_FOCUSED);
+        #[cfg(target_os = "windows")]
+        {
+            let count = self.get_item_count();
+            for i in 0..count {
+                self.set_item_state(i, 0, LVIS_SELECTED | LVIS_FOCUSED);
+            }
         }
         #[cfg(target_os = "linux")]
         {
-            let _ = count;
             let handle = self.inner.borrow().stub_handle;
             crate::platform::gtk::listctrl_clear_selection(handle);
         }
@@ -1465,20 +1466,21 @@ impl ListCtrl {
     /// Select every item (`LVIS_SELECTED`), without stealing the focus
     /// halo from the current focused row. Used by "Select all".
     pub fn select_all(&self) {
-        let count = self.get_item_count();
-        for i in 0..count {
-            #[cfg(target_os = "windows")]
-            self.set_item_state(i, LVIS_SELECTED, LVIS_SELECTED);
+        #[cfg(target_os = "windows")]
+        {
+            let count = self.get_item_count();
+            for i in 0..count {
+                self.set_item_state(i, LVIS_SELECTED, LVIS_SELECTED);
+            }
         }
         #[cfg(target_os = "linux")]
         {
-            let _ = count;
             let handle = self.inner.borrow().stub_handle;
             crate::platform::gtk::listctrl_select_all(handle);
         }
-        #[cfg(all(not(target_os = "windows"), not(target_os = "linux")))]
+        #[cfg(target_os = "macos")]
         {
-            let _ = count;
+            // `select_all` non è ancora esposto dal backend AppKit.
         }
     }
 
@@ -1540,9 +1542,9 @@ impl ListCtrl {
     /// iteration to absorb the final "no more" sentinel, and has a
     /// no-progress guard so it cannot spin on a null/invalid HWND.
     pub fn get_selected_items(&self) -> Vec<usize> {
-        let mut result = Vec::new();
         #[cfg(target_os = "windows")]
         {
+            let mut result = Vec::new();
             let count = self.get_item_count();
             if count == 0 {
                 return result;
@@ -1573,19 +1575,24 @@ impl ListCtrl {
                     current = r;
                 }
             }
+            result
         }
         #[cfg(target_os = "linux")]
         {
-            result =
-                crate::platform::gtk::listctrl_get_selected_items(self.inner.borrow().stub_handle);
+            crate::platform::gtk::listctrl_get_selected_items(self.inner.borrow().stub_handle)
         }
         #[cfg(target_os = "macos")]
         {
-            result = crate::platform::appkit::listctrl_get_selected_items(
-                self.inner.borrow().stub_handle,
-            );
+            crate::platform::appkit::listctrl_get_selected_items(self.inner.borrow().stub_handle)
         }
-        result
+        #[cfg(all(
+            not(target_os = "windows"),
+            not(target_os = "macos"),
+            not(target_os = "linux")
+        ))]
+        {
+            Vec::new()
+        }
     }
 
     /// Ask the ListView to repaint the rows in `first..=last`
@@ -1607,6 +1614,7 @@ impl ListCtrl {
         }
         #[cfg(target_os = "macos")]
         {
+            let _ = (first, last);
             crate::platform::appkit::listctrl_redraw_items(self.inner.borrow().stub_handle);
         }
         #[cfg(all(
@@ -1682,6 +1690,8 @@ impl ListCtrl {
                 style as isize,
             );
         }
+        #[cfg(not(target_os = "windows"))]
+        let _ = style;
     }
 
     /// Enable or disable the checkbox column (`LVS_EX_CHECKBOXES`).
@@ -2374,14 +2384,12 @@ impl ListCtrl {
     /// dalle preferenze utente (`Strumenti → Opzioni…`).
     pub fn set_font_size(&self, point_size: i32) {
         let pt = point_size.clamp(8, 28);
+        #[cfg(target_os = "windows")]
         {
             let mut i = self.inner.borrow_mut();
-            #[cfg(target_os = "windows")]
-            {
-                i.font_desc.point_size = pt;
-                let font = crate::core::font::Font::new(i.font_desc.clone());
-                i.font = Some(font);
-            }
+            i.font_desc.point_size = pt;
+            let font = crate::core::font::Font::new(i.font_desc.clone());
+            i.font = Some(font);
         }
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI calls with validated arguments.

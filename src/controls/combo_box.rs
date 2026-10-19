@@ -524,6 +524,7 @@ impl ComboBox {
         #[cfg(target_os = "macos")]
         {
             let handle = self.inner.borrow().stub_handle;
+            let _ = frame;
             crate::platform::appkit::popup_wire_selection_callback(handle, Box::new(callback));
         }
         #[cfg(target_os = "linux")]
@@ -1157,11 +1158,6 @@ impl BitmapComboBox {
     /// Text in the edit (read-only) field. For a combo with no
     /// selection this is the empty string.
     pub fn get_value(&self) -> String {
-        #[cfg(target_os = "macos")]
-        {
-            return crate::platform::appkit::popup_get_value(self.inner.borrow().stub_handle);
-        }
-
         #[cfg(target_os = "windows")]
         {
             let hwnd = self.inner.borrow().hwnd;
@@ -1184,7 +1180,12 @@ impl BitmapComboBox {
             String::from_utf16_lossy(&buf[..len as usize])
         }
 
-        #[cfg(not(target_os = "windows"))]
+        #[cfg(target_os = "macos")]
+        {
+            crate::platform::appkit::popup_get_value(self.inner.borrow().stub_handle)
+        }
+
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         String::new()
     }
 

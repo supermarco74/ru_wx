@@ -6,6 +6,10 @@ use std::collections::HashMap;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
+// `NSToolbarSeparatorItemIdentifier` is deprecated by Apple ("no longer recommended
+// and will be ignored on 10.7 and later"); it is still the canonical identifier that
+// AppKit maps back to `NSToolbarSeparatorItem`, so it is kept on purpose.
+#[allow(deprecated)]
 use objc2_app_kit::{
     NSBezelStyle, NSButton, NSCellImagePosition, NSImageScaling, NSToolbar, NSToolbarDelegate,
     NSToolbarDisplayMode, NSToolbarItem, NSToolbarSeparatorItemIdentifier,
@@ -113,6 +117,9 @@ fn make_gripper_item(
     item
 }
 
+// `NSBezelStyleShadowlessSquare` (raw value 6) has no non-deprecated equivalent in
+// objc2-app-kit 0.3; it is required for the borderless toolbar item look.
+#[allow(deprecated)]
 fn make_tool_item(
     mtm: MainThreadMarker,
     frame_handle: NativeHandle,
@@ -166,6 +173,9 @@ define_class!(
     unsafe impl NSObjectProtocol for ToolbarNativeDelegate {}
 
     unsafe impl NSToolbarDelegate for ToolbarNativeDelegate {
+        // These are Objective-C `NSToolbarDelegate` methods: the names mirror
+        // the selectors they implement, so snake_case must not be enforced.
+        #[allow(non_snake_case)]
         #[unsafe(method_id(toolbar:itemForItemIdentifier:willBeInsertedIntoToolbar:))]
         fn toolbar_itemForItemIdentifier_willBeInsertedIntoToolbar(
             &self,
@@ -176,6 +186,7 @@ define_class!(
             self.item_for_identifier(item_identifier)
         }
 
+        #[allow(non_snake_case)]
         #[unsafe(method_id(toolbarDefaultItemIdentifiers:))]
         fn toolbarDefaultItemIdentifiers(
             &self,
@@ -184,6 +195,7 @@ define_class!(
             self.default_item_identifiers()
         }
 
+        #[allow(non_snake_case)]
         #[unsafe(method_id(toolbarAllowedItemIdentifiers:))]
         fn toolbarAllowedItemIdentifiers(
             &self,
@@ -194,6 +206,9 @@ define_class!(
     }
 );
 
+// `NSToolbarSeparatorItemIdentifier` is deprecated by Apple but still the identifier
+// AppKit maps back to `NSToolbarSeparatorItem`; kept on purpose (see the import).
+#[allow(deprecated)]
 impl ToolbarNativeDelegate {
     fn item_for_identifier(&self, item_identifier: &NSString) -> Option<Retained<NSToolbarItem>> {
         let mtm = MainThreadMarker::new()?;

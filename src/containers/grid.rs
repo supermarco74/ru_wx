@@ -41,6 +41,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+#[cfg(target_os = "windows")]
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::containers::grid_advanced::{
@@ -1694,6 +1695,8 @@ impl Grid {
         if apply_theme {
             self.apply_explorer_theme();
         }
+        #[cfg(not(target_os = "windows"))]
+        let _ = apply_theme;
         #[cfg(target_os = "macos")]
         {
             crate::platform::appkit::grid_append_column(
@@ -1889,7 +1892,7 @@ impl Grid {
                 );
             }
         }
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        #[cfg(not(target_os = "windows"))]
         let _ = frame;
     }
 
@@ -1931,6 +1934,7 @@ impl Grid {
         }
         #[cfg(target_os = "macos")]
         {
+            let _ = (self, frame);
             crate::platform::appkit::run_on_next_event(f);
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
@@ -2399,14 +2403,14 @@ impl Grid {
         }
         #[cfg(not(target_os = "windows"))]
         {
+            #[cfg(not(target_os = "macos"))]
             let n = self.col_count();
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::grid_column_order(self.inner.borrow().stub_handle);
+                crate::platform::appkit::grid_column_order(self.inner.borrow().stub_handle)
             }
             #[cfg(not(target_os = "macos"))]
             {
-                let _ = n;
                 (0..n).collect()
             }
         }
@@ -4425,12 +4429,11 @@ impl Grid {
             id,
             Box::new(move |code| {
                 use crate::platform::appkit::{
-                    grid_get_selected_rows, grid_take_activate_cell, grid_take_cell_edited,
-                    grid_take_context_menu_target, grid_take_edit_start,
-                    grid_take_header_sort_click, grid_take_highlight_click, grid_take_link_click,
-                    grid_take_paste_at, grid_take_row_reordered, GRID_NOTIFY_CELL_EDITED,
-                    GRID_NOTIFY_COLUMN_RESIZED, GRID_NOTIFY_CONTEXT_MENU, GRID_NOTIFY_EDIT_START,
-                    GRID_NOTIFY_FOCUS_CHANGED, GRID_NOTIFY_HEADER_CLICK,
+                    grid_take_activate_cell, grid_take_cell_edited, grid_take_context_menu_target,
+                    grid_take_edit_start, grid_take_header_sort_click, grid_take_highlight_click,
+                    grid_take_link_click, grid_take_paste_at, grid_take_row_reordered,
+                    GRID_NOTIFY_CELL_EDITED, GRID_NOTIFY_COLUMN_RESIZED, GRID_NOTIFY_CONTEXT_MENU,
+                    GRID_NOTIFY_EDIT_START, GRID_NOTIFY_FOCUS_CHANGED, GRID_NOTIFY_HEADER_CLICK,
                     GRID_NOTIFY_HIGHLIGHT_CLICK, GRID_NOTIFY_ITEM_ACTIVATE,
                     GRID_NOTIFY_ITEM_CHANGED, GRID_NOTIFY_LINK_CLICK, GRID_NOTIFY_PASTE_REQUEST,
                     GRID_NOTIFY_ROW_REORDERED,
@@ -5019,7 +5022,7 @@ impl Widget for GridInner {
         }
         #[cfg(target_os = "macos")]
         {
-            self.stub_handle as isize
+            self.stub_handle
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {

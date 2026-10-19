@@ -107,9 +107,7 @@ fn outline_reuse_or_new_cell(
         }
     }
     let cell = build(mtm);
-    unsafe {
-        cell.setIdentifier(Some(&id));
-    }
+    cell.setIdentifier(Some(&id));
     cell
 }
 
@@ -414,9 +412,10 @@ pub fn create_tree_ctrl_native(
     // coprire tutte le versioni di macOS dispatchiamo su entrambi.
     let mask = objc2_app_kit::NSEventMask::LeftMouseDown | objc2_app_kit::NSEventMask::LeftMouseUp;
     let monitor: Retained<AnyObject> = unsafe {
-        objc2::msg_send![objc2::class!(NSEvent),
-            addLocalMonitorForEventsMatchingMask:mask
-            handler:&*block
+        objc2::msg_send![
+            objc2::class!(NSEvent),
+            addLocalMonitorForEventsMatchingMask: mask,
+            handler: &*block
         ]
     };
     TREE_OUTLINE_MONITORS.with(|m| m.borrow_mut().insert(handle, monitor));
@@ -479,7 +478,7 @@ pub fn tree_collapse_item(tree_handle: NativeHandle, node_id: usize) {
 /// Usato dalle preferenze utente (`Strumenti → Opzioni…`).
 pub fn tree_set_font_size_native(tree_handle: NativeHandle, point_size: f64) {
     if let Some(outline) = outline_view(tree_handle) {
-        let pt = point_size.max(8.0).min(28.0);
+        let pt = point_size.clamp(8.0, 28.0);
         let font = objc2_app_kit::NSFont::systemFontOfSize(pt);
         outline.setFont(Some(&font));
         // Allinea l'altezza riga al nuovo font per evitare troncamenti.

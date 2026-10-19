@@ -212,6 +212,7 @@ impl DataGrid {
 
         // (1b) Toggle checkbox: `LVN_ITEMCHANGED` con `NMLISTVIEW`
         // completo (`uOldState`/`uNewState` portano lo state image).
+        #[cfg(target_os = "windows")]
         let state = self.state.clone();
         let id = self.list.id();
         frame.register_lv_item_changed_handler(
@@ -278,8 +279,11 @@ impl DataGrid {
         // (3) Doppio click: edit in-place se abilitato, altrimenti
         // `on_row_activated`. `LVN_ITEMACTIVATE` porta `NMITEMACTIVATE`
         // con `iItem`/`iSubItem`.
+        #[cfg(target_os = "windows")]
         let state = self.state.clone();
+        #[cfg(target_os = "windows")]
         let list = self.list.clone();
+        #[cfg(target_os = "windows")]
         let frame_c = frame.clone();
         frame.register_lv_item_activate_handler(
             id,

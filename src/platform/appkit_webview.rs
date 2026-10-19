@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
-use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
+use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use objc2_foundation::{
     MainThreadMarker, NSObject, NSObjectProtocol, NSString, NSURLRequest, NSURL,
@@ -23,12 +23,14 @@ pub const WEBVIEW_NAV_COMPLETE: WebViewNavKind = 1;
 pub const WEBVIEW_NAV_ERROR: WebViewNavKind = 2;
 pub const WEBVIEW_TITLE_CHANGED: WebViewNavKind = 3;
 
+/// Navigation callback registered for each embedded web view.
+type WebViewNavHandler = Box<dyn FnMut(WebViewNavKind, String)>;
+
 thread_local! {
     static WEBVIEWS: RefCell<HashMap<NativeHandle, Retained<WKWebView>>> =
         RefCell::new(HashMap::new());
-    static WEBVIEW_HANDLERS: RefCell<
-        HashMap<NativeHandle, Box<dyn FnMut(WebViewNavKind, String)>>,
-    > = RefCell::new(HashMap::new());
+    static WEBVIEW_HANDLERS: RefCell<HashMap<NativeHandle, WebViewNavHandler>> =
+        RefCell::new(HashMap::new());
     static WEBVIEW_DELEGATES: RefCell<HashMap<NativeHandle, Retained<WebNavDelegate>>> =
         RefCell::new(HashMap::new());
 }

@@ -16,7 +16,7 @@ pub fn open_url_in_browser(url: &str) -> bool {
             return false;
         };
         let workspace = NSWorkspace::sharedWorkspace();
-        return workspace.openURL(&ns_url);
+        workspace.openURL(&ns_url)
     }
     #[cfg(target_os = "windows")]
     {

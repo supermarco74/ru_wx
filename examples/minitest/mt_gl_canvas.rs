@@ -48,7 +48,9 @@ use ru_wx::{App, BoxSizer, Button, Frame, GLCanvas, StaticText, Timer};
 
 /// Background RGB used for `glClearColor`. We toggle this with
 /// the "Toggle background" button.
+#[cfg(target_os = "windows")]
 const BG_DARK: (f32, f32, f32) = (0.08, 0.10, 0.16);
+#[cfg(target_os = "windows")]
 const BG_LIGHT: (f32, f32, f32) = (0.92, 0.90, 0.84);
 
 fn main() {
@@ -111,9 +113,12 @@ fn main() {
 
     // ── Animation tick ────────────────────────────────────────────
     let timer = Timer::new(&frame);
+    // The GL handles are only needed by the Windows branch below.
+    #[cfg(target_os = "windows")]
     let gl_for_tick = gl.clone();
     let angle_for_tick = angle_deg.clone();
     let paused_for_tick = paused.clone();
+    #[cfg(target_os = "windows")]
     let use_dark_bg_for_tick = use_dark_bg.clone();
     timer.on_tick(move || {
         if paused_for_tick.get() {

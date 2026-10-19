@@ -69,8 +69,11 @@ pub fn mac_bitmap_image_at(handle: NativeHandle) -> Option<Retained<NSImage>> {
     MAC_BITMAPS.with(|m| m.borrow().get(&handle).map(|e| e.image.clone()))
 }
 
+/// Shared writable BGRA pixel buffer plus its pixel dimensions.
+pub type MacBitmapBuffer = (Rc<RefCell<Vec<u8>>>, u32, u32);
+
 /// Borrow the writable BGRA buffer backing a cached bitmap.
-pub fn mac_bitmap_attach_bgra(handle: NativeHandle) -> Option<(Rc<RefCell<Vec<u8>>>, u32, u32)> {
+pub fn mac_bitmap_attach_bgra(handle: NativeHandle) -> Option<MacBitmapBuffer> {
     MAC_BITMAPS.with(|m| {
         m.borrow()
             .get(&handle)

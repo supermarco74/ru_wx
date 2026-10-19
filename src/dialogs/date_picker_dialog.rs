@@ -36,12 +36,15 @@
 //! }
 //! ```
 
+#[cfg(target_os = "windows")]
 use std::cell::RefCell;
+#[cfg(target_os = "windows")]
 use std::rc::Rc;
 
 use crate::controls::date_picker_ctrl::Date;
 use crate::window::frame::Frame;
 
+#[cfg(target_os = "windows")]
 use crate::platform::next_control_id;
 #[cfg(target_os = "windows")]
 use crate::platform::win32::to_wide;

@@ -43,6 +43,13 @@ impl WindowUpdateLocker {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+impl Default for WindowUpdateLocker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Drop for WindowUpdateLocker {
     fn drop(&mut self) {
         self.release();

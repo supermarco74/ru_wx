@@ -8,8 +8,8 @@ use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSBezelStyle, NSBorderType, NSButton, NSControl, NSControlStateValueOff, NSControlStateValueOn,
-    NSEvent, NSPopUpButton, NSScrollView, NSTextField, NSView,
+    NSBezelStyle, NSBorderType, NSButton, NSControlStateValueOff, NSControlStateValueOn, NSEvent,
+    NSPopUpButton, NSScrollView, NSTextField, NSView,
 };
 
 use objc2_foundation::{MainThreadMarker, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString};
@@ -31,15 +31,20 @@ pub enum PropertyGridValueKind {
     Choice,
 }
 
+/// Row accessor: takes the row index and returns the displayed value.
+pub type PropertyGridTextFn = Box<dyn Fn(usize) -> String>;
+/// Row mutator: applies the edited value to row `usize`, returning success.
+pub type PropertyGridApplyFn = Box<dyn FnMut(usize, &str) -> bool>;
+
 /// Rust-side hooks registered by [`crate::adv::property_grid::PropertyGrid`].
 pub struct PropertyGridCallbacks {
     pub row_count: Box<dyn Fn() -> usize>,
-    pub name_at: Box<dyn Fn(usize) -> String>,
-    pub value_display_at: Box<dyn Fn(usize) -> String>,
+    pub name_at: PropertyGridTextFn,
+    pub value_display_at: PropertyGridTextFn,
     pub kind_at: Box<dyn Fn(usize) -> PropertyGridValueKind>,
     pub choice_options_at: Box<dyn Fn(usize) -> Vec<String>>,
     pub name_col_width: Box<dyn Fn() -> f64>,
-    pub apply_text: Box<dyn FnMut(usize, &str) -> bool>,
+    pub apply_text: PropertyGridApplyFn,
     pub apply_bool: Box<dyn FnMut(usize, bool) -> bool>,
     pub apply_choice: Box<dyn FnMut(usize, usize) -> bool>,
     pub on_changed: Box<dyn FnMut(usize)>,

@@ -4,7 +4,9 @@
 //! Block-level API error tracing.
 //! Wraps a block of Win32 API calls and automatically logs any errors on scope exit.
 
+#[cfg(target_os = "windows")]
 use super::levels::LogLevel;
+#[cfg(target_os = "windows")]
 use super::manager::log_message;
 
 /// RAII guard for tracing Win32 API errors in a block.

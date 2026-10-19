@@ -42,6 +42,7 @@ use crate::core::geometry::Rect;
 use crate::core::widget::Widget;
 use crate::dc::image_list::ImageList;
 use crate::window::frame::Frame;
+#[cfg(target_os = "windows")]
 use crate::window::panel::Panel;
 
 use crate::platform::next_control_id;

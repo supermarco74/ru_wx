@@ -24,10 +24,13 @@ fn unified_frame_button_command_dispatch() {
 
 #[test]
 fn stub_backend_direct_api() {
-    use ru_wx::{GtkApp, GtkButton, GtkFrame, GtkPanel, GtkStaticText, StubBackend};
+    use ru_wx::StubBackend;
 
     #[cfg(target_os = "macos")]
     use ru_wx::{AppKitApp, AppKitButton, AppKitFrame, AppKitPanel, AppKitStaticText};
+
+    #[cfg(not(target_os = "macos"))]
+    use ru_wx::{GtkApp, GtkButton, GtkFrame, GtkPanel, GtkStaticText};
 
     #[cfg(target_os = "macos")]
     {

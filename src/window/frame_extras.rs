@@ -363,13 +363,13 @@ impl SplashScreen {
             if milliseconds > 0 {
                 crate::platform::appkit::splash_set_auto_close(handle, milliseconds);
             }
-            return Self {
+            Self {
                 inner: Rc::new(RefCell::new(SplashScreenInner {
                     handle,
                     bitmap,
                     auto_close_ms: milliseconds,
                 })),
-            };
+            }
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {

@@ -661,8 +661,8 @@ fn relayout_tab_page_inner(
 thread_local! {
     static PENDING_TAB_PAGE_LAYOUTS: RefCell<
         Vec<(crate::platform::NativeHandle, crate::platform::NativeHandle, u32, u32)>,
-    > = RefCell::new(Vec::new());
-    static TAB_PAGE_LAYOUT_SCHEDULED: Cell<bool> = Cell::new(false);
+    > = const { RefCell::new(Vec::new()) };
+    static TAB_PAGE_LAYOUT_SCHEDULED: Cell<bool> = const { Cell::new(false) };
 }
 
 #[cfg(target_os = "macos")]

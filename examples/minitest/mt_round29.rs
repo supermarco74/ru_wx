@@ -9,8 +9,11 @@ use ru_wx::{
     get_translation, App, BlockListFilter, BoxSizer, ClassInfo, EventFilter, FFileOutputStream,
     Frame, PassThroughFilter, Protocol, RefCounter, RegEx, SizerFlags, StaticBox, StaticBoxSizer,
     StaticText, StatusBar, TextBuffer, Translation, ULongLong, Url, Variant, WeakRef,
-    WindowUpdateLocker, WxOutputStream,
+    WxOutputStream,
 };
+
+#[cfg(target_os = "windows")]
+use ru_wx::WindowUpdateLocker;
 
 fn main() {
     let app = App::new();

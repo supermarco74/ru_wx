@@ -6,8 +6,7 @@ use objc2::rc::Retained;
 use objc2::MainThreadOnly;
 use objc2_app_kit::{
     NSAlert, NSAlertStyle, NSApplication, NSColor, NSColorPanel, NSModalResponse,
-    NSModalResponseCancel, NSModalResponseOK, NSOpenPanel, NSPopUpButton, NSSavePanel,
-    NSSecureTextField, NSTextField,
+    NSModalResponseOK, NSOpenPanel, NSPopUpButton, NSSavePanel, NSSecureTextField, NSTextField,
 };
 use objc2_foundation::{MainThreadMarker, NSArray, NSString, NSURL};
 
@@ -47,6 +46,11 @@ fn url_to_path(url: &NSURL) -> Option<String> {
     url.path().map(|s| s.to_string())
 }
 
+// `-[NSSavePanel setAllowedFileTypes:]` is deprecated by Apple in favour of
+// `-allowedContentTypes`, but the replacement needs `UTType` values from the
+// `objc2-uniform-type-identifiers` crate, which is not a dependency here. The wildcard
+// is given as plain extension strings, so the deprecated call is kept on purpose.
+#[allow(deprecated)]
 fn configure_panel(panel: &NSSavePanel, opts: &FilePanelOptions) {
     if !opts.title.is_empty() {
         panel.setTitle(Some(&NSString::from_str(&opts.title)));
@@ -131,7 +135,7 @@ pub fn run_color_panel(initial: Colour) -> Option<Colour> {
         initial.a as f64 / 255.0,
     );
     panel.setColor(&ns);
-    let initial_color = panel.color();
+    let _initial_color = panel.color();
     panel.makeKeyAndOrderFront(None);
     let _response = app.runModalForWindow(&panel);
     panel.orderOut(None);

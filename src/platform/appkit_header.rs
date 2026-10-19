@@ -5,7 +5,7 @@ use std::cell::{Cell, RefCell};
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, NSObjectProtocol};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadOnly};
-use objc2_app_kit::{NSBezelStyle, NSButton, NSEvent, NSTextField, NSView};
+use objc2_app_kit::{NSEvent, NSTextField, NSView};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use super::{
@@ -197,12 +197,10 @@ pub fn header_insert_column(handle: NativeHandle, index: usize, title: &str, wid
         };
         let cmd = state.header_id.wrapping_add(index as u16 + 1);
         let target = button_target_new(mtm, state.frame_handle, cmd);
-        let field = unsafe {
-            NSTextField::initWithFrame(
-                NSTextField::alloc(mtm),
-                NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width as f64, 20.0)),
-            )
-        };
+        let field = NSTextField::initWithFrame(
+            NSTextField::alloc(mtm),
+            NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(width as f64, 20.0)),
+        );
         field.setEditable(false);
         field.setBezeled(false);
         field.setDrawsBackground(false);

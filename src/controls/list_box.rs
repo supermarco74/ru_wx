@@ -416,13 +416,16 @@ impl ListBox {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::listbox_get_count(self.inner.borrow().stub_handle);
+                crate::platform::appkit::listbox_get_count(self.inner.borrow().stub_handle)
             }
             #[cfg(target_os = "linux")]
             {
-                return crate::platform::gtk::list_box_get_count(self.inner.borrow().stub_handle);
+                crate::platform::gtk::list_box_get_count(self.inner.borrow().stub_handle)
             }
-            0
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                0
+            }
         }
     }
 
@@ -451,19 +454,24 @@ impl ListBox {
             {
                 let inner = self.inner.borrow();
                 if inner.multi_select {
-                    return None;
+                    None
+                } else {
+                    crate::platform::appkit::listbox_get_selection(inner.stub_handle)
                 }
-                return crate::platform::appkit::listbox_get_selection(inner.stub_handle);
             }
             #[cfg(target_os = "linux")]
             {
                 let inner = self.inner.borrow();
                 if inner.multi_select {
-                    return None;
+                    None
+                } else {
+                    crate::platform::gtk::list_box_get_selection(inner.stub_handle)
                 }
-                return crate::platform::gtk::list_box_get_selection(inner.stub_handle);
             }
-            None
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                None
+            }
         }
     }
 
@@ -503,20 +511,25 @@ impl ListBox {
             #[cfg(target_os = "macos")]
             {
                 let inner = self.inner.borrow();
-                if !inner.multi_select {
-                    return Vec::new();
+                if inner.multi_select {
+                    crate::platform::appkit::listbox_get_selections(inner.stub_handle)
+                } else {
+                    Vec::new()
                 }
-                return crate::platform::appkit::listbox_get_selections(inner.stub_handle);
             }
             #[cfg(target_os = "linux")]
             {
                 let inner = self.inner.borrow();
-                if !inner.multi_select {
-                    return Vec::new();
+                if inner.multi_select {
+                    crate::platform::gtk::list_box_get_selections(inner.stub_handle)
+                } else {
+                    Vec::new()
                 }
-                return crate::platform::gtk::list_box_get_selections(inner.stub_handle);
             }
-            Vec::new()
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                Vec::new()
+            }
         }
     }
 
@@ -574,19 +587,16 @@ impl ListBox {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::listbox_get_string(
-                    self.inner.borrow().stub_handle,
-                    index,
-                );
+                crate::platform::appkit::listbox_get_string(self.inner.borrow().stub_handle, index)
             }
             #[cfg(target_os = "linux")]
             {
-                return crate::platform::gtk::list_box_get_string(
-                    self.inner.borrow().stub_handle,
-                    index,
-                );
+                crate::platform::gtk::list_box_get_string(self.inner.borrow().stub_handle, index)
             }
-            None
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            {
+                None
+            }
         }
     }
 
@@ -610,8 +620,10 @@ impl ListBox {
     /// Register a callback that fires when an item is double-clicked (LBN_DBLCLK).
     pub fn on_double_click<F: FnMut() + 'static>(&self, frame: &Frame, callback: F) {
         let id = self.inner.borrow().id;
-        #[cfg(any(target_os = "windows", target_os = "macos"))]
+        #[cfg(target_os = "windows")]
         frame.register_command_notify_handler(id, LBN_DBLCLK as u16, Box::new(callback));
+        #[cfg(target_os = "macos")]
+        frame.register_command_notify_handler(id, LBN_DBLCLK, Box::new(callback));
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         let _ = (frame, id, callback);
     }

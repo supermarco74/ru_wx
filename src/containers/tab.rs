@@ -514,13 +514,13 @@ impl Tab {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::tab_get_page_text(
-                    self.inner.borrow().stub_handle,
-                    index,
-                );
+                crate::platform::appkit::tab_get_page_text(self.inner.borrow().stub_handle, index)
             }
-            let _ = index;
-            None
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = index;
+                None
+            }
         }
     }
 
@@ -559,14 +559,17 @@ impl Tab {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::tab_set_page_text(
+                crate::platform::appkit::tab_set_page_text(
                     self.inner.borrow().stub_handle,
                     index,
                     title,
-                );
+                )
             }
-            let _ = (index, title);
-            false
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = (index, title);
+                false
+            }
         }
     }
 
@@ -686,11 +689,12 @@ impl Tab {
         {
             #[cfg(target_os = "macos")]
             {
-                return crate::platform::appkit::tab_get_page_count(
-                    self.inner.borrow().stub_handle,
-                );
+                crate::platform::appkit::tab_get_page_count(self.inner.borrow().stub_handle)
             }
-            0
+            #[cfg(not(target_os = "macos"))]
+            {
+                0
+            }
         }
     }
 
@@ -974,7 +978,7 @@ impl Tab {
             }),
         );
 
-        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        #[cfg(not(target_os = "windows"))]
         let _ = (frame, id);
     }
 

@@ -16,7 +16,7 @@ thread_local! {
         std::cell::RefCell::new(HashMap::new());
     static MENU_SUBMENU_LAYOUT: std::cell::RefCell<HashMap<u64, Vec<(u16, MenuItemKind)>>> =
         std::cell::RefCell::new(HashMap::new());
-    static NEXT_SUBMENU_ID: Cell<u64> = Cell::new(1);
+    static NEXT_SUBMENU_ID: Cell<u64> = const { Cell::new(1) };
 }
 
 /// Row payload for [`super::install_menu_bar`] / [`super::show_popup_menu`].

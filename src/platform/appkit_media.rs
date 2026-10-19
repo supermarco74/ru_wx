@@ -7,7 +7,7 @@ use std::path::Path;
 use objc2::rc::Retained;
 use objc2_av_foundation::{AVPlayer, AVPlayerItem};
 use objc2_av_kit::AVPlayerView;
-use objc2_core_media::{CMTime, CMTimeMakeWithSeconds};
+use objc2_core_media::CMTime;
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, NSURL};
 
 use crate::adv::media_ctrl::MediaState;
@@ -127,7 +127,7 @@ pub fn media_ctrl_stop(handle: NativeHandle) -> Result<(), String> {
             .ok_or_else(|| "invalid media control".to_string())?;
         unsafe {
             host.player.pause();
-            host.player.seekToTime(CMTimeMakeWithSeconds(0.0, 600));
+            host.player.seekToTime(CMTime::with_seconds(0.0, 600));
         }
         host.state = MediaState::Stopped;
         Ok(())
@@ -160,7 +160,7 @@ pub fn media_ctrl_length_ms(handle: NativeHandle) -> Option<u64> {
         m.borrow().get(&handle).and_then(|host| unsafe {
             host.player
                 .currentItem()
-                .and_then(|item| Some(item.duration()))
+                .map(|item| item.duration())
                 .and_then(cmtime_to_ms)
         })
     })
@@ -173,7 +173,7 @@ pub fn media_ctrl_seek_ms(handle: NativeHandle, ms: u64) -> Result<(), String> {
             .get(&handle)
             .ok_or_else(|| "invalid media control".to_string())?;
         unsafe {
-            let time = CMTimeMakeWithSeconds(ms as f64 / 1000.0, 600);
+            let time = CMTime::with_seconds(ms as f64 / 1000.0, 600);
             let zero = CMTime::new(0, 1);
             host.player
                 .seekToTime_toleranceBefore_toleranceAfter(time, zero, zero);

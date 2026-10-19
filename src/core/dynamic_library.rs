@@ -3,6 +3,7 @@
 //!
 //! Dynamic library loader (`wxDynamicLibrary`).
 
+#[cfg(target_os = "windows")]
 use std::ffi::CString;
 use std::path::Path;
 
@@ -60,8 +61,9 @@ impl DynamicLibrary {
 
     pub fn symbol(&self, name: &str) -> Result<*const (), String> {
         #[cfg(target_os = "windows")]
+        let cname = CString::new(name).map_err(|e| e.to_string())?;
+        #[cfg(target_os = "windows")]
         {
-            let cname = CString::new(name).map_err(|e| e.to_string())?;
             // SAFETY: GetProcAddress on a loaded module with a valid symbol name.
             let ptr = unsafe {
                 windows_sys::Win32::System::LibraryLoader::GetProcAddress(

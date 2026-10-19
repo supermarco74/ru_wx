@@ -69,7 +69,7 @@ fn apply_translucent_effect_background(
 }
 
 fn apply_background_to_view(view: &NSView, handle: NativeHandle, colour: Colour) {
-    if colour.a >= 255 {
+    if colour.a == u8::MAX {
         remove_effect_backdrop(handle);
         apply_solid_layer_background(view, colour);
     } else if let Some(mtm) = MainThreadMarker::new() {
