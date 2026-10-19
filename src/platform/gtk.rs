@@ -23,7 +23,7 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::{Rc, Weak};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::thread::ThreadId;
 
 use gdk4_x11::X11Surface;
@@ -52,12 +52,22 @@ pub type MenuInstallRow = (u16, String, bool, MenuItemKind, bool, Option<Acceler
 /// Thread che ha tentato per primo `gtk4::init()`.
 static GTK_THREAD: OnceLock<ThreadId> = OnceLock::new();
 
+/// Serializza le chiamate a `gtk4::init()`.
+///
+/// `OnceLock::set` non è un test-and-set: due thread che leggono
+/// `None` nello stesso istante possono entrambi proseguire e chiamare
+/// `gtk4::init()` in parallelo. `gtk_init_check` non è thread-safe e in
+/// CI headless il conflitto termina in SIGSEGV. Il `Mutex` rende
+/// esplicito che un solo thread alla volta può tentare l'init.
+static GTK_INIT_LOCK: Mutex<()> = Mutex::new(());
+
 /// Inizializza GTK4 se possibile.
 ///
 /// Restituisce `true` solo se il GTK è davvero inizializzato sul
 /// thread corrente. In ambiente headless `gtk_init_check` fallisce e
 /// la funzione restituisce `false` senza panicare.
 pub fn init() -> bool {
+    let _guard = GTK_INIT_LOCK.lock().unwrap_or_else(|err| err.into_inner());
     let current = std::thread::current().id();
     match GTK_THREAD.get() {
         Some(first) if *first != current => {
