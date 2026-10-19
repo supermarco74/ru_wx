@@ -2015,7 +2015,7 @@ dependencies = [
 
 [[package]]
 name = "ru_wx"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "block2",
  "embed-resource",

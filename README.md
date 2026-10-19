@@ -32,7 +32,7 @@ is required.
 2. Tag and push:
 
 ```bash
-git tag v0.7.1
+git tag v0.7.2
 git push origin main --tags
 ```
 
@@ -48,7 +48,7 @@ Documentation and guides: [ru_wx.easytaskflow.app](https://ru_wx.easytaskflow.ap
 
 ```toml
 [dependencies]
-ru_wx = "0.7.1"
+ru_wx = "0.7.2"
 ```
 
 Publish manually (after `cargo login`):
@@ -61,8 +61,8 @@ Local packaging (same output as CI):
 
 ```powershell
 cargo build --release --examples
-.\scripts\package_github_release.ps1 -Version 0.7.1
-# -> dist\ru_wx-0.7.1-win64.zip (+ examples-only and minitests-only zips)
+.\scripts\package_github_release.ps1 -Version 0.7.2
+# -> dist\ru_wx-0.7.2-win64.zip (+ examples-only and minitests-only zips)
 ```
 
 ### Library bundle for other projects
@@ -72,10 +72,10 @@ into the `release/` folder:
 
 ```powershell
 .\package_library.bat
-# or: .\scripts\package_library_release.ps1 -Version 0.7.1
+# or: .\scripts\package_library_release.ps1 -Version 0.7.2
 ```
 
-This produces `release/ru_wx-0.7.1/` with the `.crate` archive, extracted `ru_wx/`
+This produces `release/ru_wx-0.7.2/` with the `.crate` archive, extracted `ru_wx/`
 source tree, `INTEGRATION.md`, and a `dependency.snippet.toml`. See
 [`release/README.md`](release/README.md).
 
@@ -229,7 +229,7 @@ ru_wx = { git = "https://github.com/supermarco74/ru_wx" }
 
 ```toml
 [dependencies]
-ru_wx = { version = "0.7.1", features = ["data-sqlite"] }
+ru_wx = { version = "0.7.2", features = ["data-sqlite"] }
 ```
 
 | Feature | What it adds |

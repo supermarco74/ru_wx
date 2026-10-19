@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.2] — 2026-10-19
 
 ### Added
 - **macOS AppKit backend completed** — 39 modules, ~20.5k lines behind the
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `data`, `net`, `io`, `dnd`, `adv`, `debug`.
 - `Cargo.toml` keywords and categories now describe the three platforms
   (`gui-cross-platform`, `macos`, `linux`, `appkit`, `gtk4`), plus an explicit
-  `rust-version = "1.70"`.
+  `rust-version = "1.87"`.
 - `winui3_xaml` and `winui3_reactor` are declared as empty features in the
   published manifest. Cargo resolves `path` dependencies even when they are
   `optional`, so the four unpublished `windows-rs-study` crates were removed
@@ -50,6 +50,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cargo package` verified: the published tarball contains `src/`, `LICENSE`,
   `README.md` and `CHANGELOG.md` and compiles standalone (1013 files,
   3.3 MiB compressed).
+
+### Fixed
+- CI and Release are green on all three platforms:
+  - `rust-version` corrected to `1.87`; the previous `1.70` was wrong and made
+    Clippy's `incompatible_msrv` lint fail on 17 Windows and 23 macOS sites
+    (`is_multiple_of`, `div_ceil`, `io::Error::other`, `std::path::absolute`,
+    `panic::PanicHookInfo`).
+  - The `ubuntu-latest` jobs now install the GTK4 development packages
+    (`libgtk-4-dev`, `libglib2.0-dev`, `libpango1.0-dev`, `libcairo2-dev`,
+    `libx11-dev`, `pkg-config`) before building and before `cargo package`;
+    without them `glib-sys` fails to find `glib-2.0` via `pkg-config`.
+  - Added `deny.toml` with the license allow-list and the RUSTSEC ignore list
+    for the two unmaintained transitive crates (`rustybuzz`, `ttf-parser`).
+  - The AppKit backend is clean under
+    `cargo clippy --all-targets --target x86_64-apple-darwin -- -D warnings`
+    (418 diagnostics: unused imports and variables, deprecated `objc2` items,
+    redundant `unsafe`, over-complex types).
+- `appkit_background.rs`: comparing the alpha channel against `255` instead of
+  `u8::MAX` silently disabled the transparency shortcut.
 
 ### Known gaps
 - Linux: Dialog, TextDialog, FileDialog, DirDialog, ColourDialog, FontDialog,

@@ -1,6 +1,6 @@
 [package]
 name = "ru_wx"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 description = "Cross-platform GUI library with native API calls per platform (Win32, AppKit, GTK4). No intermediate bindings or C++ dependencies."
 authors = ["Marco Muratore <supermarco74@gmail.com>"]
