@@ -2443,6 +2443,9 @@ fn main() {
     #[cfg(target_os = "windows")]
     let opts_hmenu = opts_menu.hmenu();
     let stop_after_id_cell = Rc::new(Cell::new(0u16));
+    // Only the Win32 `CheckMenuItem` and the AppKit `menu_set_item_checked`
+    // calls below read this id.
+    #[cfg(not(target_os = "linux"))]
     let stop_after_id_for_cb = stop_after_id_cell.clone();
     let stop_after_id =
         opts_menu.append_check_item("Ferma dopo ogni brano (playlist)", &frame, move || {
