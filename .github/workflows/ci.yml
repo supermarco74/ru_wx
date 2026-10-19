@@ -106,8 +106,13 @@ jobs:
       # parser, grid sizer, menu shortcut mutators, and the
       # frame/menu-bar integration paths. None of them need a
       # display server.
+      #
+      # GTK4 e' main-thread-only: `App::new()` chiama `gtk_init_check`
+      # e i test che costruiscono un'App girano su thread diversi.
+      # In parallelo quei call si sovrappongono, quindi su Linux il
+      # runner viene forzato su un solo thread.
       - name: cargo test --lib
-        run: cargo test --lib -- --nocapture
+        run: cargo test --lib -- --nocapture ${{ matrix.os == 'ubuntu-latest' && '--test-threads=1' || '' }}
 
       # Doctests. 23 cases as of v0.5.4 (Cycle 20); they only
       # `compile` because the user code calls into Win32, but
