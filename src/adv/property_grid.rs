@@ -305,6 +305,10 @@ impl PropertyGrid {
             crate::platform::appkit::property_grid_redraw(handle);
         }
 
+        // `frame` è usato solo dai rami Windows / macOS.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = frame;
+
         PropertyGrid { data }
     }
 
@@ -552,6 +556,8 @@ impl Widget for PropertyGridData {
         {
             crate::platform::appkit::set_view_visible(self.stub_handle, visible);
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = visible;
     }
 
     fn is_enabled(&self) -> bool {

@@ -213,6 +213,10 @@ impl Menu {
             crate::platform::appkit::menu_register_icon(id, image);
         }
 
+        // L'icona colorata esiste solo su Windows / macOS.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = colour;
+
         self.items
             .push(MenuItem::normal(id, label.to_string(), true));
         frame.register_command_handler(id, Box::new(callback));

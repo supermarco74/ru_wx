@@ -143,6 +143,10 @@ impl AnimationCtrl {
         // la sequenza degli id generati; resta solo non usato.
         let _id = next_control_id();
 
+        // `parent` è usato solo dai rami Windows / macOS.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = parent;
+
         #[cfg(target_os = "windows")]
         // SAFETY: Win32 FFI call with validated arguments (HWND / HMENU / handle) and a buffer large enough for the output.
         let hwnd = unsafe {

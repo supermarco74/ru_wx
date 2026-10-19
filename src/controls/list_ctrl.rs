@@ -2409,6 +2409,8 @@ impl ListCtrl {
         }
         #[cfg(target_os = "macos")]
         crate::platform::appkit::listctrl_set_font_size(self.inner.borrow().stub_handle, pt as f64);
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = pt;
     }
 
     /// Altezza riga corrente (pixel logici), come impostata con

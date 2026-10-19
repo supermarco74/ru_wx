@@ -511,6 +511,9 @@ impl MultiChoiceDialog {
         #[cfg(not(target_os = "windows"))]
         {
             let _ = _frame;
+            // Su Linux le scelte non vengono mostrate: la lista è uno stub.
+            #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+            let _ = choices;
             MultiChoiceDialog {
                 #[cfg(target_os = "macos")]
                 frame: _frame.clone(),

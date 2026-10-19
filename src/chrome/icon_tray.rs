@@ -14,9 +14,13 @@
 //! shown automatically on right-click (or via
 //! `WM_CONTEXTMENU` / `NIN_POPUPOPEN`).
 
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 use std::cell::RefCell;
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::AtomicU32;
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+use std::sync::atomic::Ordering;
 
 use crate::window::frame::Frame;
 use crate::window::menu::Menu;

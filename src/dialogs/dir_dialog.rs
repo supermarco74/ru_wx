@@ -148,6 +148,9 @@ impl DirDialogBuilder {
 impl DirDialog {
     /// Create a new directory dialog associated with the given frame.
     pub fn new(frame: &Frame) -> Self {
+        // Su Linux non c'è HWND padre: nessun campo del dialogo lo usa.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = frame;
         DirDialog {
             #[cfg(target_os = "windows")]
             parent_hwnd: frame.hwnd() as HWND,

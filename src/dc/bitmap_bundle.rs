@@ -197,6 +197,9 @@ impl BitmapBundle {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
+            // Il calcolo della distanza richiede le bitmap reali: qui
+            // basta la dimensione logica, quindi `target_size` resta inutilizzato.
+            let _ = target_size;
             if self.logical_size == (0, 0) {
                 None
             } else {

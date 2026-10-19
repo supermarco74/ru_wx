@@ -163,7 +163,7 @@ impl HyperlinkCtrl {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = (frame, f);
+            let _ = (frame, f, id);
         }
     }
 

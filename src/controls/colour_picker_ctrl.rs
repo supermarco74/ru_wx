@@ -173,6 +173,10 @@ impl ColourPickerCtrl {
     ///
     /// This is normally called automatically by the button click, but
     /// you can also call it directly to open the dialog programmatically.
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_mut)
+    )]
     pub fn show_dialog<F: FnMut(Colour) + 'static>(
         &self,
         _frame: Option<&Frame>,
@@ -235,6 +239,10 @@ impl ColourPickerCtrl {
 
     /// Register a callback that fires when the user picks a new colour
     /// via the colour-chooser dialog.
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_variables, unused_mut)
+    )]
     pub fn on_change<F: FnMut(Colour) + 'static>(&self, frame: &Frame, mut callback: F) {
         let id = self.inner.borrow().id;
         let inner = self.inner.clone();

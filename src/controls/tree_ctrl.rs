@@ -743,7 +743,7 @@ impl TreeCtrl {
                 item.0,
             );
         }
-        #[cfg(target_os = "macos")]
+        #[cfg(not(target_os = "windows"))]
         let _ = item;
     }
 
@@ -771,6 +771,8 @@ impl TreeCtrl {
             let stub = self.inner.borrow().stub_handle;
             crate::platform::appkit::tree_set_font_size(stub, pt as f64);
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = pt;
     }
 
     /// Return the total number of items in the tree view (including

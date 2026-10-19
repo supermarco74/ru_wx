@@ -253,6 +253,10 @@ impl FindReplaceDialog {
         // Windows because we only need it during `show`.
         let _ = parent_hwnd;
 
+        // Su Linux il frame non serve: il dialogo è uno stub senza finestra reale.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = frame;
+
         let me = FindReplaceDialog {
             inner: Rc::new(RefCell::new(inner)),
             #[cfg(target_os = "macos")]
@@ -307,6 +311,8 @@ impl FindReplaceDialog {
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
             let _ = text;
+            // Su Linux `inner` non serve, ma il binding resta `mut` per Win32/AppKit.
+            let _ = &mut inner;
         }
         #[cfg(target_os = "macos")]
         {
@@ -346,6 +352,8 @@ impl FindReplaceDialog {
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
             let _ = text;
+            // Su Linux `inner` non serve, ma il binding resta `mut` per Win32/AppKit.
+            let _ = &mut inner;
         }
         #[cfg(target_os = "macos")]
         {

@@ -650,6 +650,9 @@ impl RibbonBar {
             // Start the hover timer to enable hover effect tracking
             crate::platform::appkit::start_hover_timer();
         }
+        // `outer` serve solo ai rami Windows / macOS.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = outer;
     }
 
     /// Register a click handler for all ribbon buttons.

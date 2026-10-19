@@ -298,6 +298,8 @@ impl RadioBox {
         // aggiorniamo qui, così resta coerente anche senza `on_select`.
         #[cfg(any(target_os = "windows", target_os = "macos"))]
         declared::set_selection(self.inner.borrow().native_handle(), index);
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = index;
     }
 
     /// Return the number of radio buttons in the group.
@@ -544,6 +546,8 @@ impl Widget for RadioBoxInner {
             let _ = (dx, dy);
             self.reposition_mac_radios();
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = (dx, dy);
     }
 
     fn set_size(&mut self, w: u32, h: u32) {

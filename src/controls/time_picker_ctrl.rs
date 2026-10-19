@@ -306,6 +306,10 @@ impl TimePickerCtrl {
     /// (routed through the frame's `dtn_handlers` map); on macOS the
     /// picker's action message is routed through `register_command_handler`
     /// and the value is re-read from the control.
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_mut)
+    )]
     pub fn on_time_change<F: FnMut(Option<Time>) + 'static>(&self, frame: &Frame, mut callback: F) {
         let id = self.inner.borrow().id;
         #[cfg(target_os = "macos")]
@@ -342,7 +346,7 @@ impl TimePickerCtrl {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = (frame, callback);
+            let _ = (frame, callback, id);
         }
     }
 

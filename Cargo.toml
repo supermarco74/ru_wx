@@ -54,6 +54,8 @@ gtk4 = { version = "0.11", features = ["v4_10"] }
 # X11: accesso a XID/Display della superficie GTK, usato dall'inspector
 # per posizione finestra e screenshot (XGetImage).
 gdk4-x11 = "0.11"
+# `src/platform/shell.rs` usa `libc::statvfs` per lo spazio disco disponibile.
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"

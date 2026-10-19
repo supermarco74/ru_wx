@@ -346,6 +346,10 @@ impl CheckListBox {
     /// item and the callback receives the index and the new checked
     /// state. After the callback returns, the highlighted item is
     /// deselected so the row does not appear "stuck".
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_variables, unused_mut)
+    )]
     pub fn on_check_toggle<F: FnMut(usize, bool) + 'static>(&self, frame: &Frame, mut callback: F) {
         let id = self.inner.borrow().id;
         let inner = self.inner.clone();

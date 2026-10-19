@@ -252,6 +252,8 @@ impl SpinButton {
         {
             crate::platform::appkit::spin_button_set_value(self.inner.borrow().stub_handle, v);
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = v;
     }
 
     /// Return the current value. On Windows this also refreshes the
@@ -294,6 +296,10 @@ impl SpinButton {
 
     /// Register a callback fired when the value changes (user clicked
     /// the arrows or pressed up / down).
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_mut)
+    )]
     pub fn on_value_change<F: FnMut() + 'static>(&self, frame: &Frame, mut callback: F) {
         let id = self.inner.borrow().id;
         let inner = self.inner.clone();
@@ -329,7 +335,7 @@ impl SpinButton {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = (frame, callback);
+            let _ = (frame, callback, id, inner);
         }
     }
 

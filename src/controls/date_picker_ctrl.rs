@@ -449,6 +449,10 @@ impl DatePickerCtrl {
     /// no real `HWND`), so the callback simply never fires.
     /// This mirrors the cross-platform ergonomics of
     /// [`crate::Frame::set_drop_files_callback`].
+    #[cfg_attr(
+        not(any(target_os = "windows", target_os = "macos")),
+        allow(unused_mut)
+    )]
     pub fn on_date_change<F: FnMut(Option<Date>) + 'static>(&self, frame: &Frame, mut callback: F) {
         let id = self.inner.borrow().id;
         #[cfg(target_os = "macos")]
@@ -481,7 +485,7 @@ impl DatePickerCtrl {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = (frame, callback);
+            let _ = (frame, callback, id);
         }
     }
 

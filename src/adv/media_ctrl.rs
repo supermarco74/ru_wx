@@ -76,7 +76,8 @@ struct MediaCtrlInner {
     last_error: Option<u32>,
 }
 
-#[cfg(not(target_os = "windows"))]
+// `Rect` serve solo alla struttura e al costruttore macOS.
+#[cfg(target_os = "macos")]
 use crate::core::geometry::Rect;
 #[cfg(not(target_os = "windows"))]
 use crate::core::widget::Window;

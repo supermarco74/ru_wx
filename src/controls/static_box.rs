@@ -106,7 +106,7 @@ impl StaticBox {
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         let _ = (parent_in, label, width, height);
 
-        #[cfg(target_os = "macos")]
+        #[cfg(not(target_os = "windows"))]
         let _ = id;
 
         #[cfg(target_os = "macos")]

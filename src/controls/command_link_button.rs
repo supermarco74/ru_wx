@@ -71,7 +71,7 @@ impl CommandLinkButton {
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         let _ = parent;
 
-        #[cfg(target_os = "macos")]
+        #[cfg(not(target_os = "windows"))]
         let _ = &label;
 
         #[cfg(target_os = "macos")]

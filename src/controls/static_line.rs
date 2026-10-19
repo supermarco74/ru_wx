@@ -110,7 +110,7 @@ impl StaticLine {
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         let _ = (parent_in, default_w, default_h);
 
-        #[cfg(target_os = "macos")]
+        #[cfg(not(target_os = "windows"))]
         let _ = id;
 
         #[cfg(target_os = "macos")]

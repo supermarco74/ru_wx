@@ -375,6 +375,8 @@ impl ScrollBar {
                 pos,
             );
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = pos;
     }
 
     /// Get the current thumb position. The value is read live
@@ -529,7 +531,8 @@ impl ScrollBar {
         }
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         {
-            let _ = (frame, callback);
+            // `&mut` perché il binding `mut callback` è richiesto solo dai closure Win32/AppKit.
+            let _ = (&mut callback, frame);
         }
     }
 

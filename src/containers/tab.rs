@@ -270,6 +270,10 @@ impl Tab {
             })),
         };
 
+        // Su Linux il frame non serve: il controllo è solo uno stub senza HWND reale.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = frame;
+
         #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
         Tab {
             inner: Rc::new(RefCell::new(TabInner {
@@ -980,6 +984,9 @@ impl Tab {
 
         #[cfg(not(target_os = "windows"))]
         let _ = (frame, id);
+        // Su Linux nessun handler nativo consuma `inner`.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = inner;
     }
 
     /// Return the control's Win32 ID.

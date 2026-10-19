@@ -337,6 +337,8 @@ impl Button {
             not(target_os = "linux")
         ))]
         let _ = (parent_in, svg_bytes, icon_size, align);
+        #[cfg(target_os = "linux")]
+        let _ = (svg_bytes, icon_size);
         #[cfg(target_os = "macos")]
         let (stub_handle, parent_handle) = macos_button(parent_in, label, id, 200, 36);
         #[cfg(target_os = "linux")]
@@ -495,6 +497,8 @@ impl Button {
             not(target_os = "linux")
         ))]
         let _ = (parent_in, label, colour, bmp_width, bmp_height);
+        #[cfg(target_os = "linux")]
+        let _ = (colour, bmp_width, bmp_height);
         #[cfg(target_os = "macos")]
         let (stub_handle, parent_handle) = macos_button(parent_in, label, id, 100, 30);
         #[cfg(target_os = "linux")]

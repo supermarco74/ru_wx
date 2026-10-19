@@ -534,6 +534,10 @@ pub fn inject_event(_root: NativeHandle, event: &InjectedEvent) -> Result<(), St
                 Err(format!("`set_text` non supportato per `{component_type}`"))
             }
         }
+        // `GtkComboBoxText` è deprecato da GTK 4.10 ma `ComboBox::new` lo
+        // usa ancora: è l'unico widget GTK4 che unisce lista a tendina e
+        // campo di testo editabile (cfr. `gtk.rs::create_combo_box`).
+        #[allow(deprecated)]
         "select" => {
             let index = event
                 .key
@@ -689,6 +693,9 @@ fn state_of(widget: &gtk4::Widget, handle: Option<NativeHandle>) -> serde_json::
         map.insert("checked".into(), serde_json::json!(switch.is_active()));
     }
 
+    // Vedi la nota sul braccio `select`: il combo può essere un
+    // `GtkComboBoxText` deprecato da GTK 4.10.
+    #[allow(deprecated)]
     if let Some(combo) = widget.downcast_ref::<gtk4::ComboBoxText>() {
         if let Some(active) = combo.active() {
             map.insert("selected".into(), serde_json::json!(active));

@@ -2265,6 +2265,9 @@ impl Grid {
             let _ = (row, col);
             self.invalidate_view();
         }
+        // Su Linux non esiste un backend nativo: i valori non vengono usati.
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = (row, col);
     }
 
     /// Register a callback invoked when the sort column or direction
@@ -3177,6 +3180,8 @@ impl Grid {
             );
             self.set_column_width(col, width);
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = width;
         true
     }
 
@@ -3488,6 +3493,8 @@ impl Grid {
         {
             crate::platform::appkit::grid_set_checkboxes(self.inner.borrow().stub_handle, enabled);
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = enabled;
     }
 
     /// Return whether the given row's checkbox is currently checked.
@@ -3765,6 +3772,8 @@ impl Grid {
                 list.handle(),
             );
         }
+        #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+        let _ = list;
     }
 
     /// Attach a [`crate::GridIcons`] set and optionally widen the

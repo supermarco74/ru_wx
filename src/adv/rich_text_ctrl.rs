@@ -14,6 +14,8 @@ use crate::platform::win32::to_wide;
 #[cfg(target_os = "windows")]
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::EnableWindow;
 
+// `Frame` è usato solo dai blocchi Windows / macOS.
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 use crate::window::frame::Frame;
 
 #[cfg(target_os = "windows")]
