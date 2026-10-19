@@ -2,15 +2,16 @@
 name = "ru_wx"
 version = "0.7.1"
 edition = "2021"
-description = "Cross-platform GUI library with native API calls per platform. No intermediate bindings or C++ dependencies."
+description = "Cross-platform GUI library with native API calls per platform (Win32, AppKit, GTK4). No intermediate bindings or C++ dependencies."
 authors = ["Marco Muratore <supermarco74@gmail.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/supermarco74/ru_wx"
 homepage = "https://ru_wx.easytaskflow.app/"
 documentation = "https://ru_wx.easytaskflow.app/"
 readme = "README.md"
-keywords = ["gui", "win32", "wxwidgets", "windows", "native"]
-categories = ["gui"]
+keywords = ["gui", "gui-cross-platform", "wxwidgets", "windows", "macos", "linux", "win32", "appkit", "gtk4", "native"]
+categories = ["gui", "gui::gtk", "os::windows-apis", "os::macos-apis"]
+rust-version = "1.70"
 exclude = [
     "/dist/",
     "/release/",
@@ -238,18 +239,21 @@ winui3 = []
 # In debug (`debug_assertions`) è attivo automaticamente.
 inspector = []
 
-# WinUI3_Xaml / WinUI3_Reactor: i backend nativi WinRT/XAML sono
-# sviluppati in locale e dipendono dal repository fratello
-# `windows-rs-study` (path dependency ../windows-rs-study/...).
-# Le quattro dipendenze windows-reactor / windows-numerics /
-# windows-collections / windows-future NON sono dichiarate qui: Cargo
-# risolve le dipendenze `path` anche quando sono `optional`, quindi la
-# loro presenza romperebbe `cargo build` per chi clona il crate senza
-# quel checkout. Le feature restano dichiarate (vuote) perché il codice
-# in src/platform/ vi fa riferimento con `#[cfg(feature = ...)]`.
-# Per compilare i due backend: clona windows-rs-study, ripristina le
-# quattro voci nel manifest e abilita la feature.
+# WinUI3_Xaml: backend nativo WinRT/XAML (Microsoft.UI.Xaml) via
+# windows-reactor. Richiede Windows App SDK per MddBootstrapInitialize2.
+#
+# Le quattro crate windows-rs-* non sono dichiarate in questo manifest
+# perché sono path dependency verso il repository fratello
+# windows-rs-study e Cargo le risolve anche se sono `optional`: dichiararle
+# romperebbe `cargo build` sui cloni freschi. La feature resta quindi
+# vuota, così i `#[cfg(feature = "winui3_xaml")]` nel codice restano
+# validi e gli esempi che la richiedono vengono saltati. Per compilare
+# il backend, clona windows-rs-study e ripristina le quattro voci
+# sotto [target.'cfg(target_os = "windows")'.dependencies].
 winui3_xaml = []
+
+# WinUI3_Reactor: component model Fluent UI su windows-reactor.
+# Stessa nota di winui3_xaml.
 winui3_reactor = []
 
 # Layer data: provider DB multi-backend (SQLite / MySQL / MariaDB).
@@ -258,6 +262,23 @@ winui3_reactor = []
 data-sqlite = ["dep:rusqlite"]
 data-mysql = ["dep:mysql"]
 data-db = ["data-sqlite", "data-mysql"]
+
+# ─────────────────────────────────────────────────────────────────────
+# Le quattro crate windows-rs-* (reactor / numerics / collections /
+# future) NON sono dichiarate in questo manifest perché sono path
+# dependency verso il repository fratello windows-rs-study, in
+# ../windows-rs-study/crates/libs/*. Cargo le risolve anche quando sono
+# `optional`, quindi la loro presenza romperebbe `cargo build` per chi
+# clona questo crate senza quel checkout.
+# I sorgenti dei due backend restano in src/platform/winui3_xaml/:
+# per compilarli, clona windows-rs-study e aggiungi qui
+#
+#   [target.'cfg(target_os = "windows")'.dependencies.windows-reactor]
+#   version = "0.0.0"; optional = true
+#   path = "../windows-rs-study/crates/libs/reactor"
+#
+# (e analogamente numerics / collections / future).
+# ─────────────────────────────────────────────────────────────────────
 
 [[example]]
 name = "window_with_button"
