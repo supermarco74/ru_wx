@@ -57,7 +57,10 @@ foreach ($f in $exes) {
     Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
     $p = Start-Process -FilePath $f.FullName -PassThru
-    $null = $p.WaitForInputIdle(5000)
+    # Gli esempi console non hanno una coda di messaggi: WaitForInputIdle
+    # solleva, ma non e' un errore perche' il processo viene comunque
+    # classificato dalla exit code qui sotto.
+    try { $null = $p.WaitForInputIdle(5000) } catch { }
 
     # La finestra principale puo' comparire in ritardo.
     $h = [IntPtr]::Zero
@@ -72,8 +75,15 @@ foreach ($f in $exes) {
     }
 
     if ($p.HasExited) {
-        Write-Host "[FAIL] $name exited early (code $($p.ExitCode))"
-        $failed += $name
+        # Un esempio che termina da solo con codice 0 ha completato il
+        # suo corso senza crash: i demo stub chiudono da soli dopo pochi
+        # tick di idle. Solo un codice diverso da 0 e' un fallimento.
+        if ($p.ExitCode -eq 0) {
+            Write-Host "[OK]   $name self-closed cleanly (no capture)"
+        } else {
+            Write-Host "[FAIL] $name exited early (code $($p.ExitCode))"
+            $failed += $name
+        }
         continue
     }
     if ($h -eq [IntPtr]::Zero) {

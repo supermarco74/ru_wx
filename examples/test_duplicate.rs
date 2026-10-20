@@ -38,8 +38,8 @@ fn main() {
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).unwrap();
 
-    // 1. Empty target dir → first duplicate is "input - duplicate.txt"
-    let input_file = tmp.join("input.txt");
+    // 1. Empty target dir → first duplicate is "foo - duplicate.txt"
+    let input_file = tmp.join("foo.txt");
     fs::write(&input_file, "hello").unwrap();
     let d1 = find_unique_duplicate_name(&input_file);
     assert_eq!(
