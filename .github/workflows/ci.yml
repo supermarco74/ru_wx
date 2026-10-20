@@ -253,17 +253,26 @@ jobs:
       - name: Copy binaries to working layout
         shell: pwsh
         run: |
-          $root = $env:GITHUB_WORKSPACE
-          # Replicate the layout from build_all_examples.ps1.
+          # Replicate the layout from build_all_examples.ps1. The WinUI3
+          # build must be copied first: the second `cargo build` above
+          # overwrites the same `target\release\examples` binaries with
+          # the Win32 ones.
           New-Item -ItemType Directory -Path examples\examples_winui3 -Force | Out-Null
           Copy-Item -Path target\release\examples\*.exe -Destination examples\examples_winui3\ -Force -ErrorAction SilentlyContinue
+
+      - name: Copy win32 binaries to working layout
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path examples\examples_win32 -Force | Out-Null
+          Copy-Item -Path target\release\examples\*.exe -Destination examples\examples_win32\ -Force -ErrorAction SilentlyContinue
 
       - name: Capture all win32 examples
         shell: pwsh
         run: |
-          $captures = "./capture_all.ps1 -ExeDir '$($env:GITHUB_WORKSPACE)\examples\examples_win32' -OutDir '$($env:GITHUB_WORKSPACE)\smoke_out_win32' -MaxSeconds 4 -Skip 'repro*'"
-          $output = Invoke-Expression $captures 2>&1 | Out-String
-          $output | Write-Output
+          & "$($env:GITHUB_WORKSPACE)\tools\capture_all.ps1" `
+            -ExeDir "$($env:GITHUB_WORKSPACE)\examples\examples_win32" `
+            -OutDir "$($env:GITHUB_WORKSPACE)\smoke_out_win32" `
+            -MaxSeconds 4 -Skip 'repro*'
           if ($LASTEXITCODE -ne 0) {
             Write-Error "win32 capture suite failed (exit $LASTEXITCODE)."
             exit 1
@@ -272,9 +281,10 @@ jobs:
       - name: Capture all winui3 examples
         shell: pwsh
         run: |
-          $captures = "./capture_all.ps1 -ExeDir '$($env:GITHUB_WORKSPACE)\examples\examples_winui3' -OutDir '$($env:GITHUB_WORKSPACE)\smoke_out_winui3' -MaxSeconds 4 -Skip 'repro*'"
-          $output = Invoke-Expression $captures 2>&1 | Out-String
-          $output | Write-Output
+          & "$($env:GITHUB_WORKSPACE)\tools\capture_all.ps1" `
+            -ExeDir "$($env:GITHUB_WORKSPACE)\examples\examples_winui3" `
+            -OutDir "$($env:GITHUB_WORKSPACE)\smoke_out_winui3" `
+            -MaxSeconds 4 -Skip 'repro*'
           if ($LASTEXITCODE -ne 0) {
             Write-Error "winui3 capture suite failed (exit $LASTEXITCODE)."
             exit 1
